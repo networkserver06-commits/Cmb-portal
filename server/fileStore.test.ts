@@ -1,0 +1,88 @@
+import { afterAll, afterEach, describe, expect, it } from "vitest";
+import {
+  deletePortalFile,
+  MAX_UPLOAD_BYTES,
+  portalFileById,
+  uploadPortalFile,
+  validateUpload,
+} from "./fileStore";
+import { closeMongoConnectionForTests, mongo } from "./mongoStore";
+
+const createdFileIds: string[] = [];
+
+afterEach(async () => {
+  if (!createdFileIds.length) return;
+  const db = await mongo();
+  await db
+    .collection("operational_records")
+    .deleteMany({ subjectId: { $in: createdFileIds } });
+  createdFileIds.length = 0;
+});
+
+afterAll(async () => {
+  await closeMongoConnectionForTests();
+});
+
+describe("GridFS upload validation", () => {
+  it("accepts a valid PDF signature and rejects unsafe type, size, and signature combinations", () => {
+    expect(
+      validateUpload({
+        fileName: "revision.pdf",
+        mimeType: "application/pdf",
+        byteLength: 9,
+        bytes: Buffer.from("%PDF-1.4"),
+      }).fileName
+    ).toBe("revision.pdf");
+    expect(() =>
+      validateUpload({
+        fileName: "revision.exe",
+        mimeType: "application/octet-stream",
+        byteLength: 1,
+      })
+    ).toThrow("Only PDF");
+    expect(() =>
+      validateUpload({
+        fileName: "revision.pdf",
+        mimeType: "text/plain",
+        byteLength: 9,
+      })
+    ).toThrow("does not match");
+    expect(() =>
+      validateUpload({
+        fileName: "revision.pdf",
+        mimeType: "application/pdf",
+        byteLength: MAX_UPLOAD_BYTES + 1,
+      })
+    ).toThrow("4 MiB");
+    expect(() =>
+      validateUpload({
+        fileName: "revision.pdf",
+        mimeType: "application/pdf",
+        byteLength: 6,
+        bytes: Buffer.from("NOTPDF"),
+      })
+    ).toThrow("signature");
+  });
+
+  it("persists an uploaded document in GridFS with MongoDB metadata and removes it safely when unreferenced", async () => {
+    const file = await uploadPortalFile({
+      ownerId: 999_001,
+      purpose: "submission",
+      fileName: `test-${Date.now()}.pdf`,
+      mimeType: "application/pdf",
+      bytes: Buffer.from("%PDF-1.4\nunit-test"),
+    });
+    createdFileIds.push(file.gridFsId);
+    expect(file.gridFsId).toMatch(/^[a-f0-9]{24}$/);
+    expect(file.byteLength).toBeGreaterThan(5);
+    expect(file.sha256).toMatch(/^[a-f0-9]{64}$/);
+    expect((await portalFileById(file.gridFsId))?.lifecycle).toBe("pending");
+    await deletePortalFile({ fileId: file.gridFsId, actorId: 999_001 });
+    expect(await portalFileById(file.gridFsId)).toBeNull();
+    const db = await mongo();
+    await db
+      .collection("operational_records")
+      .deleteMany({ subjectId: file.gridFsId });
+    createdFileIds.splice(createdFileIds.indexOf(file.gridFsId), 1);
+  }, 45_000);
+});

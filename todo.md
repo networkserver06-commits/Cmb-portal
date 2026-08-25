@@ -1,0 +1,41 @@
+# Project TODO
+
+- [x] Inventory the existing portal’s routes, core user journeys, data stores, and upload implementation before modifying behavior.
+- [x] Preserve all existing core workflows and document any compatibility decisions in the migration guide.
+- [x] Replace persistent application data with MongoDB collections for users, submissions, workflows, operational records, and activity events.
+- [x] Enforce a Vercel-safe 4 MiB authenticated upload limit so file writes never exceed the platform request-body ceiling.
+- [x] Implement MongoDB/GridFS-backed file storage with document metadata and scoped access controls.
+- [x] Repair uploads with authenticated server-side handling, file type and size validation, progress feedback, reliable errors, and submission status updates.
+- [x] Implement robust role-based authorization for administrator and user access throughout the server and client.
+- [x] Build a polished administrator workspace for user, submission, file, record, status, and activity management.
+- [x] Replace the administrator catalogue file-ID field with a secure GridFS uploader and visible progress, success, and error states.
+- [x] Replace administrator paper-replacement alerts with inline upload progress, success, and error states.
+- [x] Implement editable protected profile management with validation and visible success/error handling in the user workspace.
+- [x] Add authenticated procedure tests for profile updates and user-scoped activity records, alongside submission/status coverage.
+- [x] Re-verify the completed user workspace for profile management, file submission, status tracking, records, and activity visibility.
+- [x] Add MongoDB configuration and migration guidance for deployment.
+- [x] Add and run automated checks for authorization, persistence, upload security, and primary admin/user workflows.
+- [x] Run type, test, build, and browser verification checks.
+- [ ] Commit the verified upgrade and push it to the connected GitHub repository.
+- [x] Preserve Vercel serverless compatibility for API endpoints, static assets, direct client routes, and MongoDB/GridFS connection reuse.
+- [x] Validate Vercel-compatible local build output and serverless routing before GitHub push.
+- [ ] Run the Vercel CLI build using an authenticated Vercel session before release; the current sandbox token is invalid.
+- [x] Audit application architecture, route boundaries, and serverless deployment configuration.
+- [x] Audit authentication, authorization, payment, upload, download, MongoDB/GridFS, and input-validation paths.
+- [x] Run static analysis, dependency review, full tests, type checks, and a production build for the code audit.
+- [x] Document audit findings, remediate confirmed defects, and re-verify affected paths.
+- [x] Replace hard-coded account-email URLs with validated deployment environment configuration.
+- [x] Retire the Till-based purchase charge in favor of Paystack-hosted checkout.
+- [x] Replace all custom Till and phone collection checkout paths with Paystack-hosted checkout driven by the configured Paystack keys.
+- [x] Preserve existing catalogue, account, library, protected download, wallet, administration, upload, MongoDB/GridFS, and role-based workflows throughout the payment upgrade.
+- [x] Convert wallet funding to Paystack-hosted checkout without collecting a phone number or Till value.
+- [x] Remove all obsolete phone/Till payment configuration, code paths, tests, and user-facing copy; complete a final repository-wide scan and justify any retained historical reference.
+- [x] Apply safe, compatible upgrades for remaining direct dependency advisories and document any unavoidable transitive exposure with impact and mitigation.
+- [x] Migrate ignored pnpm override and patch configuration into the supported workspace configuration format.
+- [x] Deduplicate the vulnerable Recharts transitive Lodash version onto its patched release while preserving existing analytics charts.
+- [x] Apply the patched Express routing dependency version and complete the full test, build, API, and SPA-route verification suite.
+- [x] Refresh launch, Vercel, and operational documentation to match Paystack-hosted checkout and the final deployment configuration.
+- [x] Harden MongoDB connection initialization against rejected startup promises in long-lived serverless instances.
+- [x] Return structured JSON for oversized raw upload requests instead of Express’s default error response.
+- [x] Apply the project formatter and re-check style consistency across source, tests, configuration, and documentation.
+- [x] Make the dashboard workspace source assertion resilient to Prettier line wrapping, then rerun the complete serial suite.

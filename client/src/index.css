@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap");
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -94,7 +95,7 @@
   --muted: oklch(0.274 0.006 286.033);
   --muted-foreground: oklch(0.705 0.015 286.067);
   --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground:  oklch(0.92 0.005 65);
+  --accent-foreground: oklch(0.92 0.005 65);
   --destructive: oklch(0.704 0.191 22.216);
   --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(1 0 0 / 10%);
@@ -108,7 +109,7 @@
   --sidebar: oklch(0.21 0.006 285.885);
   --sidebar-foreground: oklch(0.85 0.005 65);
   --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground:  oklch(0.985 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.488 0.243 264.376);
 }
@@ -173,5 +174,414 @@
       padding-right: 2rem;
       max-width: 1280px; /* Standard content width */
     }
+  }
+}
+
+@layer base {
+  body {
+    font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  }
+  .font-serif {
+    font-family: "Fraunces", Georgia, serif;
+  }
+  a,
+  button,
+  input {
+    transition:
+      color 180ms ease,
+      background-color 180ms ease,
+      border-color 180ms ease,
+      box-shadow 180ms ease,
+      transform 180ms ease;
+  }
+  button:active,
+  a:active {
+    transform: scale(0.98);
+  }
+}
+
+@layer components {
+  .section-eyebrow {
+    @apply text-[11px] font-bold uppercase tracking-[0.22em] text-[#4b8876];
+  }
+  .step-card {
+    @apply rounded-2xl border border-[#e1ebe6] bg-[#f8fbf9] p-5;
+  }
+  .step-card span {
+    @apply text-[11px] font-bold tracking-[0.18em] text-[#b88327];
+  }
+  .step-card h3 {
+    @apply mt-6 font-serif text-xl font-semibold text-[#173e35];
+  }
+  .step-card p {
+    @apply mt-2 text-sm leading-6 text-[#718780];
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@layer components {
+  .account-route-transition {
+    animation: account-route-transition 220ms cubic-bezier(0.23, 1, 0.32, 1)
+      both;
+  }
+
+  .account-route-shell {
+    animation: account-route-enter 260ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+
+  .account-reveal {
+    animation: account-reveal 360ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+
+  .account-reveal-delay-1 {
+    animation-delay: 45ms;
+  }
+  .account-reveal-delay-2 {
+    animation-delay: 90ms;
+  }
+  .account-reveal-delay-3 {
+    animation-delay: 135ms;
+  }
+  .account-reveal-delay-4 {
+    animation-delay: 180ms;
+  }
+
+  .account-panel-transition {
+    animation: account-panel-enter 360ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+
+  .account-mode-content {
+    animation: account-mode-enter 220ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+
+  .account-mode-tab {
+    transition:
+      color 180ms ease,
+      background-color 180ms ease,
+      box-shadow 180ms ease,
+      transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .account-mode-tab:active {
+    transform: scale(0.98);
+  }
+
+  .account-spinner {
+    animation: account-spin 850ms linear infinite;
+  }
+
+  .account-skeleton-line {
+    display: block;
+    border-radius: 0.65rem;
+    background: linear-gradient(90deg, #e8f0ec 25%, #f5f8f6 45%, #e8f0ec 65%);
+    background-size: 300% 100%;
+    animation: account-skeleton-shimmer 1.35s ease-in-out infinite;
+  }
+
+  .account-auth-status {
+    animation: account-status-enter 180ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+
+  .account-alert {
+    animation: account-alert-enter 220ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+
+  .account-content-loading {
+    animation: account-content-enter 240ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+
+  .account-resource-card,
+  .account-empty-state {
+    transition:
+      transform 200ms cubic-bezier(0.23, 1, 0.32, 1),
+      box-shadow 200ms ease,
+      border-color 200ms ease;
+  }
+
+  .account-resource-card:hover {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes account-route-transition {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes account-route-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes account-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes account-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes account-mode-enter {
+  from {
+    opacity: 0;
+    transform: translateX(7px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes account-status-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes account-alert-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes account-content-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes account-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes account-skeleton-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .account-route-transition,
+  .account-route-shell,
+  .account-reveal,
+  .account-panel-transition,
+  .account-mode-content,
+  .account-auth-status,
+  .account-alert,
+  .account-content-loading,
+  .account-skeleton-line,
+  .account-spinner {
+    animation: none !important;
+  }
+
+  .account-resource-card:hover {
+    transform: none;
+  }
+}
+
+@layer components {
+  .route-progress {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-height: 2.25rem;
+    overflow: hidden;
+    border-bottom: 1px solid #dfe9e3;
+    background: rgba(255, 255, 255, 0.92);
+    padding: 0.55rem 1rem;
+    color: #4b8876;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    animation: route-progress-enter 180ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+
+  .route-progress-track {
+    position: absolute;
+    inset: 0 0 auto;
+    height: 2px;
+    overflow: hidden;
+    background: #e5f2eb;
+  }
+
+  .route-progress-indicator {
+    display: block;
+    width: 38%;
+    height: 100%;
+    background: #b88327;
+    animation: route-progress-sweep 1.2s cubic-bezier(0.77, 0, 0.175, 1)
+      infinite;
+  }
+
+  .route-progress-spinner {
+    animation: account-spin 850ms linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .route-progress,
+    .route-progress-indicator,
+    .route-progress-spinner {
+      animation: none !important;
+    }
+  }
+}
+
+@keyframes route-progress-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes route-progress-sweep {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(285%);
+  }
+}
+
+@layer components {
+  .account-dashboard {
+    transition:
+      background-color 180ms ease,
+      color 180ms ease;
+  }
+
+  .dark .account-dashboard [class~="bg-white"] {
+    background-color: #142d26 !important;
+  }
+  .dark .account-dashboard [class~="bg-[#f7f8f6]"] {
+    background-color: #0e1d19 !important;
+  }
+  .dark .account-dashboard [class~="bg-[#edf4f0]"] {
+    background-color: #112a23 !important;
+  }
+  .dark .account-dashboard [class~="bg-[#e8f1ed]"] {
+    background-color: #1b3a30 !important;
+  }
+  .dark .account-dashboard [class~="bg-[#f7faf8]"] {
+    background-color: #17352c !important;
+  }
+  .dark .account-dashboard [class~="bg-[#fff9e8]"] {
+    background-color: #3b321b !important;
+  }
+  .dark .account-dashboard [class~="border-[#dfe9e3]"],
+  .dark .account-dashboard [class~="border-[#dce6e1]"],
+  .dark .account-dashboard [class~="border-[#c8d9d2]"],
+  .dark .account-dashboard [class~="border-[#edf2ef]"] {
+    border-color: #2b5045 !important;
+  }
+  .dark .account-dashboard [class~="text-[#173e35]"],
+  .dark .account-dashboard [class~="text-[#274d43]"],
+  .dark .account-dashboard [class~="text-[#19312c]"] {
+    color: #e7f3ed !important;
+  }
+  .dark .account-dashboard [class~="text-[#718780]"],
+  .dark .account-dashboard [class~="text-[#82958e]"],
+  .dark .account-dashboard [class~="text-[#648078]"] {
+    color: #a8c2b7 !important;
+  }
+  .dark .account-dashboard [class~="text-[#1d5146]"] {
+    color: #a8dec7 !important;
+  }
+  .dark .account-dashboard [class~="text-[#34745f]"] {
+    color: #9ee0bf !important;
+  }
+  .dark .account-dashboard input,
+  .dark .account-dashboard select {
+    background-color: #142d26 !important;
+    color: #e7f3ed !important;
+    border-color: #396354 !important;
+  }
+  .dark .account-dashboard header {
+    background-color: #10251f !important;
+    border-color: #2b5045 !important;
+  }
+}
+
+@layer components {
+  /* Radix dropdown content is portaled outside .account-dashboard, so scope dark-mode contrast globally. */
+  .dark .account-menu-content {
+    background-color: #142d26 !important;
+    color: #e7f3ed !important;
+    border-color: #2b5045 !important;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.32) !important;
+  }
+
+  .dark .account-menu-content [class~="bg-[#f2f7f4]"] {
+    background-color: #1b3a30 !important;
+  }
+
+  .dark .account-menu-content [class~="bg-[#e8f1ed]"] {
+    background-color: #24503f !important;
+  }
+
+  .dark .account-menu-content [class~="text-muted-foreground"],
+  .dark .account-menu-content [class~="text-[#94aaa2]"],
+  .dark .account-menu-content [class~="text-[#82958e]"] {
+    color: #a8c2b7 !important;
+  }
+
+  .dark .account-menu-content [data-slot="dropdown-menu-item"]:focus,
+  .dark .account-menu-content [data-slot="dropdown-menu-item"]:hover {
+    background-color: #24503f !important;
+    color: #f2faf6 !important;
   }
 }

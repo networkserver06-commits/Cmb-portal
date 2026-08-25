@@ -1,0 +1,3 @@
+# Administrator Menu Verification
+
+The `/admin` route was visually checked at 390×844 and 1280×720. The protected dashboard retains the existing responsive shell and now presents an “Admin menu” control at the right of the workspace heading. The menu is designed to reveal specific management pages: Overview, Catalogue, Students, Payments, Submissions, Announcements, Reports, and Storage. Each item maps to an existing live management section, closes the menu, updates active state, scrolls to the target section, and applies a visible highlight. TypeScript, focused admin tests, production build, launch checks, and responsive screenshots passed.

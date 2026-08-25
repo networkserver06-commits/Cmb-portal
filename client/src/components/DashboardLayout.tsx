@@ -19,17 +19,35 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users } from "lucide-react";
+import {
+  BarChart3,
+  BookOpen,
+  FileText,
+  HardDrive,
+  LayoutDashboard,
+  LogOut,
+  PanelLeft,
+  Settings,
+  ShieldCheck,
+  Users,
+  WalletCards,
+} from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
+import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { Button } from "./ui/button";
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Page 1", path: "/" },
-  { icon: Users, label: "Page 2", path: "/some-path" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/admin" },
+  { icon: BookOpen, label: "Papers", path: "/admin/papers" },
+  { icon: FileText, label: "Posts", path: "/admin/posts" },
+  { icon: Users, label: "Students", path: "/admin/students" },
+  { icon: WalletCards, label: "Funds", path: "/admin/funds" },
+  { icon: BarChart3, label: "Analytics", path: "/admin/analytics" },
+  { icon: Settings, label: "Settings & security", path: "/admin/settings" },
+  { icon: ShieldCheck, label: "Maintenance", path: "/admin/maintenance" },
+  { icon: HardDrive, label: "Storage", path: "/admin/storage" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -47,13 +65,14 @@ export default function DashboardLayout({
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
   });
   const { loading, user } = useAuth();
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
   }, [sidebarWidth]);
 
   if (loading) {
-    return <DashboardLayoutSkeleton />
+    return <DashboardLayoutSkeleton />;
   }
 
   if (!user) {
@@ -65,11 +84,12 @@ export default function DashboardLayout({
               Sign in to continue
             </h1>
             <p className="text-sm text-muted-foreground text-center max-w-sm">
-              Access to this dashboard requires authentication. Continue to launch the login flow.
+              Access to this dashboard requires authentication. Continue to
+              launch the login flow.
             </p>
           </div>
           <Button
-            onClick={() => startLogin()}
+            onClick={() => setLocation("/login")}
             size="lg"
             className="w-full shadow-lg hover:shadow-xl transition-all"
           >
@@ -169,7 +189,7 @@ function DashboardLayoutContent({
               {!isCollapsed ? (
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="font-semibold tracking-tight truncate">
-                    Navigation
+                    {user?.role === "admin" ? "Administrator" : "Navigation"}
                   </span>
                 </div>
               ) : null}
@@ -179,7 +199,11 @@ function DashboardLayoutContent({
           <SidebarContent className="gap-0">
             <SidebarMenu className="px-2 py-1">
               {menuItems.map(item => {
-                const isActive = location === item.path;
+                const isActive =
+                  item.path === "/admin"
+                    ? location === "/admin"
+                    : location.startsWith(item.path);
+
                 return (
                   <SidebarMenuItem key={item.path}>
                     <SidebarMenuButton
@@ -213,6 +237,7 @@ function DashboardLayoutContent({
                       {user?.name || "-"}
                     </p>
                     <p className="text-xs text-muted-foreground truncate mt-1.5">
+                      {user?.role === "admin" ? "Administrator · " : ""}
                       {user?.email || "-"}
                     </p>
                   </div>

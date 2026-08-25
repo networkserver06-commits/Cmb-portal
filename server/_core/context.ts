@@ -1,6 +1,8 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { User } from "../../drizzle/schema";
 import { sdk } from "./sdk";
+import { parse } from "cookie";
+import { ACCOUNT_COOKIE, authenticateAccount } from "../mongoAuth";
 
 export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
@@ -16,8 +18,17 @@ export async function createContext(
   try {
     user = await sdk.authenticateRequest(opts.req);
   } catch (error) {
-    // Authentication is optional for public procedures.
     user = null;
+  }
+  if (!user) {
+    try {
+      user =
+        (await authenticateAccount(
+          parse(opts.req.headers.cookie ?? "")[ACCOUNT_COOKIE]
+        )) ?? null;
+    } catch {
+      user = null;
+    }
   }
 
   return {

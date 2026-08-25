@@ -1,33 +1,699 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { Link } from "wouter";
+import { startLogin } from "@/const";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
-import { Streamdown } from 'streamdown';
+import { Badge } from "@/components/ui/badge";
+import {
+  AlertCircle,
+  BookOpen,
+  CheckCircle2,
+  ChevronRight,
+  Clock3,
+  Download,
+  FileText,
+  LayoutDashboard,
+  LockKeyhole,
+  Loader2,
+  Menu,
+  MessageCircle,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  X,
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { trpc } from "@/lib/trpc";
 
-/**
- * All content in this page are only for example, replace with your own feature implementation
- * When building pages, remember your instructions in Frontend Workflow, Frontend Best Practices, Design Guide and Common Pitfalls
- */
+const accentMap: Record<string, string> = {
+  sage: "bg-[#e4efe9] text-[#1f5a4b]",
+  blue: "bg-[#e4ebf7] text-[#244a82]",
+  gold: "bg-[#f7edcf] text-[#8b6518]",
+  plum: "bg-[#eee7f4] text-[#704979]",
+};
+
 export default function Home() {
-  // The useAuth hook provides authentication state.
-  // To implement login/logout, call logout(), or start login from an event
-  // handler: onClick={() => startLogin()} (imported from "@/const"). Never call
-  // startLogin() during render (no href={startLogin()}) — it mints a one-time
-  // nonce cookie and must run only at the moment of navigation.
-  let { user, loading, error, isAuthenticated, logout } = useAuth();
-
-  // If theme is switchable in App.tsx, we can implement theme toggling like this:
-  // const { theme, toggleTheme } = useTheme();
+  const { user, isAuthenticated, logout } = useAuth();
+  const [query, setQuery] = useState("");
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<{
+    state: "idle" | "processing" | "authorizing" | "success" | "error";
+    message: string;
+    reference?: string;
+  }>({ state: "idle", message: "" });
+  const [selectedPaperId, setSelectedPaperId] = useState<number | null>(null);
+  const catalogue = trpc.catalogue.useQuery({ search: query });
+  const initializePayment = trpc.student.initializePayment.useMutation();
+  const claimFreePaper = trpc.student.claimFreePaper.useMutation();
+  const paymentCheck = trpc.student.paymentStatus.useQuery(
+    { reference: paymentStatus.reference ?? "" },
+    {
+      enabled:
+        Boolean(paymentStatus.reference) &&
+        paymentStatus.state === "authorizing",
+      refetchInterval: 4000,
+    }
+  );
+  useEffect(() => {
+    if (
+      paymentCheck.data?.status === "paid" &&
+      paymentStatus.state === "authorizing"
+    ) {
+      setSelectedPaperId(null);
+      setPaymentStatus(current => ({
+        ...current,
+        state: "success",
+        message:
+          "Payment confirmed. Your paper is now available in My Library.",
+      }));
+    }
+    if (
+      ["failed", "cancelled"].includes(paymentCheck.data?.status ?? "") &&
+      paymentStatus.state === "authorizing"
+    )
+      setPaymentStatus(current => ({
+        ...current,
+        state: "error",
+        message:
+          "Paystack did not confirm this payment. You can retry checkout safely.",
+      }));
+  }, [paymentCheck.data?.status, paymentStatus.state]);
+  const filteredPapers = useMemo(() => {
+    const live = catalogue.data ?? [];
+    return live.map(p => ({
+      id: p.legacyId,
+      code: `${p.course} · ${p.cycle}`,
+      title: p.title,
+      unit: p.unit,
+      category: p.course,
+      level: p.level,
+      cycle: p.cycle,
+      price: Number(p.priceKes),
+      accessMode: p.accessMode,
+      accent: "sage",
+      description:
+        p.description ?? "Secure examination paper for focused revision.",
+    }));
+  }, [catalogue.data]);
+  const selectedPaper = filteredPapers.find(
+    paper => paper.id === selectedPaperId
+  );
+  const buy = (paperId: number) => {
+    if (!isAuthenticated) return startLogin();
+    const paper = catalogue.data?.find(item => item.legacyId === paperId);
+    if (!paper)
+      return setPaymentStatus({
+        state: "error",
+        message:
+          "This paper is no longer available. Please refresh and try again.",
+      });
+    if (paper.accessMode === "free" || Number(paper.priceKes) === 0) {
+      setPaymentStatus({
+        state: "processing",
+        message: "Adding this free paper to your library…",
+      });
+      return claimFreePaper.mutate(
+        { paperId },
+        {
+          onSuccess: () => {
+            setSelectedPaperId(null);
+            setPaymentStatus({
+              state: "success",
+              message:
+                "Free paper added to your library. Open your account to download it.",
+            });
+          },
+          onError: error =>
+            setPaymentStatus({
+              state: "error",
+              message:
+                error.message ||
+                "We could not add this free paper. Please try again.",
+            }),
+        }
+      );
+    }
+    setPaymentStatus({
+      state: "processing",
+      message: "Preparing secure Paystack checkout…",
+    });
+    initializePayment.mutate(
+      { paperId },
+      {
+        onSuccess: result => {
+          setPaymentStatus({
+            state: "processing",
+            message: "Redirecting you to Paystack’s secure checkout…",
+            reference: result.reference,
+          });
+          window.location.assign(result.authorizationUrl);
+        },
+        onError: error =>
+          setPaymentStatus({
+            state: "error",
+            message:
+              error.message || "We could not start checkout. Please try again.",
+          }),
+      }
+    );
+  };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen bg-[#f7f8f6] text-[#19312c]">
+      <header className="sticky top-0 z-30 border-b border-[#dce6e1] bg-white/95 shadow-[0_1px_0_rgba(29,81,70,0.03)] backdrop-blur-xl">
+        <div className="container flex h-[76px] items-center justify-between gap-6">
+          <a href="/" className="flex items-center gap-3">
+            <div className="grid h-11 w-11 place-items-center rounded-2xl bg-[#1d5146] text-[#e8c979] shadow-lg shadow-[#1d5146]/15">
+              <BookOpen size={23} strokeWidth={1.8} />
+            </div>
+            <div>
+              <div className="font-serif text-xl font-semibold tracking-tight text-[#163d35]">
+                Exam<span className="text-[#bb8a2e]">Vault</span>
+              </div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#78938a]">
+                EXAMINATION PAPER LIBRARY
+              </div>
+            </div>
+          </a>
+          <nav className="hidden items-center gap-8 text-sm font-medium text-[#547068] md:flex">
+            <a className="text-[#153c34]" href="#catalogue">
+              Catalogue
+            </a>
+            <a href="#how-it-works">How it works</a>
+            <a href="#support">Support</a>
+          </nav>
+          <div className="hidden items-center gap-3 md:flex">
+            {isAuthenticated ? (
+              <>
+                <Link
+                  href={user?.role === "admin" ? "/admin" : "/account"}
+                  className="inline-flex h-10 items-center gap-2 rounded-full border border-[#c8d9d2] px-4 text-sm font-medium text-[#1d5146] transition hover:bg-[#e8f1ed]"
+                >
+                  <LayoutDashboard size={16} /> View dashboard
+                </Link>
+                <Button
+                  variant="ghost"
+                  className="rounded-full"
+                  onClick={() => logout()}
+                >
+                  Sign out
+                </Button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="inline-flex h-10 items-center rounded-full px-4 text-sm font-medium text-[#1d5146] hover:bg-[#e8f1ed]"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  href="/create-account"
+                  className="inline-flex h-10 items-center gap-2 rounded-full bg-[#1d5146] px-5 text-sm font-medium text-white hover:bg-[#153c34]"
+                >
+                  Create account <ChevronRight size={16} />
+                </Link>
+              </>
+            )}
+          </div>
+          <button
+            className="rounded-xl p-2 md:hidden"
+            onClick={() => setMobileOpen(!mobileOpen)}
+            aria-label="Toggle navigation"
+          >
+            {mobileOpen ? <X /> : <Menu />}
+          </button>
+        </div>
+        {mobileOpen && (
+          <div className="border-t border-[#dce6e1] bg-white px-5 py-4 md:hidden">
+            <div className="flex flex-col gap-4 text-sm font-medium">
+              <a href="#catalogue" onClick={() => setMobileOpen(false)}>
+                Catalogue
+              </a>
+              <a href="#how-it-works" onClick={() => setMobileOpen(false)}>
+                How it works
+              </a>
+              {isAuthenticated ? (
+                <div className="flex flex-col gap-3 border-t border-[#e8efeb] pt-4">
+                  <Link
+                    href={user?.role === "admin" ? "/admin" : "/account"}
+                    className="inline-flex h-10 items-center gap-2 rounded-full bg-[#1d5146] px-4 text-white"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <LayoutDashboard size={16} /> View dashboard
+                  </Link>
+                  <button
+                    className="text-left text-[#718780]"
+                    onClick={() => logout()}
+                  >
+                    Sign out
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3 border-t border-[#e8efeb] pt-4">
+                  <Link
+                    href="/login"
+                    className="text-left text-[#1d5146]"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    href="/create-account"
+                    className="inline-flex h-10 items-center justify-center rounded-full bg-[#1d5146] text-white"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    Create account <ChevronRight size={16} className="ml-1" />
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </header>
+
       <main>
-        {/* Example: lucide-react for icons */}
-        <Loader2 className="animate-spin" />
-        Example Page
-        {/* Example: Streamdown for markdown rendering */}
-        <Streamdown>Any **markdown** content</Streamdown>
-        <Button variant="default">Example Button</Button>
+        <section className="relative overflow-hidden border-b border-[#dce6e1] bg-[#edf4f0]">
+          <div className="absolute -right-24 -top-28 h-80 w-80 rounded-full bg-[#dbece3] blur-2xl" />
+          <div className="container relative grid gap-12 py-16 md:grid-cols-[1.1fr_.9fr] md:items-center md:py-24">
+            <div>
+              <Badge className="mb-6 border-0 bg-[#dcebe4] px-3 py-1.5 text-[#1d604f]">
+                <Sparkles size={14} className="mr-1.5" /> Curated revision
+                resources
+              </Badge>
+              <h1 className="max-w-3xl font-serif text-5xl font-semibold leading-[1.03] tracking-[-0.045em] text-[#153c34] md:text-7xl">
+                Study with clarity.
+                <br />
+                <span className="text-[#b88327]">Arrive prepared.</span>
+              </h1>
+              <p className="mt-6 max-w-xl text-lg leading-8 text-[#5c766e]">
+                Find trusted examination papers for your course, unlock them
+                securely, and keep every purchased resource in one personal
+                library.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <a href="#catalogue">
+                  <Button
+                    size="lg"
+                    className="rounded-full bg-[#1d5146] px-6 hover:bg-[#153c34]"
+                  >
+                    Explore papers <ChevronRight size={17} />
+                  </Button>
+                </a>
+                <a href="#how-it-works">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="rounded-full border-[#bcd2c8] bg-transparent px-6 text-[#1d5146]"
+                  >
+                    How it works
+                  </Button>
+                </a>
+              </div>
+              {isAuthenticated ? (
+                <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-[#c9ddd4] bg-white/70 p-3 text-sm text-[#668078] shadow-sm">
+                  <span className="px-1 font-medium">
+                    Your library is ready.
+                  </span>
+                  <Link
+                    href={user?.role === "admin" ? "/admin" : "/account"}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[#1d5146] px-4 font-semibold text-white transition hover:bg-[#153c34]"
+                  >
+                    <LayoutDashboard size={14} /> View dashboard
+                  </Link>
+                </div>
+              ) : (
+                <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-[#d3e4db] bg-white/70 p-3 text-sm text-[#668078] shadow-sm">
+                  <span className="px-1 font-medium">Ready to begin?</span>
+                  <Link
+                    href="/login"
+                    className="inline-flex h-9 items-center rounded-full px-3 font-semibold text-[#1d5146] transition hover:bg-[#e8f1ed]"
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    href="/create-account"
+                    className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[#1d5146] px-4 font-semibold text-white transition hover:bg-[#153c34]"
+                  >
+                    Create account <ChevronRight size={14} />
+                  </Link>
+                </div>
+              )}
+              <div className="mt-9 flex flex-wrap gap-6 text-sm text-[#668078]">
+                <span className="flex items-center gap-2">
+                  <ShieldCheck size={17} className="text-[#2f806a]" />{" "}
+                  Authenticated access
+                </span>
+                <span className="flex items-center gap-2">
+                  <LockKeyhole size={16} className="text-[#2f806a]" /> Protected
+                  downloads
+                </span>
+              </div>
+            </div>
+            <div className="relative mx-auto w-full max-w-[430px]">
+              <div className="absolute -inset-3 rounded-[2rem] border border-[#c7ded4]" />
+              <div className="relative rounded-[1.7rem] bg-[#183f37] p-7 text-[#f1f7f3] shadow-2xl shadow-[#1b5145]/20">
+                <div className="flex items-center justify-between text-xs text-[#aac8bd]">
+                  <span>STUDENT LIBRARY</span>
+                  <span className="rounded-full bg-white/10 px-2.5 py-1">
+                    Secure
+                  </span>
+                </div>
+                <div className="mt-12 font-serif text-3xl leading-tight">
+                  Your next
+                  <br />
+                  <em className="text-[#e6c46f]">breakthrough</em>
+                  <br />
+                  starts here.
+                </div>
+                <div className="mt-12 rounded-2xl bg-white/10 p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="grid h-10 w-10 place-items-center rounded-xl bg-[#e1c16d] text-[#193b34]">
+                      <FileText size={19} />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-semibold">
+                        Purchased paper
+                      </div>
+                      <div className="mt-1 text-xs text-[#b2cec2]">
+                        Unlocked · PDF resource
+                      </div>
+                    </div>
+                    <Download size={18} className="ml-auto text-[#e6c46f]" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="catalogue" className="container py-16 md:py-20">
+          <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
+            <div>
+              <p className="section-eyebrow">The catalogue</p>
+              <h2 className="mt-2 font-serif text-4xl font-semibold tracking-tight text-[#173e35]">
+                Find your paper
+              </h2>
+              <p className="mt-3 max-w-lg text-[#6a8179]">
+                Search by subject, unit, level, or category. Availability is
+                clearly marked before you pay.
+              </p>
+            </div>
+            <div className="relative w-full md:w-80">
+              <Search
+                size={18}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-[#87a097]"
+              />
+              <input
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder="Search papers"
+                className="h-12 w-full rounded-full border border-[#cdded7] bg-white pl-11 pr-4 text-sm outline-none transition focus:border-[#4d8978] focus:ring-4 focus:ring-[#4d8978]/10"
+              />
+            </div>
+          </div>
+          {paymentStatus.state !== "idle" && (
+            <div
+              className={`mt-6 flex items-start gap-3 rounded-2xl border p-4 text-sm ${paymentStatus.state === "error" ? "border-[#efc8c5] bg-[#fff4f3] text-[#a44e49]" : paymentStatus.state === "success" ? "border-[#b9ddc7] bg-[#eef9f1] text-[#327452]" : "border-[#d8c47d] bg-[#fff9e8] text-[#7a5b16]"}`}
+              role="status"
+              aria-live="polite"
+            >
+              {paymentStatus.state === "processing" && (
+                <Loader2 className="mt-0.5 h-5 w-5 shrink-0 animate-spin" />
+              )}
+              {paymentStatus.state === "authorizing" && (
+                <Clock3 className="mt-0.5 h-5 w-5 shrink-0 animate-pulse" />
+              )}
+              {paymentStatus.state === "success" && (
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
+              )}
+              {paymentStatus.state === "error" && (
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="font-semibold">
+                  {paymentStatus.state === "processing"
+                    ? "Preparing checkout"
+                    : paymentStatus.state === "authorizing"
+                      ? "Redirecting to secure checkout"
+                      : paymentStatus.state === "success"
+                        ? "Payment status received"
+                        : "Checkout needs attention"}
+                </div>
+                <div className="mt-1 leading-6">{paymentStatus.message}</div>
+                {paymentStatus.reference && (
+                  <div className="mt-2 space-y-2 font-mono text-xs">
+                    <div>Reference: {paymentStatus.reference}</div>
+                    <a
+                      href={`/payment-result?reference=${encodeURIComponent(paymentStatus.reference)}`}
+                      className="inline-flex font-sans font-semibold underline underline-offset-4"
+                    >
+                      Open payment result
+                    </a>
+                  </div>
+                )}
+                {paymentStatus.state === "error" && (
+                  <button
+                    className="mt-3 rounded-full border border-current px-3 py-1.5 text-xs font-semibold"
+                    onClick={() =>
+                      setPaymentStatus({ state: "idle", message: "" })
+                    }
+                  >
+                    Dismiss and retry
+                  </button>
+                )}
+              </div>
+              <button
+                aria-label="Dismiss payment status"
+                className="text-current/60 hover:text-current"
+                onClick={() => setPaymentStatus({ state: "idle", message: "" })}
+              >
+                <X size={16} />
+              </button>
+            </div>
+          )}
+          {selectedPaper && (
+            <div
+              className="mt-8 rounded-3xl border border-[#c9ddd4] bg-[#edf6f1] p-5 shadow-sm"
+              role="dialog"
+              aria-modal="false"
+              aria-label={`Paper details for ${selectedPaper.title}`}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-[#6b8f83]">
+                    Paper details
+                  </p>
+                  <h3 className="mt-2 font-serif text-2xl font-semibold text-[#173e35]">
+                    {selectedPaper.title}
+                  </h3>
+                  <p className="mt-2 text-sm text-[#648078]">
+                    {selectedPaper.code} · {selectedPaper.unit} ·{" "}
+                    {selectedPaper.level}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="rounded-full p-2 text-[#5d7b71] transition hover:bg-white"
+                  onClick={() => setSelectedPaperId(null)}
+                  aria-label="Close paper details"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <p className="mt-4 max-w-2xl text-sm leading-6 text-[#5f786f]">
+                {selectedPaper.description}
+              </p>
+              <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[#c9ddd4] pt-4">
+                <div>
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-[#6b8f83]">
+                    {selectedPaper.accessMode === "free" ||
+                    selectedPaper.price === 0
+                      ? "Access"
+                      : "Price"}
+                  </div>
+                  <div className="mt-1 font-semibold text-[#1d5146]">
+                    {selectedPaper.accessMode === "free" ||
+                    selectedPaper.price === 0
+                      ? "Free"
+                      : `KES ${selectedPaper.price.toLocaleString()}`}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    className="rounded-full border-[#b8d1c5] bg-white/70 text-[#1d5146]"
+                    onClick={() => setSelectedPaperId(null)}
+                  >
+                    Close
+                  </Button>
+                  <Button
+                    className="rounded-full bg-[#1d5146] hover:bg-[#153c34]"
+                    onClick={() => buy(selectedPaper.id)}
+                    disabled={
+                      initializePayment.isPending || claimFreePaper.isPending
+                    }
+                  >
+                    {selectedPaper.accessMode === "free" ||
+                    selectedPaper.price === 0
+                      ? "Add to library"
+                      : "Continue to payment"}{" "}
+                    <ChevronRight size={15} />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {filteredPapers.map(paper => (
+              <article
+                key={paper.id}
+                className="group flex flex-col rounded-3xl border border-[#dce7e1] bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-[#1d5146]/8"
+              >
+                <div
+                  className={`grid h-14 w-14 place-items-center rounded-2xl ${accentMap[paper.accent]}`}
+                >
+                  <FileText size={24} strokeWidth={1.6} />
+                </div>
+                <div className="mt-7 flex-1">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.17em] text-[#94aaa2]">
+                    {paper.code}
+                  </div>
+                  <h3 className="mt-2 font-serif text-xl font-semibold leading-tight text-[#173e35]">
+                    {paper.title}
+                  </h3>
+                  <p className="mt-2 text-xs font-medium text-[#709087]">
+                    {paper.unit} · {paper.level}
+                  </p>
+                  <p className="mt-4 text-sm leading-6 text-[#718780]">
+                    {paper.description}
+                  </p>
+                </div>
+                <div className="mt-6 flex items-center justify-between border-t border-[#e8efeb] pt-4">
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-[#9aaca6]">
+                      {paper.accessMode === "free" || paper.price === 0
+                        ? "Access"
+                        : "Price"}
+                    </div>
+                    <div className="mt-0.5 font-semibold text-[#1d5146]">
+                      {paper.accessMode === "free" || paper.price === 0
+                        ? "Free"
+                        : `KES ${paper.price.toLocaleString()}`}
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => setSelectedPaperId(paper.id)}
+                    size="sm"
+                    className="rounded-full bg-[#1d5146] hover:bg-[#153c34]"
+                  >
+                    {paper.accessMode === "free" || paper.price === 0
+                      ? "View free paper"
+                      : "View paper"}{" "}
+                    <ChevronRight size={14} />
+                  </Button>
+                </div>
+              </article>
+            ))}
+          </div>
+          {catalogue.isLoading ? (
+            <div
+              role="status"
+              className="rounded-3xl border border-dashed border-[#cdded7] py-16 text-center text-[#6a8179]"
+            >
+              Loading published papers…
+            </div>
+          ) : catalogue.error ? (
+            <div
+              role="alert"
+              className="rounded-3xl border border-[#efc8c5] bg-[#fff4f3] py-16 text-center text-[#a44e49]"
+            >
+              We couldn’t load the catalogue right now. Please refresh and try
+              again.
+            </div>
+          ) : (
+            filteredPapers.length === 0 && (
+              <div className="rounded-3xl border border-dashed border-[#cdded7] py-16 text-center text-[#6a8179]">
+                No papers are published yet. Check back soon.
+              </div>
+            )
+          )}
+        </section>
+
+        <section
+          id="how-it-works"
+          className="border-y border-[#dce7e1] bg-white"
+        >
+          <div className="container py-16 md:py-20">
+            <div className="grid gap-10 md:grid-cols-[.8fr_1.2fr] md:items-start">
+              <div>
+                <p className="section-eyebrow">Simple by design</p>
+                <h2 className="mt-2 font-serif text-4xl font-semibold tracking-tight text-[#173e35]">
+                  From search to study in minutes.
+                </h2>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="step-card">
+                  <span>01</span>
+                  <h3>Choose</h3>
+                  <p>Find the right course, level, cycle, and unit.</p>
+                </div>
+                <div className="step-card">
+                  <span>02</span>
+                  <h3>Pay securely</h3>
+                  <p>Complete payment securely on Paystack.</p>
+                </div>
+                <div className="step-card">
+                  <span>03</span>
+                  <h3>Access</h3>
+                  <p>Your paper unlocks in your authenticated library.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section id="support" className="container py-12">
+          <div className="flex flex-col justify-between gap-5 rounded-3xl bg-[#e8f1ed] p-7 md:flex-row md:items-center md:p-9">
+            <div>
+              <div className="flex items-center gap-2 text-sm font-semibold text-[#1d604f]">
+                <Clock3 size={16} /> Need help?
+              </div>
+              <h2 className="mt-2 font-serif text-2xl font-semibold text-[#173e35]">
+                We keep your study journey focused.
+              </h2>
+              <p className="mt-2 text-sm text-[#648078]">
+                For account or payment support, contact the administrator with
+                your payment reference.
+              </p>
+            </div>
+            <a
+              href="https://wa.me/254116553618?text=Hello%20ExamVault%20support%2C%20I%20need%20help%20with%20the%20portal."
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Contact ExamVault support on WhatsApp at plus 254 116 553 618"
+              className="inline-flex w-fit items-center gap-2 rounded-full border border-[#b8d1c5] px-5 py-2.5 text-sm font-semibold text-[#1d5146] transition hover:-translate-y-0.5 hover:bg-white hover:shadow-sm"
+            >
+              <MessageCircle size={17} /> WhatsApp support
+            </a>
+          </div>
+        </section>
       </main>
+      <footer className="border-t border-[#dce7e1] bg-[#153c34] text-[#c2d9cf]">
+        <div className="container flex flex-col gap-4 py-8 text-sm md:flex-row md:items-center md:justify-between">
+          <div className="font-serif text-lg text-white">
+            Exam<span className="text-[#e6c46f]">Vault</span>
+          </div>
+          <div className="text-xs text-[#91b0a4]">
+            Only authorized examination materials may be uploaded and
+            distributed.
+          </div>
+          <div className="text-xs text-[#91b0a4]">© 2026 ExamVault</div>
+          <div className="text-xs text-[#91b0a4]">
+            Powered by{" "}
+            <span className="font-semibold text-[#d6e8df]">Lee Tech</span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
