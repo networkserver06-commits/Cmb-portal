@@ -1089,11 +1089,11 @@ function AccountDashboard({
                 for your account.
               </p>
               <a
-                href="https://wa.me/254116553618?text=Hello%20ExamVault%20support%2C%20I%20need%20help%20with%20my%20account."
+                href="https://wa.me/254116553618?text=Hello%20ScholarShelf%20support%2C%20I%20need%20help%20with%20my%20account."
                 target="_blank"
                 rel="noreferrer"
                 className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#1d5146] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#153c34]"
-                aria-label="Contact ExamVault support on WhatsApp at plus 254 116 553 618"
+                aria-label="Contact ScholarShelf support on WhatsApp at plus 254 116 553 618"
               >
                 <LifeBuoy size={16} /> Contact WhatsApp support
               </a>
@@ -1391,7 +1391,7 @@ export default function Account({
       </header>
       <main className="container grid max-w-5xl gap-10 py-12 md:grid-cols-[.85fr_1.15fr] md:items-center md:py-20">
         <section className="hidden md:block account-reveal">
-          <p className="section-eyebrow">ExamVault account</p>
+          <p className="section-eyebrow">ScholarShelf account</p>
           <h1 className="mt-3 max-w-md font-serif text-5xl font-semibold leading-tight text-[#173e35]">
             Keep every paper in one trusted library.
           </h1>

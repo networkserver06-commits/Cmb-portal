@@ -1,0 +1,37 @@
+name: Validate Git configuration
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  git-config:
+    name: Validate commit identity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Validate commit identities
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -eu
+          zero="0000000000000000000000000000000000000000"
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            range="$BASE_SHA..$CURRENT_SHA"
+          elif [ -n "${BEFORE_SHA:-}" ] && [ "$BEFORE_SHA" != "$zero" ]; then
+            range="$BEFORE_SHA..$CURRENT_SHA"
+          else
+            range="$CURRENT_SHA"
+          fi
+          node scripts/validate-git-config.mjs --range "$range"

@@ -226,6 +226,43 @@ function AdminWorkspace() {
           </Button>
         </div>
 
+        <section
+          aria-label="Administrator quick actions"
+          className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5"
+        >
+          {[
+            ["Upload catalogue paper", "admin-controls", "catalogue", Plus],
+            [
+              "Review student submissions",
+              "admin-operations",
+              "submissions",
+              FileText,
+            ],
+            ["Review payments", "admin-operations", "payments", CreditCard],
+            ["Open storage", "storage-management", "storage", ArrowUpRight],
+            [
+              "Check maintenance",
+              "admin-maintenance",
+              "maintenance",
+              ShieldCheck,
+            ],
+          ].map(([label, target, tab, Icon]) => (
+            <button
+              key={label as string}
+              type="button"
+              onClick={() => jumpTo(target as string, tab as string)}
+              className="group flex items-center gap-3 rounded-2xl border border-[#dfe9e3] bg-white p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#b8d8c8] hover:shadow-md"
+            >
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#e8f1ed] text-[#2d7965]">
+                <Icon size={16} />
+              </span>
+              <span className="min-w-0 text-xs font-semibold text-[#274d43]">
+                {label as string}
+              </span>
+            </button>
+          ))}
+        </section>
+
         <div
           id="admin-overview"
           className={`scroll-mt-6 mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 ${activeSection !== "overview" ? "hidden" : ""}`}

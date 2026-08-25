@@ -18,7 +18,7 @@ describe("Resend credentials", () => {
       body: JSON.stringify({
         from: sender!,
         to: ["not-an-email"],
-        subject: "ExamVault credential validation",
+        subject: "ScholarShelf credential validation",
         html: "Credential validation only; this message must not be sent.",
       }),
     });

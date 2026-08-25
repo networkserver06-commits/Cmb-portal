@@ -1,4 +1,4 @@
-# ExamVault Production Launch Checklist
+# ScholarShelf Production Launch Checklist
 
 Complete this checklist with test credentials before enabling live payments. The portal’s persistent records and uploaded document bytes are stored in MongoDB and GridFS; payment collection runs on Paystack-hosted checkout.
 

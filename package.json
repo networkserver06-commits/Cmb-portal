@@ -10,6 +10,8 @@
     "check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest run",
+    "validate:git": "node scripts/validate-git-config.mjs",
+    "prepare": "node scripts/install-git-hooks.mjs",
     "verify:launch": "node scripts/verify-launch.mjs",
     "db:push": "drizzle-kit generate && drizzle-kit migrate"
   },

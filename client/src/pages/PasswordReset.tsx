@@ -69,7 +69,7 @@ function ResetHeader({ completion }: { completion: boolean }) {
       </h2>
       <p className="mt-2 text-sm leading-6 text-[#718780]">
         {completion
-          ? "Set a fresh password for your ExamVault student account."
+          ? "Set a fresh password for your ScholarShelf student account."
           : "Enter your account email and we’ll help you securely get back in."}
       </p>
     </div>

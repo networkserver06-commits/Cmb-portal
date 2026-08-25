@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This guide deploys the upgraded ExamVault portal on Vercel while keeping MongoDB as the persistent system of record for portal data and GridFS as the store for new document bytes. The supplied `api/index.ts` Vercel function builds the Express application, and `vercel.json` routes `/api/*` traffic to that function while preserving client-side routing for direct visits.
+This guide deploys the upgraded ScholarShelf portal on Vercel while keeping MongoDB as the persistent system of record for portal data and GridFS as the store for new document bytes. The supplied `api/index.ts` Vercel function builds the Express application, and `vercel.json` routes `/api/*` traffic to that function while preserving client-side routing for direct visits.
 
 > The portal accepts document uploads up to **4 MiB**. This intentionally stays below Vercel Functions’ 4.5 MB request/response payload boundary and avoids platform-level request-size failures. [1]
 

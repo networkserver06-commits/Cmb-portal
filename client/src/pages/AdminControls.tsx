@@ -237,10 +237,11 @@ export default function AdminControls() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-serif text-xl font-semibold text-[#173e35]">
-              Catalogue controls
+              Catalogue upload station
             </h2>
             <p className="mt-1 text-xs text-[#82958e]">
-              Add a paper and control availability.
+              Administrator-only upload for papers that belong in the public
+              catalogue. Student submissions are handled in Operations.
             </p>
           </div>
           <Plus size={19} className="text-[#4b8876]" />
@@ -322,7 +323,7 @@ export default function AdminControls() {
             ? "Uploading…"
             : createPaper.isPending
               ? "Saving…"
-              : "Upload & save paper"}
+              : "Upload catalogue paper"}
         </Button>
         {paperFeedback && (
           <p
@@ -372,11 +373,11 @@ export default function AdminControls() {
               <FileUp size={15} /> Posts studio
             </div>
             <h2 className="mt-2 font-serif text-2xl font-semibold">
-              Publish a document
+              Administrator document publisher
             </h2>
             <p className="mt-2 text-xs leading-5 text-[#b5cec2]">
-              Upload a PDF or supported office document and choose whether
-              learners access it free or through Paystack checkout.
+              Add an administrator-managed catalogue resource. This area does
+              not accept student submissions.
             </p>
           </div>
           <Badge className="border-0 bg-white/10 text-[#d8ebe2]">
@@ -522,7 +523,7 @@ export default function AdminControls() {
             ? "Preparing…"
             : publishPost.isPending
               ? "Publishing…"
-              : "Publish post"}
+              : "Publish catalogue update"}
         </Button>
       </div>
 

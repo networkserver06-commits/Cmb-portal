@@ -95,9 +95,9 @@ async function deliverEmailVerification(email: string, rawToken: string) {
     body: JSON.stringify({
       from: normalizeEmailSender(ENV.passwordResetFromEmail),
       to: [email],
-      subject: "Verify your ExamVault email",
-      html: `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#19312c"><h2>Verify your ExamVault email</h2><p>Confirm your email within 24 hours to activate your ExamVault account.</p><p><a href="${verifyUrl}" style="color:#1d5146;font-weight:700">Verify email address</a></p></div>`,
-      text: `Verify your ExamVault email: ${verifyUrl}\n\nThis link expires in 24 hours.`,
+      subject: "Verify your ScholarShelf email",
+      html: `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#19312c"><h2>Verify your ScholarShelf email</h2><p>Confirm your email within 24 hours to activate your ScholarShelf account.</p><p><a href="${verifyUrl}" style="color:#1d5146;font-weight:700">Verify email address</a></p></div>`,
+      text: `Verify your ScholarShelf email: ${verifyUrl}\n\nThis link expires in 24 hours.`,
     }),
   });
   if (!response.ok) {
@@ -150,9 +150,9 @@ async function deliverPasswordResetEmail(email: string, rawToken: string) {
     body: JSON.stringify({
       from: normalizeEmailSender(ENV.passwordResetFromEmail),
       to: [email],
-      subject: "Reset your ExamVault password",
-      html: `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#19312c"><h2>Reset your ExamVault password</h2><p>This secure link expires in 30 minutes and can only be used once.</p><p><a href="${resetUrl}" style="color:#1d5146;font-weight:700">Choose a new password</a></p><p>If you did not request this, you can safely ignore this email.</p></div>`,
-      text: `Reset your ExamVault password: ${resetUrl}\n\nThis secure link expires in 30 minutes and can only be used once.`,
+      subject: "Reset your ScholarShelf password",
+      html: `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#19312c"><h2>Reset your ScholarShelf password</h2><p>This secure link expires in 30 minutes and can only be used once.</p><p><a href="${resetUrl}" style="color:#1d5146;font-weight:700">Choose a new password</a></p><p>If you did not request this, you can safely ignore this email.</p></div>`,
+      text: `Reset your ScholarShelf password: ${resetUrl}\n\nThis secure link expires in 30 minutes and can only be used once.`,
     }),
   });
   if (!response.ok) {

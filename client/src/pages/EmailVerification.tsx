@@ -60,7 +60,7 @@ export default function EmailVerification() {
     missing: {
       eyebrow: "Verification link missing",
       title: "Open the link from your email.",
-      body: "This page needs the secure token included in your ExamVault verification email.",
+      body: "This page needs the secure token included in your ScholarShelf verification email.",
       action: "Back to sign in",
     },
     pending: {

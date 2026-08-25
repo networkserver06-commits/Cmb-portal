@@ -1,6 +1,6 @@
-# ExamVault Portal
+# ScholarShelf Portal
 
-ExamVault is a role-based examination-paper platform for authorized learning materials. It retains the public catalogue, protected student library, submission workflow, wallet, Paystack payment records, administrator workspace, MongoDB/GridFS storage, and server-side access checks that protect every download and management action.
+ScholarShelf is a role-based examination-paper platform for authorized learning materials. It retains the public catalogue, protected student library, submission workflow, wallet, Paystack payment records, administrator workspace, MongoDB/GridFS storage, and server-side access checks that protect every download and management action.
 
 ## Core Workflows
 

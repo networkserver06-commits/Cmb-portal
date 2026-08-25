@@ -15,7 +15,7 @@ describe("homepage support and credit surfaces", () => {
   it("keeps an accessible WhatsApp support link for the configured number", () => {
     expect(homeSource).toContain("https://wa.me/254116553618");
     expect(homeSource).toContain(
-      "Contact ExamVault support on WhatsApp at plus 254 116 553 618"
+      "Contact ScholarShelf support on WhatsApp at plus 254 116 553 618"
     );
     expect(homeSource).toContain('target="_blank"');
     expect(homeSource).toContain('rel="noreferrer"');

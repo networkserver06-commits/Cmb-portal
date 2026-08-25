@@ -1,18 +1,18 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import Home from "./pages/Home";
-import Admin from "./pages/Admin";
-import Library from "./pages/Library";
-import PaymentResult from "./pages/PaymentResult";
-import Account from "./pages/Account";
-import PasswordReset from "./pages/PasswordReset";
-import EmailVerification from "./pages/EmailVerification";
+const Home = lazy(() => import("./pages/Home"));
+const Admin = lazy(() => import("./pages/Admin"));
+const Library = lazy(() => import("./pages/Library"));
+const PaymentResult = lazy(() => import("./pages/PaymentResult"));
+const Account = lazy(() => import("./pages/Account"));
+const PasswordReset = lazy(() => import("./pages/PasswordReset"));
+const EmailVerification = lazy(() => import("./pages/EmailVerification"));
 
 function LoginRoute() {
   return <Account initialMode="login" />;
@@ -62,24 +62,32 @@ function Router() {
       key={location}
       className={isAccountFlow ? "account-route-transition" : undefined}
     >
-      <Switch>
-        <Route path={"/"} component={Home} />
-        <Route path={"/library"} component={Library} />
-        <Route path={"/payment-result"} component={PaymentResult} />
-        <Route path={"/login"} component={LoginRoute} />
-        <Route path={"/signup"} component={CreateAccountRoute} />
-        <Route path={"/create-account"} component={CreateAccountRoute} />
-        <Route path={"/reset-password"} component={PasswordReset} />
-        <Route path={"/verify-email"} component={EmailVerification} />
-        <Route path={"/account/login"} component={LoginRoute} />
-        <Route path={"/account/create"} component={CreateAccountRoute} />
-        <Route path={"/account"} component={AccountRoute} />
-        <Route path={"/admin"} component={Admin} />
-        <Route path={"/admin/:section"} component={Admin} />
-        <Route path={"/404"} component={NotFound} />
-        {/* Final fallback route */}
-        <Route component={NotFound} />
-      </Switch>
+      <Suspense
+        fallback={
+          <div className="grid min-h-[50vh] place-items-center bg-[#f7f8f6] p-8 text-sm text-[#58766b]">
+            Loading workspace…
+          </div>
+        }
+      >
+        <Switch>
+          <Route path={"/"} component={Home} />
+          <Route path={"/library"} component={Library} />
+          <Route path={"/payment-result"} component={PaymentResult} />
+          <Route path={"/login"} component={LoginRoute} />
+          <Route path={"/signup"} component={CreateAccountRoute} />
+          <Route path={"/create-account"} component={CreateAccountRoute} />
+          <Route path={"/reset-password"} component={PasswordReset} />
+          <Route path={"/verify-email"} component={EmailVerification} />
+          <Route path={"/account/login"} component={LoginRoute} />
+          <Route path={"/account/create"} component={CreateAccountRoute} />
+          <Route path={"/account"} component={AccountRoute} />
+          <Route path={"/admin"} component={Admin} />
+          <Route path={"/admin/:section"} component={Admin} />
+          <Route path={"/404"} component={NotFound} />
+          {/* Final fallback route */}
+          <Route component={NotFound} />
+        </Switch>
+      </Suspense>
     </div>
   );
 }

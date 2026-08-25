@@ -14,7 +14,11 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["server/**/*.test.ts", "server/**/*.spec.ts"],
+    include: [
+      "server/**/*.test.ts",
+      "server/**/*.spec.ts",
+      "scripts/**/*.test.mjs",
+    ],
     fileParallelism: false,
     maxWorkers: 1,
     minWorkers: 1,

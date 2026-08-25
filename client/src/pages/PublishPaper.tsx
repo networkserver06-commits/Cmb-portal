@@ -3,7 +3,6 @@ import { uploadPortalDocument, validatePortalDocument } from "@/lib/fileUpload";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { CheckCircle2, FileUp, Loader2, ShieldCheck } from "lucide-react";
 
 export default function PublishPaper({
@@ -15,9 +14,9 @@ export default function PublishPaper({
     title: "",
     course: "",
     level: "",
-    cycle: "",
-    unit: "",
-    paperType: "",
+    cycle: "Not specified",
+    unit: "General revision",
+    paperType: "Revision paper",
     description: "",
   });
   const [file, setFile] = useState<File | null>(null);
@@ -31,9 +30,9 @@ export default function PublishPaper({
         title: "",
         course: "",
         level: "",
-        cycle: "",
-        unit: "",
-        paperType: "",
+        cycle: "Not specified",
+        unit: "General revision",
+        paperType: "Revision paper",
         description: "",
       });
       setFile(null);
@@ -88,11 +87,11 @@ export default function PublishPaper({
         <div>
           <p className="section-eyebrow">Share for free</p>
           <h2 className="mt-1 font-serif text-2xl font-semibold text-[#173e35]">
-            Publish a paper
+            Submit a paper
           </h2>
           <p className="mt-2 max-w-xl text-sm leading-6 text-[#718780]">
-            Contribute an authorized revision resource. An administrator reviews
-            it before it appears in the public catalogue.
+            Share an authorized PDF for administrator review. We keep this form
+            focused so you can submit in under a minute.
           </p>
         </div>
         <div className="hidden rounded-xl bg-[#e5f2eb] p-3 text-[#34745f] sm:block">
@@ -130,46 +129,7 @@ export default function PublishPaper({
             placeholder="Level 5"
           />
         </label>
-        <label className="text-sm font-medium text-[#3c5d53]">
-          Cycle
-          <Input
-            required
-            value={form.cycle}
-            onChange={event => update("cycle", event.target.value)}
-            className="mt-2 rounded-xl border-[#d9e6df]"
-            placeholder="June 2025"
-          />
-        </label>
-        <label className="text-sm font-medium text-[#3c5d53]">
-          Unit
-          <Input
-            required
-            value={form.unit}
-            onChange={event => update("unit", event.target.value)}
-            className="mt-2 rounded-xl border-[#d9e6df]"
-            placeholder="Communication Skills"
-          />
-        </label>
-        <label className="text-sm font-medium text-[#3c5d53]">
-          Paper type
-          <Input
-            required
-            value={form.paperType}
-            onChange={event => update("paperType", event.target.value)}
-            className="mt-2 rounded-xl border-[#d9e6df]"
-            placeholder="Theory paper"
-          />
-        </label>
       </div>
-      <label className="mt-4 block text-sm font-medium text-[#3c5d53]">
-        Description
-        <Textarea
-          value={form.description}
-          onChange={event => update("description", event.target.value)}
-          className="mt-2 min-h-24 rounded-xl border-[#d9e6df]"
-          placeholder="Add a short description for other learners."
-        />
-      </label>
       <label className="mt-4 flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-[#b9d2c5] bg-[#f6faf7] p-4 text-sm text-[#58766b]">
         <FileUp size={19} className="text-[#4b8876]" />
         <span className="min-w-0 flex-1 truncate">
@@ -200,8 +160,8 @@ export default function PublishPaper({
           onChange={event => setAuthorized(event.target.checked)}
           className="mt-1 h-4 w-4 accent-[#1d5146]"
         />
-        I confirm that I own this material or have permission to share it, and
-        understand it will be reviewed before publication.
+        I confirm I own this material or have permission to share it. It will be
+        reviewed before appearing in the catalogue.
       </label>
       {uploading && (
         <div className="mt-4" aria-live="polite">
@@ -240,7 +200,7 @@ export default function PublishPaper({
           ? "Uploading securely…"
           : submit.isPending
             ? "Saving submission…"
-            : "Submit paper for review"}
+            : "Send for review"}
       </Button>
     </form>
   );

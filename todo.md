@@ -16,7 +16,7 @@
 - [x] Add MongoDB configuration and migration guidance for deployment.
 - [x] Add and run automated checks for authorization, persistence, upload security, and primary admin/user workflows.
 - [x] Run type, test, build, and browser verification checks.
-- [ ] Commit the verified upgrade and push it to the connected GitHub repository.
+- [x] Commit the verified upgrade and push it to the connected GitHub repository.
 - [x] Preserve Vercel serverless compatibility for API endpoints, static assets, direct client routes, and MongoDB/GridFS connection reuse.
 - [x] Validate Vercel-compatible local build output and serverless routing before GitHub push.
 - [ ] Run the Vercel CLI build using an authenticated Vercel session before release; the current sandbox token is invalid.
@@ -39,3 +39,10 @@
 - [x] Return structured JSON for oversized raw upload requests instead of Express’s default error response.
 - [x] Apply the project formatter and re-check style consistency across source, tests, configuration, and documentation.
 - [x] Make the dashboard workspace source assertion resilient to Prettier line wrapping, then rerun the complete serial suite.
+- [x] Add a pre-push Git identity validation script, local hook installation path, CI workflow, tests, and usage documentation.
+- [ ] Recheck the full MongoDB-backed regression suite after the Atlas connection timeout; distinguish infrastructure reachability from application regressions.
+- [x] Rename the public brand to ScholarShelf across the header, title, account copy, support copy, emails, and documentation.
+- [x] Simplify student publishing to essential metadata and clearly separate it from administrator catalogue uploads.
+- [x] Add administrator quick actions and explicit administrator-only upload messaging without removing existing management features.
+- [x] Keep the Git secret-pattern scan compatible with intentional malformed-email test fixtures without weakening the scan.
+- [x] Add page-level route splitting so the public catalogue loads separately from the heavier account and admin workspaces.

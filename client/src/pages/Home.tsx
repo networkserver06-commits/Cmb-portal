@@ -167,7 +167,7 @@ export default function Home() {
             </div>
             <div>
               <div className="font-serif text-xl font-semibold tracking-tight text-[#163d35]">
-                Exam<span className="text-[#bb8a2e]">Vault</span>
+                Scholar<span className="text-[#bb8a2e]">Shelf</span>
               </div>
               <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#78938a]">
                 EXAMINATION PAPER LIBRARY
@@ -667,10 +667,10 @@ export default function Home() {
               </p>
             </div>
             <a
-              href="https://wa.me/254116553618?text=Hello%20ExamVault%20support%2C%20I%20need%20help%20with%20the%20portal."
+              href="https://wa.me/254116553618?text=Hello%20ScholarShelf%20support%2C%20I%20need%20help%20with%20the%20portal."
               target="_blank"
               rel="noreferrer"
-              aria-label="Contact ExamVault support on WhatsApp at plus 254 116 553 618"
+              aria-label="Contact ScholarShelf support on WhatsApp at plus 254 116 553 618"
               className="inline-flex w-fit items-center gap-2 rounded-full border border-[#b8d1c5] px-5 py-2.5 text-sm font-semibold text-[#1d5146] transition hover:-translate-y-0.5 hover:bg-white hover:shadow-sm"
             >
               <MessageCircle size={17} /> WhatsApp support
@@ -687,7 +687,7 @@ export default function Home() {
             Only authorized examination materials may be uploaded and
             distributed.
           </div>
-          <div className="text-xs text-[#91b0a4]">© 2026 ExamVault</div>
+          <div className="text-xs text-[#91b0a4]">© 2026 ScholarShelf</div>
           <div className="text-xs text-[#91b0a4]">
             Powered by{" "}
             <span className="font-semibold text-[#d6e8df]">Lee Tech</span>
