@@ -66,7 +66,7 @@ function normalizeEmailSender(value: string) {
   return (match?.[1] ?? value).trim();
 }
 
-function publicPortalUrl(path: string) {
+export function publicPortalUrl(path: string) {
   if (!ENV.appBaseUrl) throw new Error("APP_BASE_URL is not configured");
   let base: URL;
   try {

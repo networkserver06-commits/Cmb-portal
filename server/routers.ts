@@ -19,6 +19,7 @@ import {
   resetAccountPassword,
   validatePasswordResetToken,
   verifyEmailToken,
+  publicPortalUrl,
 } from "./mongoAuth";
 import {
   mongo,
@@ -408,6 +409,9 @@ export const appRouter = router({
         if (!paper?.isAvailable || paper.accessMode === "free")
           throw new Error("This paper is free and does not require payment");
         const reference = createPaymentReference(paper.legacyId, ctx.user.id);
+        const callbackUrl = publicPortalUrl(
+          `/payment-result?reference=${encodeURIComponent(reference)}`
+        );
         const order = {
           _id: new (await import("mongodb")).ObjectId(),
           legacyId: await nextId("orders"),
@@ -425,10 +429,7 @@ export const appRouter = router({
             email: ctx.user.email ?? `${ctx.user.openId}@student.local`,
             amountKes: order.amountKes,
             reference,
-            callbackUrl: new URL(
-              `/payment-result?reference=${encodeURIComponent(reference)}`,
-              process.env.APP_BASE_URL
-            ).toString(),
+            callbackUrl,
           });
           return { reference, authorizationUrl: checkout.authorizationUrl };
         } catch (error) {
@@ -445,6 +446,9 @@ export const appRouter = router({
       .input(z.object({ amountKes: z.number().int().min(10).max(150000) }))
       .mutation(async ({ ctx, input }) => {
         const reference = createWalletTopUpReference(ctx.user.id);
+        const callbackUrl = publicPortalUrl(
+          `/account?wallet_reference=${encodeURIComponent(reference)}`
+        );
         const now = new Date();
         const topUp = {
           _id: new (await import("mongodb")).ObjectId(),
@@ -462,10 +466,7 @@ export const appRouter = router({
             email: ctx.user.email ?? `${ctx.user.openId}@student.local`,
             amountKes: input.amountKes,
             reference,
-            callbackUrl: new URL(
-              `/account?wallet_reference=${encodeURIComponent(reference)}`,
-              process.env.APP_BASE_URL
-            ).toString(),
+            callbackUrl,
           });
           return { reference, authorizationUrl: checkout.authorizationUrl };
         } catch (error) {

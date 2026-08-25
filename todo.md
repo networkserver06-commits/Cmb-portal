@@ -40,7 +40,7 @@
 - [x] Apply the project formatter and re-check style consistency across source, tests, configuration, and documentation.
 - [x] Make the dashboard workspace source assertion resilient to Prettier line wrapping, then rerun the complete serial suite.
 - [x] Add a pre-push Git identity validation script, local hook installation path, CI workflow, tests, and usage documentation.
-- [ ] Recheck the full MongoDB-backed regression suite after the Atlas connection timeout; distinguish infrastructure reachability from application regressions.
+- [x] Recheck the full MongoDB-backed regression suite after the Atlas connection timeout; distinguish infrastructure reachability from application regressions.
 - [x] Rename the public brand to ScholarShelf across the header, title, account copy, support copy, emails, and documentation.
 - [x] Simplify student publishing to essential metadata and clearly separate it from administrator catalogue uploads.
 - [x] Add administrator quick actions and explicit administrator-only upload messaging without removing existing management features.
@@ -50,3 +50,5 @@
 - [x] Remove stale post-publisher references left after consolidating administrator uploads, then rerun TypeScript validation.
 - [x] Update admin regression assertions to enforce the single-uploader dashboard design.
 - [x] Make resource type, metadata, price, description, and upload details visibly labeled, compact, and easy to scan in the unified admin form.
+- [x] Fix the wallet Paystack hosted-checkout callback URL so valid configuration redirects to Paystack and invalid configuration returns a clear actionable error.
+- [x] Add focused tests proving Paystack callback URLs are valid and malformed APP_BASE_URL values produce actionable errors.
