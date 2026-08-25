@@ -63,3 +63,4 @@
 - [x] Automatically publish approved student submissions to the main catalogue while preserving moderation and ownership records.
 - [x] Make selected-paper state behavior explicit during checkout so the selected detail context is intentionally cleared or preserved.
 - [x] Assert the paid payment-result protected download path in the account-route regression suite.
+- [x] Add an accessible confirmation modal for permanent admin paper deletion with paper name, impact warning, cancel, and final delete actions.

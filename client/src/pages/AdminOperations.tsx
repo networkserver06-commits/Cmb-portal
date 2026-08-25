@@ -4,6 +4,16 @@ import { uploadPortalDocument } from "@/lib/fileUpload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import RouteProgress from "@/components/RouteProgress";
 import {
   Check,
@@ -343,40 +353,14 @@ export default function AdminOperations() {
                   <span className="min-w-0 truncate text-xs font-semibold text-[#5b3d3b]">
                     {paper.title}
                   </span>
-                  {deleteConfirmation === paper.legacyId ? (
-                    <span className="flex shrink-0 items-center gap-2">
-                      <Button
-                        size="sm"
-                        className="rounded-full bg-[#a44e49] text-xs hover:bg-[#873c38]"
-                        disabled={deletePaper.isPending}
-                        onClick={() =>
-                          deletePaper.mutate({
-                            paperId: paper.legacyId,
-                            confirmation: "DELETE_PAPER",
-                          })
-                        }
-                      >
-                        {deletePaper.isPending ? "Removing…" : "Confirm delete"}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="rounded-full text-xs"
-                        onClick={() => setDeleteConfirmation(null)}
-                      >
-                        Cancel
-                      </Button>
-                    </span>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="shrink-0 rounded-full border-[#efc8c5] bg-transparent text-xs text-[#a44e49]"
-                      onClick={() => setDeleteConfirmation(paper.legacyId)}
-                    >
-                      Delete permanently
-                    </Button>
-                  )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="shrink-0 rounded-full border-[#efc8c5] bg-transparent text-xs text-[#a44e49]"
+                    onClick={() => setDeleteConfirmation(paper.legacyId)}
+                  >
+                    Delete permanently
+                  </Button>
                 </div>
               ))}
             </div>
@@ -470,6 +454,49 @@ export default function AdminOperations() {
           </div>
         </section>
       </div>
+      <AlertDialog
+        open={deleteConfirmation !== null}
+        onOpenChange={open => {
+          if (!open && !deletePaper.isPending) setDeleteConfirmation(null);
+        }}
+      >
+        <AlertDialogContent className="border-[#dfe9e3] bg-white text-[#173e35]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-serif text-2xl text-[#173e35]">
+              Permanently delete this paper?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="leading-6 text-[#5f786f]">
+              {papers.data?.find(paper => paper.legacyId === deleteConfirmation)
+                ?.title ?? "This paper"}{" "}
+              will be removed from the public catalogue and every user library.
+              This action cannot be undone. Payment history remains available
+              for audit.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={deletePaper.isPending}
+              className="rounded-full border-[#c8d9d2] bg-transparent text-[#1d5146]"
+            >
+              Keep paper
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deletePaper.isPending || deleteConfirmation === null}
+              className="rounded-full bg-[#a44e49] text-white hover:bg-[#873c38]"
+              onClick={event => {
+                event.preventDefault();
+                if (deleteConfirmation !== null)
+                  deletePaper.mutate({
+                    paperId: deleteConfirmation,
+                    confirmation: "DELETE_PAPER",
+                  });
+              }}
+            >
+              {deletePaper.isPending ? "Deleting…" : "Yes, delete permanently"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

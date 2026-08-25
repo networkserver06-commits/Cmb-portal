@@ -79,6 +79,10 @@ describe("role-aware administrator access", () => {
     expect(routerSource).toContain("deleteMany({ paperId: paper.legacyId })");
     expect(routerSource).toContain("unlinkPortalFile");
     expect(routerSource).toContain('eventType: "paper.permanently_deleted"');
+    expect(adminOperationsSource).toContain("<AlertDialog");
+    expect(adminOperationsSource).toContain("Permanently delete this paper?");
+    expect(adminOperationsSource).toContain("Keep paper");
+    expect(adminOperationsSource).toContain("Yes, delete permanently");
   });
 
   it("publishes approved submissions and refreshes the public catalogue", () => {
