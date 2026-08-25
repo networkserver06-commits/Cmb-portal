@@ -37,7 +37,7 @@ describe("Paystack payment safeguards", () => {
     const oldSecret = process.env.PAYSTACK_SECRET_KEY;
     const oldPublic = process.env.VITE_PAYSTACK_PUBLIC_KEY;
     const oldFetch = globalThis.fetch;
-    process.env.PAYSTACK_SECRET_KEY = "sk_test_example_key";
+    process.env.PAYSTACK_SECRET_KEY = "sk_test_x";
     process.env.VITE_PAYSTACK_PUBLIC_KEY = "pk_test_example_key";
     globalThis.fetch = vi.fn(async () => ({
       ok: true,
@@ -54,7 +54,7 @@ describe("Paystack payment safeguards", () => {
         modeMatch: true,
         hostedCheckout: true,
       });
-      expect(JSON.stringify(result)).not.toContain("sk_test_example_key");
+      expect(JSON.stringify(result)).not.toContain("sk_test_x");
       expect(JSON.stringify(result)).not.toContain("pk_test_example_key");
     } finally {
       process.env.PAYSTACK_SECRET_KEY = oldSecret;
@@ -67,7 +67,7 @@ describe("Paystack payment safeguards", () => {
     const oldSecret = process.env.PAYSTACK_SECRET_KEY;
     const oldFetch = globalThis.fetch;
     let requestBody: any;
-    process.env.PAYSTACK_SECRET_KEY = "sk_test_example_key";
+    process.env.PAYSTACK_SECRET_KEY = "sk_test_x";
     globalThis.fetch = vi.fn(async (_url, init) => {
       requestBody = JSON.parse(String(init?.body));
       return {
@@ -113,7 +113,7 @@ describe("Paystack payment safeguards", () => {
     const oldSecret = process.env.PAYSTACK_SECRET_KEY;
     const oldFetch = globalThis.fetch;
     let requestBody: any;
-    process.env.PAYSTACK_SECRET_KEY = "sk_test_example_key";
+    process.env.PAYSTACK_SECRET_KEY = "sk_test_x";
     globalThis.fetch = vi.fn(async (_url, init) => {
       requestBody = JSON.parse(String(init?.body));
       return {
