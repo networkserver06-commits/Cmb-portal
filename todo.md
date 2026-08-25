@@ -46,3 +46,7 @@
 - [x] Add administrator quick actions and explicit administrator-only upload messaging without removing existing management features.
 - [x] Keep the Git secret-pattern scan compatible with intentional malformed-email test fixtures without weakening the scan.
 - [x] Add page-level route splitting so the public catalogue loads separately from the heavier account and admin workspaces.
+- [x] Remove duplicate administrator upload surfaces and reorganize admin controls into grouped navigation without removing existing workflows.
+- [x] Remove stale post-publisher references left after consolidating administrator uploads, then rerun TypeScript validation.
+- [x] Update admin regression assertions to enforce the single-uploader dashboard design.
+- [x] Make resource type, metadata, price, description, and upload details visibly labeled, compact, and easy to scan in the unified admin form.

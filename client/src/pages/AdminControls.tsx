@@ -1,18 +1,18 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { uploadPortalDocument, validatePortalDocument } from "@/lib/fileUpload";
 import {
-  FileUp,
-  Megaphone,
-  Plus,
-  Power,
-  Save,
-  UploadCloud,
-} from "lucide-react";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { uploadPortalDocument, validatePortalDocument } from "@/lib/fileUpload";
+import { Megaphone, Plus, Power, Save, UploadCloud } from "lucide-react";
 import { toast } from "sonner";
 
 const emptyPaper = {
@@ -25,18 +25,15 @@ const emptyPaper = {
   priceKes: "",
   description: "",
 };
-const emptyPost = {
-  title: "",
-  course: "",
-  level: "",
-  cycle: "",
-  unit: "",
-  paperType: "",
-  description: "",
-  mode: "free" as "free" | "paid",
-  priceKes: "0",
-};
 const acceptedDocuments = ".pdf,.doc,.docx,.ppt,.pptx,.txt,.csv";
+const resourceFieldLabels = {
+  title: "Title",
+  course: "Course",
+  level: "Level",
+  cycle: "Cycle",
+  unit: "Unit",
+  paperType: "Paper type",
+} as const;
 
 export default function AdminControls() {
   const papers = trpc.admin.listPapers.useQuery();
@@ -65,14 +62,15 @@ export default function AdminControls() {
   const publishPost = trpc.admin.publishPost.useMutation({
     onSuccess: async () => {
       await utils.admin.listPapers.invalidate();
-      setPost(emptyPost);
-      setPostFile(null);
-      setPostFeedback({
+      setPaper(emptyPaper);
+      setPaperFile(null);
+      setPaperProgress(0);
+      setPaperFeedback({
         tone: "success",
-        text: "Post published successfully and added to the catalogue.",
+        text: "Post published to the catalogue.",
       });
       toast.success("Post published", {
-        description: "The live catalogue has been refreshed.",
+        description: "The catalogue has been refreshed.",
       });
     },
     onError: error =>
@@ -94,9 +92,9 @@ export default function AdminControls() {
       }),
   });
   const [paper, setPaper] = useState(emptyPaper);
+  const [resourceType, setResourceType] = useState<"paper" | "post">("paper");
+  const [resourceMode, setResourceMode] = useState<"free" | "paid">("paid");
   const [paperFile, setPaperFile] = useState<File | null>(null);
-  const [post, setPost] = useState(emptyPost);
-  const [postFile, setPostFile] = useState<File | null>(null);
   const [notice, setNotice] = useState({
     title: "",
     message: "",
@@ -106,41 +104,23 @@ export default function AdminControls() {
     tone: "success" | "error";
     text: string;
   } | null>(null);
-  const [postFeedback, setPostFeedback] = useState<{
-    tone: "success" | "error";
-    text: string;
-  } | null>(null);
-  const [preparingPost, setPreparingPost] = useState(false);
-  const [postProgress, setPostProgress] = useState(0);
   const [preparingPaper, setPreparingPaper] = useState(false);
   const [paperProgress, setPaperProgress] = useState(0);
   const setPaperField = (key: keyof typeof emptyPaper, value: string) =>
     setPaper(current => ({ ...current, [key]: value }));
-  const setPostField = (key: keyof typeof emptyPost, value: string) =>
-    setPost(current => ({ ...current, [key]: value }));
-  const paidPrice = Number(post.priceKes);
-
-  const handlePostFile = (file?: File) => {
-    if (!file) return;
-    const validationError = validatePortalDocument(file, "paper");
-    if (validationError) {
-      setPostFile(null);
-      setPostFeedback({ tone: "error", text: validationError });
+  const saveResource = async () => {
+    if (preparingPaper || createPaper.isPending || publishPost.isPending)
       return;
-    }
-    setPostFile(file);
-    setPostProgress(0);
-    setPostFeedback(null);
-  };
-
-  const savePaper = async () => {
-    if (preparingPaper || createPaper.isPending) return;
     if (!paperFile)
       return setPaperFeedback({
         tone: "error",
-        text: "Choose a document before saving this paper.",
+        text: "Choose a document before saving this resource.",
       });
-    if (!Number.isFinite(Number(paper.priceKes)) || Number(paper.priceKes) <= 0)
+    const priceKes = resourceMode === "free" ? 0 : Number(paper.priceKes);
+    if (
+      resourceMode === "paid" &&
+      (!Number.isFinite(priceKes) || priceKes <= 0)
+    )
       return setPaperFeedback({
         tone: "error",
         text: "Enter a positive price in KES.",
@@ -153,81 +133,31 @@ export default function AdminControls() {
         purpose: "paper",
         onProgress: setPaperProgress,
       });
-      await createPaper.mutateAsync({
-        ...paper,
-        priceKes: Number(paper.priceKes),
-        fileId: uploaded.fileId,
-      });
+      if (resourceType === "post") {
+        await publishPost.mutateAsync({
+          ...paper,
+          priceKes,
+          mode: resourceMode,
+          fileId: uploaded.fileId,
+        });
+      } else {
+        await createPaper.mutateAsync({
+          ...paper,
+          priceKes,
+          fileId: uploaded.fileId,
+        });
+      }
     } catch (error) {
       setPaperFeedback({
         tone: "error",
         text:
           error instanceof Error
             ? error.message
-            : "The paper could not be uploaded.",
+            : "The document could not be uploaded.",
       });
       setPaperProgress(0);
     } finally {
       setPreparingPaper(false);
-    }
-  };
-
-  const submitPost = async () => {
-    if (preparingPost || publishPost.isPending) return;
-    if (!postFile)
-      return setPostFeedback({
-        tone: "error",
-        text: "Choose a document before publishing.",
-      });
-    if (post.mode === "paid" && (!Number.isFinite(paidPrice) || paidPrice <= 0))
-      return setPostFeedback({
-        tone: "error",
-        text: "Paid posts need a price greater than zero.",
-      });
-    setPreparingPost(true);
-    toast.loading("Uploading post", {
-      id: "post-publish",
-      description:
-        "Uploading the document directly into secure portal storage…",
-    });
-    try {
-      const uploaded = await uploadPortalDocument({
-        file: postFile,
-        purpose: "paper",
-        onProgress: setPostProgress,
-      });
-      toast.loading("Publishing post", {
-        id: "post-publish",
-        description:
-          "Linking the GridFS document and refreshing the catalogue…",
-      });
-      await publishPost.mutateAsync({
-        ...post,
-        priceKes: post.mode === "free" ? 0 : paidPrice,
-        fileId: uploaded.fileId,
-      });
-      toast.success("Post published", {
-        id: "post-publish",
-        description: "The document is now available through the catalogue.",
-      });
-    } catch (error) {
-      toast.error("Document could not be published", {
-        id: "post-publish",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Unable to publish this document.",
-      });
-      setPostFeedback({
-        tone: "error",
-        text:
-          error instanceof Error
-            ? error.message
-            : "Unable to publish this document.",
-      });
-      setPostProgress(0);
-    } finally {
-      setPreparingPost(false);
     }
   };
 
@@ -240,40 +170,110 @@ export default function AdminControls() {
               Catalogue upload station
             </h2>
             <p className="mt-1 text-xs text-[#82958e]">
-              Administrator-only upload for papers that belong in the public
-              catalogue. Student submissions are handled in Operations.
+              One secure uploader for administrator-managed papers and catalogue
+              posts. Student submissions are handled in Operations.
             </p>
           </div>
           <Plus size={19} className="text-[#4b8876]" />
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-[#789087]">
+              Resource type
+            </label>
+            <Select
+              value={resourceType}
+              onValueChange={value => {
+                const nextType = value as "paper" | "post";
+                setResourceType(nextType);
+                if (nextType === "post" && resourceMode === "paid") {
+                  setResourceMode("free");
+                  setPaper(current => ({ ...current, priceKes: "0" }));
+                }
+              }}
+            >
+              <SelectTrigger className="h-10 rounded-xl border-[#d9e6df]">
+                <SelectValue placeholder="Choose resource type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="paper">Examination paper</SelectItem>
+                <SelectItem value="post">
+                  Catalogue post with document
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-[#789087]">
+              Access
+            </label>
+            <Select
+              value={resourceMode}
+              onValueChange={value => {
+                const mode = value as "free" | "paid";
+                setResourceMode(mode);
+                if (mode === "free")
+                  setPaper(current => ({ ...current, priceKes: "0" }));
+              }}
+            >
+              <SelectTrigger className="h-10 rounded-xl border-[#d9e6df]">
+                <SelectValue placeholder="Choose access" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="free">Free access</SelectItem>
+                <SelectItem value="paid">Paystack checkout</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           {(
-            [
-              "title",
-              "course",
-              "level",
-              "cycle",
-              "unit",
-              "paperType",
-              "priceKes",
-            ] as const
+            Object.keys(resourceFieldLabels) as Array<
+              keyof typeof resourceFieldLabels
+            >
           ).map(key => (
-            <Input
-              key={key}
-              value={paper[key]}
-              onChange={e => setPaperField(key, e.target.value)}
-              placeholder={key.replace(/([A-Z])/g, " $1")}
-              className="h-10 rounded-xl border-[#d9e6df]"
-            />
+            <div key={key}>
+              <label className="mb-2 block text-xs font-semibold text-[#58766b]">
+                {resourceFieldLabels[key]}
+              </label>
+              <Input
+                value={paper[key]}
+                onChange={e => setPaperField(key, e.target.value)}
+                placeholder={`Enter ${resourceFieldLabels[key].toLowerCase()}`}
+                className="h-10 rounded-xl border-[#d9e6df]"
+              />
+            </div>
           ))}
+          {resourceMode === "paid" && (
+            <div>
+              <label className="mb-2 block text-xs font-semibold text-[#58766b]">
+                Price (KES)
+              </label>
+              <Input
+                type="number"
+                min="1"
+                value={paper.priceKes}
+                onChange={e => setPaperField("priceKes", e.target.value)}
+                placeholder="Enter price"
+                className="h-10 rounded-xl border-[#d9e6df]"
+              />
+            </div>
+          )}
         </div>
-        <Textarea
-          value={paper.description}
-          onChange={e => setPaperField("description", e.target.value)}
-          placeholder="Short paper description"
-          className="mt-3 rounded-xl border-[#d9e6df]"
-        />
-        <label className="mt-3 flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-[#b9d2c5] bg-[#f6faf7] p-4 text-sm text-[#58766b]">
+        <div className="mt-3">
+          <label className="mb-2 block text-xs font-semibold text-[#58766b]">
+            Description{" "}
+            <span className="font-normal text-[#9aaca5]">(optional)</span>
+          </label>
+          <Textarea
+            value={paper.description}
+            onChange={e => setPaperField("description", e.target.value)}
+            placeholder="One short note for learners"
+            className="rounded-xl border-[#d9e6df]"
+          />
+        </div>
+        <div className="mt-3 text-xs font-semibold text-[#58766b]">
+          Document upload
+        </div>
+        <label className="mt-2 flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-[#b9d2c5] bg-[#f6faf7] p-4 text-sm text-[#58766b]">
           <UploadCloud size={19} className="text-[#4b8876]" />
           <span className="min-w-0 flex-1">
             <span className="block truncate font-semibold">
@@ -289,7 +289,9 @@ export default function AdminControls() {
             type="file"
             accept={acceptedDocuments}
             className="sr-only"
-            disabled={preparingPaper || createPaper.isPending}
+            disabled={
+              preparingPaper || createPaper.isPending || publishPost.isPending
+            }
             onChange={event => {
               const next = event.target.files?.[0] ?? null;
               const error = next ? validatePortalDocument(next, "paper") : null;
@@ -315,15 +317,19 @@ export default function AdminControls() {
         )}
         <Button
           className="mt-4 rounded-full bg-[#1d5146]"
-          disabled={createPaper.isPending || preparingPaper}
-          onClick={savePaper}
+          disabled={
+            createPaper.isPending || publishPost.isPending || preparingPaper
+          }
+          onClick={saveResource}
         >
           <Save size={15} />{" "}
           {preparingPaper
             ? "Uploading…"
-            : createPaper.isPending
+            : createPaper.isPending || publishPost.isPending
               ? "Saving…"
-              : "Upload catalogue paper"}
+              : resourceType === "post"
+                ? "Publish catalogue post"
+                : "Upload catalogue paper"}
         </Button>
         {paperFeedback && (
           <p
@@ -364,167 +370,6 @@ export default function AdminControls() {
             </div>
           ))}
         </div>
-      </div>
-
-      <div className="rounded-2xl border border-[#dfe9e3] bg-[#173f36] p-6 text-[#edf7f1] shadow-sm">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[#b9dccb]">
-              <FileUp size={15} /> Posts studio
-            </div>
-            <h2 className="mt-2 font-serif text-2xl font-semibold">
-              Administrator document publisher
-            </h2>
-            <p className="mt-2 text-xs leading-5 text-[#b5cec2]">
-              Add an administrator-managed catalogue resource. This area does
-              not accept student submissions.
-            </p>
-          </div>
-          <Badge className="border-0 bg-white/10 text-[#d8ebe2]">
-            Admin only
-          </Badge>
-        </div>
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          <Input
-            value={post.title}
-            onChange={e => setPostField("title", e.target.value)}
-            placeholder="Post title"
-            className="h-10 rounded-xl border-white/15 bg-white/10 text-white placeholder:text-[#9fbeb1]"
-          />
-          <Input
-            value={post.course}
-            onChange={e => setPostField("course", e.target.value)}
-            placeholder="Course"
-            className="h-10 rounded-xl border-white/15 bg-white/10 text-white placeholder:text-[#9fbeb1]"
-          />
-          <Input
-            value={post.level}
-            onChange={e => setPostField("level", e.target.value)}
-            placeholder="Level"
-            className="h-10 rounded-xl border-white/15 bg-white/10 text-white placeholder:text-[#9fbeb1]"
-          />
-          <Input
-            value={post.cycle}
-            onChange={e => setPostField("cycle", e.target.value)}
-            placeholder="Cycle"
-            className="h-10 rounded-xl border-white/15 bg-white/10 text-white placeholder:text-[#9fbeb1]"
-          />
-          <Input
-            value={post.unit}
-            onChange={e => setPostField("unit", e.target.value)}
-            placeholder="Unit"
-            className="h-10 rounded-xl border-white/15 bg-white/10 text-white placeholder:text-[#9fbeb1]"
-          />
-          <Input
-            value={post.paperType}
-            onChange={e => setPostField("paperType", e.target.value)}
-            placeholder="Document type"
-            className="h-10 rounded-xl border-white/15 bg-white/10 text-white placeholder:text-[#9fbeb1]"
-          />
-        </div>
-        <Textarea
-          value={post.description}
-          onChange={e => setPostField("description", e.target.value)}
-          placeholder="Describe this post for learners"
-          className="mt-3 rounded-xl border-white/15 bg-white/10 text-white placeholder:text-[#9fbeb1]"
-        />
-        <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr]">
-          <label
-            className={`cursor-pointer rounded-2xl border p-4 transition ${post.mode === "free" ? "border-[#e4c66f] bg-white/10" : "border-white/15 bg-white/5 hover:bg-white/10"}`}
-          >
-            <input
-              type="radio"
-              name="post-mode"
-              className="sr-only"
-              checked={post.mode === "free"}
-              onChange={() => setPost({ ...post, mode: "free", priceKes: "0" })}
-            />
-            <span className="block text-sm font-semibold">Free post</span>
-            <span className="mt-1 block text-xs text-[#b5cec2]">
-              Publish at no cost for learners.
-            </span>
-          </label>
-          <label
-            className={`cursor-pointer rounded-2xl border p-4 transition ${post.mode === "paid" ? "border-[#e4c66f] bg-white/10" : "border-white/15 bg-white/5 hover:bg-white/10"}`}
-          >
-            <input
-              type="radio"
-              name="post-mode"
-              className="sr-only"
-              checked={post.mode === "paid"}
-              onChange={() => setPost({ ...post, mode: "paid" })}
-            />
-            <span className="block text-sm font-semibold">Paid post</span>
-            <span className="mt-1 block text-xs text-[#b5cec2]">
-              Require verified Paystack payment.
-            </span>
-          </label>
-        </div>
-        {post.mode === "paid" && (
-          <Input
-            type="number"
-            min="1"
-            value={post.priceKes}
-            onChange={e => setPostField("priceKes", e.target.value)}
-            placeholder="Price in KES"
-            className="mt-3 h-10 rounded-xl border-white/15 bg-white/10 text-white placeholder:text-[#9fbeb1]"
-          />
-        )}
-        <label className="mt-3 flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-white/20 bg-white/5 p-4 transition hover:bg-white/10">
-          <UploadCloud size={19} className="shrink-0 text-[#e4c66f]" />
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-semibold">
-              {postFile
-                ? `${postFile.name} · ${(postFile.size / 1024 / 1024).toFixed(2)} MiB`
-                : "Choose a document"}
-            </span>
-            <span className="mt-1 block text-xs text-[#b5cec2]">
-              PDF, Word, PowerPoint, TXT, or CSV · max 4 MiB
-            </span>
-          </span>
-          <input
-            type="file"
-            accept={acceptedDocuments}
-            className="sr-only"
-            disabled={preparingPost || publishPost.isPending}
-            onChange={e => handlePostFile(e.target.files?.[0])}
-          />
-        </label>
-        {preparingPost && (
-          <div className="mt-3" aria-live="polite">
-            <div className="flex justify-between text-xs text-[#b9dccb]">
-              <span>Secure upload progress</span>
-              <span>{postProgress}%</span>
-            </div>
-            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-              <div
-                className="h-full rounded-full bg-[#e4c66f] transition-[width] duration-200"
-                style={{ width: `${postProgress}%` }}
-              />
-            </div>
-          </div>
-        )}
-        {postFeedback && (
-          <p
-            className={`mt-3 text-xs ${postFeedback.tone === "error" ? "text-[#ffb9b3]" : "text-[#a9e0bc]"}`}
-            role="status"
-            aria-live="polite"
-          >
-            {postFeedback.text}
-          </p>
-        )}
-        <Button
-          className="mt-4 rounded-full bg-[#e4c66f] text-[#193b34] hover:bg-[#efd581]"
-          disabled={publishPost.isPending || preparingPost}
-          onClick={submitPost}
-        >
-          <UploadCloud size={15} />{" "}
-          {preparingPost
-            ? "Preparing…"
-            : publishPost.isPending
-              ? "Publishing…"
-              : "Publish catalogue update"}
-        </Button>
       </div>
 
       <div className="rounded-2xl border border-[#dfe9e3] bg-white p-6 shadow-sm lg:col-span-2">

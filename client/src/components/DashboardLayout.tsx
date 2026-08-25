@@ -7,6 +7,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
@@ -23,6 +28,7 @@ import { useIsMobile } from "@/hooks/useMobile";
 import {
   BarChart3,
   BookOpen,
+  ChevronDown,
   FileText,
   HardDrive,
   LayoutDashboard,
@@ -38,16 +44,34 @@ import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { Button } from "./ui/button";
 
-const menuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/admin" },
-  { icon: BookOpen, label: "Papers", path: "/admin/papers" },
-  { icon: FileText, label: "Posts", path: "/admin/posts" },
-  { icon: Users, label: "Students", path: "/admin/students" },
-  { icon: WalletCards, label: "Funds", path: "/admin/funds" },
-  { icon: BarChart3, label: "Analytics", path: "/admin/analytics" },
-  { icon: Settings, label: "Settings & security", path: "/admin/settings" },
-  { icon: ShieldCheck, label: "Maintenance", path: "/admin/maintenance" },
-  { icon: HardDrive, label: "Storage", path: "/admin/storage" },
+const menuGroups = [
+  {
+    label: "Overview",
+    items: [{ icon: LayoutDashboard, label: "Dashboard", path: "/admin" }],
+  },
+  {
+    label: "Catalogue",
+    items: [
+      { icon: BookOpen, label: "Papers", path: "/admin/papers" },
+      { icon: FileText, label: "Posts", path: "/admin/posts" },
+    ],
+  },
+  {
+    label: "Learners & finance",
+    items: [
+      { icon: Users, label: "Students", path: "/admin/students" },
+      { icon: WalletCards, label: "Funds", path: "/admin/funds" },
+      { icon: BarChart3, label: "Analytics", path: "/admin/analytics" },
+    ],
+  },
+  {
+    label: "System",
+    items: [
+      { icon: HardDrive, label: "Storage", path: "/admin/storage" },
+      { icon: ShieldCheck, label: "Maintenance", path: "/admin/maintenance" },
+      { icon: Settings, label: "Settings & security", path: "/admin/settings" },
+    ],
+  },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -130,8 +154,17 @@ function DashboardLayoutContent({
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const activeMenuItem = menuItems.find(item => item.path === location);
+  const activeMenuItem = menuGroups
+    .flatMap(group => group.items)
+    .find(item =>
+      item.path === "/admin"
+        ? location === "/admin"
+        : location.startsWith(item.path)
+    );
   const isMobile = useIsMobile();
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(menuGroups.map(group => [group.label, true]))
+  );
 
   useEffect(() => {
     if (isCollapsed) {
@@ -197,27 +230,61 @@ function DashboardLayoutContent({
           </SidebarHeader>
 
           <SidebarContent className="gap-0">
-            <SidebarMenu className="px-2 py-1">
-              {menuItems.map(item => {
-                const isActive =
+            <SidebarMenu className="gap-1 px-2 py-2">
+              {menuGroups.map(group => {
+                const groupIsActive = group.items.some(item =>
                   item.path === "/admin"
                     ? location === "/admin"
-                    : location.startsWith(item.path);
-
+                    : location.startsWith(item.path)
+                );
+                const isOpen = openGroups[group.label] ?? true;
                 return (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      onClick={() => setLocation(item.path)}
-                      tooltip={item.label}
-                      className={`h-10 transition-all font-normal`}
-                    >
-                      <item.icon
-                        className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
-                      />
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  <Collapsible
+                    key={group.label}
+                    open={isOpen}
+                    onOpenChange={open =>
+                      setOpenGroups(current => ({
+                        ...current,
+                        [group.label]: open,
+                      }))
+                    }
+                    className="group/collapsible"
+                  >
+                    <SidebarMenuItem>
+                      <CollapsibleTrigger asChild>
+                        <SidebarMenuButton
+                          tooltip={group.label}
+                          className="h-8 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground"
+                        >
+                          <span>{group.label}</span>
+                          <ChevronDown className="ml-auto h-3.5 w-3.5 transition-transform group-data-[state=closed]/collapsible:-rotate-90" />
+                        </SidebarMenuButton>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <SidebarMenu className="mt-1 gap-0.5 pl-2">
+                          {group.items.map(item => {
+                            const isActive =
+                              item.path === "/admin"
+                                ? location === "/admin"
+                                : location.startsWith(item.path);
+                            return (
+                              <SidebarMenuItem key={item.path}>
+                                <SidebarMenuButton
+                                  isActive={isActive}
+                                  onClick={() => setLocation(item.path)}
+                                  tooltip={item.label}
+                                  className="h-9 font-normal"
+                                >
+                                  <item.icon className="h-4 w-4" />
+                                  <span>{item.label}</span>
+                                </SidebarMenuButton>
+                              </SidebarMenuItem>
+                            );
+                          })}
+                        </SidebarMenu>
+                      </CollapsibleContent>
+                    </SidebarMenuItem>
+                  </Collapsible>
                 );
               })}
             </SidebarMenu>

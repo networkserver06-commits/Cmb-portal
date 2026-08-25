@@ -110,20 +110,23 @@ describe("role-aware administrator access", () => {
     expect(adminSource).toContain('activeSection !== "settings" ? "hidden"');
     expect(adminSource).toContain('activeSection !== "maintenance" ? "hidden"');
     expect(adminSource).toContain('activeSection !== "storage" ? "hidden"');
-    expect(controlsSource).toContain("Posts studio");
+    expect(controlsSource).toContain("Catalogue upload station");
+    expect(controlsSource).toContain(
+      "Student submissions are handled in Operations."
+    );
+    expect(controlsSource).not.toContain("Posts studio");
+    expect(controlsSource).not.toContain("Administrator document publisher");
     expect(controlsSource).toContain('from "sonner"');
-    expect(controlsSource).toContain('toast.success("Post published"');
     expect(controlsSource).toContain(
       "await utils.admin.listPapers.invalidate()"
     );
-    expect(controlsSource).toContain(
-      "if (preparingPost || publishPost.isPending) return;"
-    );
+    expect(layoutSource).toContain("const menuGroups = [");
+    expect(layoutSource).toContain("Learners & finance");
+    expect(layoutSource).toContain("System");
+    expect(layoutSource).toContain("CollapsibleTrigger");
     expect(mainSource).toContain('Toaster position="top-right"');
-    expect(controlsSource).toContain("Free post");
-    expect(controlsSource).toContain("Paid post");
     expect(controlsSource).toContain("accept={acceptedDocuments}");
-    expect(controlsSource).toContain('post.mode === "paid"');
+    expect(controlsSource).toContain('purpose: "paper"');
     expect(routerSource).toMatch(
       /publishPost:\s*adminProcedure\s*\.input\(postInput\)/
     );
