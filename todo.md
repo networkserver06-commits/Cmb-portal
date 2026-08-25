@@ -52,3 +52,5 @@
 - [x] Make resource type, metadata, price, description, and upload details visibly labeled, compact, and easy to scan in the unified admin form.
 - [x] Fix the wallet Paystack hosted-checkout callback URL so valid configuration redirects to Paystack and invalid configuration returns a clear actionable error.
 - [x] Add focused tests proving Paystack callback URLs are valid and malformed APP_BASE_URL values produce actionable errors.
+- [x] Reconcile confirmed Paystack wallet top-ups into the displayed balance and add regression coverage while excluding pending and failed records.
+- [x] Remove the automatic 100 KES top-up amount and require an intentional user-entered amount before starting Paystack checkout.

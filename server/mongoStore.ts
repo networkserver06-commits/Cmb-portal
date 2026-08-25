@@ -277,31 +277,27 @@ export async function walletTopUpByReference(
     .findOne({ userId, reference });
 }
 
+export function calculateWalletSummary(
+  topUps: Pick<WalletTopUpDoc, "status" | "amountKes">[]
+) {
+  const paid = topUps.filter(topUp => topUp.status === "paid");
+  return {
+    balanceKes: paid.reduce((sum, topUp) => sum + Number(topUp.amountKes), 0),
+    totalTopUps: paid.length,
+  };
+}
+
 export async function walletForUser(userId: number) {
   const db = await mongo();
-  const [summary] = await db
-    .collection<WalletTopUpDoc>("wallet_topups")
-    .aggregate([
-      { $match: { userId, status: "paid" } },
-      {
-        $group: {
-          _id: null,
-          balanceKes: { $sum: "$amountKes" },
-          totalTopUps: { $sum: 1 },
-        },
-      },
-    ])
-    .toArray();
-  const transactions = await db
+  const allTopUps = await db
     .collection<WalletTopUpDoc>("wallet_topups")
     .find({ userId })
     .sort({ createdAt: -1 })
-    .limit(20)
     .toArray();
+  const summary = calculateWalletSummary(allTopUps);
   return {
-    balanceKes: Number(summary?.balanceKes ?? 0),
-    totalTopUps: Number(summary?.totalTopUps ?? 0),
-    transactions,
+    ...summary,
+    transactions: allTopUps.slice(0, 20),
   };
 }
 

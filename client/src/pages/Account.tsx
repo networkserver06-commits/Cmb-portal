@@ -167,7 +167,7 @@ function AccountDashboard({
   const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
   const [profileName, setProfileName] = useState(user.name ?? "");
   const [profileNotice, setProfileNotice] = useState("");
-  const [topupAmount, setTopupAmount] = useState(100);
+  const [topupAmount, setTopupAmount] = useState<number | "">("");
   const [topupReference, setTopupReference] = useState(
     () =>
       new URLSearchParams(window.location.search).get("wallet_reference") ?? ""
@@ -218,6 +218,7 @@ function AccountDashboard({
         "Top-up confirmed. Your wallet balance has been updated."
       );
       void wallet.refetch();
+      void utils.student.wallet.invalidate();
     }
     if (walletTopUpStatus.data?.status === "failed")
       setWalletNotice("The top-up was not completed. You can try again.");
