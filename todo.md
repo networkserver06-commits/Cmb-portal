@@ -54,3 +54,12 @@
 - [x] Add focused tests proving Paystack callback URLs are valid and malformed APP_BASE_URL values produce actionable errors.
 - [x] Reconcile confirmed Paystack wallet top-ups into the displayed balance and add regression coverage while excluding pending and failed records.
 - [x] Remove the automatic 100 KES top-up amount and require an intentional user-entered amount before starting Paystack checkout.
+- [x] Refine paid-paper cards, Paystack checkout initiation, payment confirmation refresh, and post-payment library access.
+- [x] Refine paid-paper cards with clearer access labels, purchase CTA states, and signed-in guidance.
+- [x] Improve checkout initiation messaging and selected-paper state in the catalogue.
+- [x] Add source coverage for automatic payment polling, entitlement refresh, and direct post-payment access.
+- [x] Make paid-paper payment confirmation and access visible automatically in the user flow.
+- [x] Add an admin-only permanently delete paper action with dependency-safe cleanup and explicit confirmation.
+- [x] Automatically publish approved student submissions to the main catalogue while preserving moderation and ownership records.
+- [x] Make selected-paper state behavior explicit during checkout so the selected detail context is intentionally cleared or preserved.
+- [x] Assert the paid payment-result protected download path in the account-route regression suite.

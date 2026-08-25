@@ -9,6 +9,7 @@ describe("role-aware administrator access", () => {
   const accountSource = source("client/src/pages/Account.tsx");
   const adminSource = source("client/src/pages/Admin.tsx");
   const controlsSource = source("client/src/pages/AdminControls.tsx");
+  const adminOperationsSource = source("client/src/pages/AdminOperations.tsx");
   const layoutSource = source("client/src/components/DashboardLayout.tsx");
   const appSource = source("client/src/App.tsx");
   const mainSource = source("client/src/main.tsx");
@@ -70,6 +71,23 @@ describe("role-aware administrator access", () => {
     expect(routerSource).toMatch(/recordVisit:\s*publicProcedure\s*\.input/);
     expect(routerSource).toContain("analytics_events");
     expect(appSource).toContain("recordVisit.mutate");
+  });
+
+  it("keeps permanent paper deletion confirmation-gated and access-cleaning", () => {
+    expect(routerSource).toContain("deletePaper: adminProcedure");
+    expect(routerSource).toContain('confirmation: z.literal("DELETE_PAPER")');
+    expect(routerSource).toContain("deleteMany({ paperId: paper.legacyId })");
+    expect(routerSource).toContain("unlinkPortalFile");
+    expect(routerSource).toContain('eventType: "paper.permanently_deleted"');
+  });
+
+  it("publishes approved submissions and refreshes the public catalogue", () => {
+    expect(routerSource).toContain('status: "approved"');
+    expect(routerSource).toContain("paperId,");
+    expect(routerSource).toContain('accessMode: "free"');
+    expect(adminOperationsSource).toContain(
+      "utils.admin.listPapers.invalidate()"
+    );
   });
 
   it("keeps all admin mutations protected on the server", () => {

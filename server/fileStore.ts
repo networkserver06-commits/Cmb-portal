@@ -250,6 +250,42 @@ export async function linkPortalFile(input: {
   });
 }
 
+export async function unlinkPortalFile(input: {
+  fileId: string;
+  actorId: number;
+  entityType: "paper" | "submission";
+  entityId: number;
+}) {
+  const db = await mongo();
+  const metadata = await portalFileById(input.fileId);
+  if (!metadata) return;
+  const references = metadata.references.filter(
+    reference =>
+      !(
+        reference.entityType === input.entityType &&
+        reference.entityId === input.entityId
+      )
+  );
+  if (references.length === metadata.references.length) return;
+  await db.collection<PortalFileMetadata>("file_metadata").updateOne(
+    { _id: metadata._id },
+    {
+      $set: {
+        references,
+        lifecycle: references.length ? "linked" : "archived",
+        updatedAt: new Date(),
+      },
+    }
+  );
+  await recordWorkflow({
+    entityType: "file",
+    entityId: input.fileId,
+    status: `unlinked:${input.entityType}`,
+    actorId: input.actorId,
+    detail: String(input.entityId),
+  });
+}
+
 export async function listPortalFiles() {
   return await (
     await mongo()

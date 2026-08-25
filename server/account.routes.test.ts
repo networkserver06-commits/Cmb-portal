@@ -151,6 +151,15 @@ describe("account route regression coverage", () => {
     expect(stylesSource).toContain("@keyframes route-progress-sweep");
   });
 
+  it("gives paid catalogue papers a clear secure-purchase journey", () => {
+    expect(homeSource).toContain('"Paid resource"');
+    expect(homeSource).toContain('"Secure price"');
+    expect(homeSource).toContain('"Buy securely"');
+    expect(homeSource).toContain('"Opening Paystack…"');
+    expect(homeSource).toContain("confirmation returns you to your library");
+    expect(homeSource).toContain("Sign in is required before secure checkout");
+  });
+
   it("wires route progress into library, payment, and admin data loading", () => {
     expect(librarySource).toContain(
       'import RouteProgress from "@/components/RouteProgress"'
@@ -162,6 +171,16 @@ describe("account route regression coverage", () => {
     );
     expect(paymentSource).toContain("Loading your payment result…");
     expect(paymentSource).toContain("Waiting for Paystack confirmation…");
+    expect(paymentSource).toContain("trpc.student.paymentStatus.useQuery");
+    expect(paymentSource).toContain("utils.student.library.invalidate()");
+    expect(paymentSource).toContain(
+      "href={`/api/papers/${paper.legacyId}/download`}"
+    );
+    expect(paymentSource).toContain("Download exam paper");
+    expect(paymentSource).toContain(
+      'const paid = order.status === "paid" && unlocked;'
+    );
+    expect(homeSource).toContain("aria-current={selectedPaperId === paper.id");
     expect(adminOperationsSource).toContain(
       'import RouteProgress from "@/components/RouteProgress"'
     );

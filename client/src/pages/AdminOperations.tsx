@@ -11,6 +11,7 @@ import {
   KeyRound,
   Search,
   UploadCloud,
+  Trash2,
   Users,
   WalletCards,
   X,
@@ -118,12 +119,33 @@ export default function AdminOperations() {
     onSuccess: () => utils.admin.listUsers.invalidate(),
   });
   const reviewSubmission = trpc.admin.reviewSubmission.useMutation({
-    onSuccess: () => utils.admin.listSubmissions.invalidate(),
+    onSuccess: async () => {
+      await Promise.all([
+        utils.admin.listSubmissions.invalidate(),
+        utils.admin.listPapers.invalidate(),
+      ]);
+    },
+  });
+  const deletePaper = trpc.admin.deletePaper.useMutation({
+    onSuccess: async () => {
+      setDeleteConfirmation(null);
+      setAccessMessage(
+        "Paper permanently removed from the catalogue and user libraries."
+      );
+      await Promise.all([
+        utils.admin.listPapers.invalidate(),
+        utils.admin.listPayments.invalidate(),
+      ]);
+    },
+    onError: error => setAccessMessage(error.message),
   });
   const [paymentFilter, setPaymentFilter] = useState("");
   const [selectedUser, setSelectedUser] = useState("");
   const [selectedPaper, setSelectedPaper] = useState("");
   const [accessMessage, setAccessMessage] = useState("");
+  const [deleteConfirmation, setDeleteConfirmation] = useState<number | null>(
+    null
+  );
   const filteredPayments = useMemo(
     () =>
       payments.data?.filter(
@@ -302,6 +324,62 @@ export default function AdminOperations() {
                 No transactions match the current filter.
               </div>
             )}
+          </div>
+          <div className="mt-6 border-t border-[#edf2ef] pt-5">
+            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#274d43]">
+              <Trash2 size={16} className="text-[#a44e49]" /> Permanently remove
+              a paper
+            </div>
+            <p className="mb-3 text-xs leading-5 text-[#82958e]">
+              This removes the catalogue record and every user entitlement.
+              Payment history is retained for audit.
+            </p>
+            <div className="space-y-2">
+              {papers.data?.slice(0, 10).map(paper => (
+                <div
+                  key={`delete-${paper.legacyId}`}
+                  className="flex items-center justify-between gap-3 rounded-xl bg-[#fff8f7] p-3"
+                >
+                  <span className="min-w-0 truncate text-xs font-semibold text-[#5b3d3b]">
+                    {paper.title}
+                  </span>
+                  {deleteConfirmation === paper.legacyId ? (
+                    <span className="flex shrink-0 items-center gap-2">
+                      <Button
+                        size="sm"
+                        className="rounded-full bg-[#a44e49] text-xs hover:bg-[#873c38]"
+                        disabled={deletePaper.isPending}
+                        onClick={() =>
+                          deletePaper.mutate({
+                            paperId: paper.legacyId,
+                            confirmation: "DELETE_PAPER",
+                          })
+                        }
+                      >
+                        {deletePaper.isPending ? "Removing…" : "Confirm delete"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="rounded-full text-xs"
+                        onClick={() => setDeleteConfirmation(null)}
+                      >
+                        Cancel
+                      </Button>
+                    </span>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="shrink-0 rounded-full border-[#efc8c5] bg-transparent text-xs text-[#a44e49]"
+                      onClick={() => setDeleteConfirmation(paper.legacyId)}
+                    >
+                      Delete permanently
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
           <div className="mt-6 border-t border-[#edf2ef] pt-5">
             <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#274d43]">

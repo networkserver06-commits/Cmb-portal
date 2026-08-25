@@ -33,7 +33,14 @@ import {
   recordOperationalEvent,
 } from "./mongoStore";
 import { getUserById } from "./db";
-import { claimPortalFile, linkPortalFile, listPortalFiles } from "./fileStore";
+import {
+  claimPortalFile,
+  deletePortalFile,
+  linkPortalFile,
+  listPortalFiles,
+  portalFileById,
+  unlinkPortalFile,
+} from "./fileStore";
 import {
   auditStorage,
   cleanupStorage,
@@ -697,6 +704,54 @@ export const appRouter = router({
             { $set: { isAvailable: input.isAvailable, updatedAt: new Date() } }
           );
         return { success: true };
+      }),
+    deletePaper: adminProcedure
+      .input(
+        z.object({
+          paperId: z.number().int().positive(),
+          confirmation: z.literal("DELETE_PAPER"),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const db = await mongo();
+        const paper = await db.collection<any>("papers").findOne({
+          legacyId: input.paperId,
+        });
+        if (!paper) throw new Error("Paper not found.");
+        if (paper.fileId) {
+          await unlinkPortalFile({
+            fileId: paper.fileId,
+            actorId: ctx.user.id,
+            entityType: "paper",
+            entityId: paper.legacyId,
+          });
+          const file = await portalFileById(paper.fileId);
+          if (file && file.references.length === 0)
+            await deletePortalFile({
+              fileId: paper.fileId,
+              actorId: ctx.user.id,
+            });
+        }
+        const entitlementResult = await db
+          .collection("entitlements")
+          .deleteMany({ paperId: paper.legacyId });
+        await db.collection("papers").deleteOne({ _id: paper._id });
+        await recordOperationalEvent({
+          eventType: "paper.permanently_deleted",
+          actorId: ctx.user.id,
+          subjectType: "paper",
+          subjectId: String(paper.legacyId),
+          detail: {
+            title: paper.title,
+            removedEntitlements: entitlementResult.deletedCount,
+            paymentRecordsRetained: true,
+          },
+        });
+        return {
+          success: true,
+          paperId: paper.legacyId,
+          removedEntitlements: entitlementResult.deletedCount,
+        };
       }),
     listAnnouncements: adminProcedure.query(
       async () =>

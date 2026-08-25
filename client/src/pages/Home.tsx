@@ -503,6 +503,19 @@ export default function Home() {
               <p className="mt-4 max-w-2xl text-sm leading-6 text-[#5f786f]">
                 {selectedPaper.description}
               </p>
+              <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-[#5f786f]">
+                <Badge className="border-0 bg-white text-[#1d5146]">
+                  {selectedPaper.accessMode === "free" ||
+                  selectedPaper.price === 0
+                    ? "Free access"
+                    : "Paid resource"}
+                </Badge>
+                <span>
+                  {isAuthenticated
+                    ? "You are signed in; confirmation returns you to your library."
+                    : "Sign in is required before secure checkout."}
+                </span>
+              </div>
               <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[#c9ddd4] pt-4">
                 <div>
                   <div className="text-[10px] font-bold uppercase tracking-widest text-[#6b8f83]">
@@ -536,7 +549,9 @@ export default function Home() {
                     {selectedPaper.accessMode === "free" ||
                     selectedPaper.price === 0
                       ? "Add to library"
-                      : "Continue to payment"}{" "}
+                      : initializePayment.isPending
+                        ? "Opening Paystack…"
+                        : "Buy securely"}{" "}
                     <ChevronRight size={15} />
                   </Button>
                 </div>
@@ -548,7 +563,8 @@ export default function Home() {
             {filteredPapers.map(paper => (
               <article
                 key={paper.id}
-                className="group flex flex-col rounded-3xl border border-[#dce7e1] bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-[#1d5146]/8"
+                aria-current={selectedPaperId === paper.id ? "true" : undefined}
+                className={`group flex flex-col rounded-3xl border bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-[#1d5146]/8 ${selectedPaperId === paper.id ? "border-[#2f806a] ring-2 ring-[#2f806a]/15" : "border-[#dce7e1]"}`}
               >
                 <div
                   className={`grid h-14 w-14 place-items-center rounded-2xl ${accentMap[paper.accent]}`}
@@ -574,7 +590,7 @@ export default function Home() {
                     <div className="text-[10px] font-bold uppercase tracking-widest text-[#9aaca6]">
                       {paper.accessMode === "free" || paper.price === 0
                         ? "Access"
-                        : "Price"}
+                        : "Secure price"}
                     </div>
                     <div className="mt-0.5 font-semibold text-[#1d5146]">
                       {paper.accessMode === "free" || paper.price === 0
@@ -589,7 +605,9 @@ export default function Home() {
                   >
                     {paper.accessMode === "free" || paper.price === 0
                       ? "View free paper"
-                      : "View paper"}{" "}
+                      : isAuthenticated
+                        ? "View & buy"
+                        : "View paper"}{" "}
                     <ChevronRight size={14} />
                   </Button>
                 </div>

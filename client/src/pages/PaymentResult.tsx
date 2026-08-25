@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useEffect } from "react";
 import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -43,14 +44,25 @@ export default function PaymentResult() {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const reference =
     new URLSearchParams(window.location.search).get("reference") ?? "";
+  const utils = trpc.useUtils();
   const result = trpc.student.paymentResult.useQuery(
+    { reference },
+    { enabled: isAuthenticated && reference.length > 7 }
+  );
+  const paymentStatus = trpc.student.paymentStatus.useQuery(
     { reference },
     {
       enabled: isAuthenticated && reference.length > 7,
       refetchInterval: query =>
-        query.state.data?.order.status === "pending" ? 4000 : false,
+        query.state.data?.status === "pending" ? 4000 : false,
     }
   );
+  useEffect(() => {
+    if (paymentStatus.data?.status === "paid") {
+      void result.refetch();
+      void utils.student.library.invalidate();
+    }
+  }, [paymentStatus.data?.status, result, utils.student.library]);
   if (authLoading)
     return <PaymentLoading label="Checking your payment access…" />;
   if (!isAuthenticated)
