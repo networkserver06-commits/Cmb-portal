@@ -18,6 +18,7 @@ import {
 import RouteProgress from "@/components/RouteProgress";
 import {
   Check,
+  Eye,
   FileUp,
   KeyRound,
   Search,
@@ -81,19 +82,37 @@ function PaperReplacement({ paper }: { paper: any }) {
             Replace with a validated PDF or document up to 4 MiB.
           </p>
         </div>
-        <label className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-full border border-[#c8d9d2] bg-white px-3 py-2 text-xs font-semibold text-[#1d5146] transition hover:bg-[#e8f1ed]">
-          <UploadCloud size={14} /> {busy ? "Uploading…" : "Replace file"}
-          <input
-            type="file"
-            className="sr-only"
-            accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.csv"
-            disabled={busy}
-            onChange={event => {
-              void upload(event.target.files?.[0]);
-              event.currentTarget.value = "";
-            }}
-          />
-        </label>
+        <div className="flex shrink-0 items-center gap-2">
+          {paper.fileId && (
+            <Button
+              asChild
+              size="sm"
+              variant="outline"
+              className="rounded-full border-[#c8d9d2] bg-white text-xs text-[#1d5146]"
+            >
+              <a
+                href={`/api/files/${encodeURIComponent(paper.fileId)}/view`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <Eye size={14} /> View
+              </a>
+            </Button>
+          )}
+          <label className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-full border border-[#c8d9d2] bg-white px-3 py-2 text-xs font-semibold text-[#1d5146] transition hover:bg-[#e8f1ed]">
+            <UploadCloud size={14} /> {busy ? "Uploading…" : "Replace file"}
+            <input
+              type="file"
+              className="sr-only"
+              accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.csv"
+              disabled={busy}
+              onChange={event => {
+                void upload(event.target.files?.[0]);
+                event.currentTarget.value = "";
+              }}
+            />
+          </label>
+        </div>
       </div>
       {busy && (
         <div className="mt-3" aria-live="polite">
@@ -410,7 +429,9 @@ export default function AdminOperations() {
               </h2>
               <p className="mt-1 max-w-2xl text-xs leading-5 text-[#82958e]">
                 Approve once to publish a learner contribution to the free
-                catalogue. Rejections stay recorded for moderation history.
+                catalogue. Rejections stay recorded for moderation history,
+                while rejected document bytes are permanently purged from
+                GridFS.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -482,51 +503,81 @@ export default function AdminOperations() {
                   </div>
                   <div className="mt-2 text-xs font-medium text-[#58766b]">
                     {submission.status === "approved" && submission.paperId
-                      ? "✓ Published to catalogue and available as free access"
+                      ? submission.approvalMode === "automatic"
+                        ? "✓ Auto-published after the safety check"
+                        : "✓ Published to catalogue and available as free access"
                       : submission.status === "rejected"
-                        ? "Kept out of the catalogue · decision recorded"
-                        : "Awaiting administrator decision"}
+                        ? submission.storagePurged
+                          ? "Rejected · file permanently purged from GridFS"
+                          : "Kept out of the catalogue · decision recorded"
+                        : submission.safetyStatus === "held"
+                          ? "Held by the safety detector · administrator decision required"
+                          : "Awaiting administrator decision"}
                   </div>
+                  {submission.safetyReasons?.length > 0 &&
+                    submission.status === "pending" && (
+                      <p className="mt-1 text-xs text-[#80631a]">
+                        Detector note: {submission.safetyReasons.join(" ")}
+                      </p>
+                    )}
                   {submission.reviewNote && (
                     <p className="mt-1 text-xs italic text-[#82958e]">
                       Note: {submission.reviewNote}
                     </p>
                   )}
                 </div>
-                {submission.status === "pending" && (
-                  <div className="flex shrink-0 flex-wrap gap-2">
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  {submission.fileId && !submission.storagePurged && (
                     <Button
-                      size="sm"
-                      className="rounded-full bg-[#1d5146]"
-                      disabled={reviewSubmission.isPending}
-                      onClick={() =>
-                        reviewSubmission.mutate({
-                          submissionId: submission.legacyId,
-                          status: "approved",
-                          reviewNote:
-                            "Approved and published to the free catalogue.",
-                        })
-                      }
-                    >
-                      <Check size={14} /> Approve & publish
-                    </Button>
-                    <Button
+                      asChild
                       size="sm"
                       variant="outline"
-                      className="rounded-full border-[#efc8c5] bg-transparent text-[#a44e49]"
-                      disabled={reviewSubmission.isPending}
-                      onClick={() =>
-                        reviewSubmission.mutate({
-                          submissionId: submission.legacyId,
-                          status: "rejected",
-                          reviewNote: "Not approved for publication.",
-                        })
-                      }
+                      className="rounded-full border-[#c8d9d2] bg-white text-[#1d5146]"
                     >
-                      <X size={14} /> Reject
+                      <a
+                        href={`/api/files/${encodeURIComponent(submission.fileId)}/view`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <Eye size={14} /> View document
+                      </a>
                     </Button>
-                  </div>
-                )}
+                  )}
+                  {submission.status === "pending" && (
+                    <>
+                      <Button
+                        size="sm"
+                        className="rounded-full bg-[#1d5146]"
+                        disabled={reviewSubmission.isPending}
+                        onClick={() =>
+                          reviewSubmission.mutate({
+                            submissionId: submission.legacyId,
+                            status: "approved",
+                            reviewNote:
+                              "Approved and published to the free catalogue.",
+                          })
+                        }
+                      >
+                        <Check size={14} /> Approve & publish
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="rounded-full border-[#efc8c5] bg-transparent text-[#a44e49]"
+                        disabled={reviewSubmission.isPending}
+                        onClick={() =>
+                          reviewSubmission.mutate({
+                            submissionId: submission.legacyId,
+                            status: "rejected",
+                            reviewNote: "Not approved for publication.",
+                          })
+                        }
+                      >
+                        <X size={14} /> Reject & purge
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
             ))}
             {!visibleSubmissions.length && (

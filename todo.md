@@ -91,3 +91,13 @@
 - [x] Add a dedicated administrator contributed-resource review queue with clear pending, approved, and rejected states plus fast safe actions.
 - [x] Ensure approving a contributed resource publishes it to the catalogue exactly once and preserves moderation ownership/history.
 - [x] Add regression coverage for admin review actions, automatic publication, duplicate prevention, and rejection safety.
+- [x] Auto-approve and publish safe student/user submissions immediately while preserving administrator hide, delete, replace, and moderation controls.
+- [x] Add a server-side submission safety detector that blocks invalid, suspicious, or uncertain uploads into an admin-review hold state.
+- [x] Add regression coverage for safe auto-publication, detector holds, catalogue refresh, and administrator overrides.
+- [x] Add secure document preview/view actions for administrators and authorized users
+- [x] Automatically unlink and delete rejected submission files from GridFS while preserving moderation history
+- [x] Add regression coverage for rejected-file storage purge and access control
+- [x] Align student submission picker and messaging with the supported document formats and detector-held workflow
+- [x] Verify and expose administrator hide/unpublish control for auto-published papers or prove the existing control is preserved
+- [x] Add runtime coverage that a safe submission appears in the public catalogue immediately
+- [x] Add runtime authorization coverage for admin, owner/entitled, and forbidden document view requests

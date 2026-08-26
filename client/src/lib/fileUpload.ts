@@ -21,8 +21,6 @@ export function validatePortalDocument(
 ) {
   if (!extensions.has(extensionOf(file.name)))
     return "Use a PDF, DOC, DOCX, PPT, PPTX, TXT, or CSV document.";
-  if (purpose === "submission" && file.type && file.type !== "application/pdf")
-    return "Student paper submissions must be PDF documents.";
   if (file.size < 1) return "Select a non-empty document.";
   if (file.size > MAX_PORTAL_UPLOAD_BYTES)
     return "Files must be 4 MiB or smaller for reliable uploads.";

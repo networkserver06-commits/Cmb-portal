@@ -515,12 +515,22 @@ function AccountDashboard({
                         </p>
                       </div>
                     </div>
-                    <a
-                      href={`/api/papers/${item.paper!.legacyId}/download`}
-                      className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#1d5146] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#153c34]"
-                    >
-                      <Download size={14} /> Download
-                    </a>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <a
+                        href={`/api/papers/${item.paper!.legacyId}/view`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-[#c8d9d2] bg-white px-3 py-2 text-xs font-semibold text-[#1d5146] transition hover:bg-[#e8f1ed]"
+                      >
+                        <Eye size={14} /> View
+                      </a>
+                      <a
+                        href={`/api/papers/${item.paper!.legacyId}/download`}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-[#1d5146] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#153c34]"
+                      >
+                        <Download size={14} /> Download
+                      </a>
+                    </div>
                   </article>
                 ))}
               </div>
@@ -644,11 +654,32 @@ function AccountDashboard({
                         {new Date(submission.createdAt).toLocaleDateString()}
                       </div>
                     </div>
-                    <Badge
-                      className={`shrink-0 border-0 ${submission.status === "approved" ? "bg-[#e5f2eb] text-[#34745f]" : submission.status === "rejected" ? "bg-[#fff4f3] text-[#a44e49]" : "bg-[#fff4d5] text-[#94701d]"}`}
-                    >
-                      {submission.status}
-                    </Badge>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {submission.fileId &&
+                        submission.status !== "rejected" &&
+                        !submission.storagePurged && (
+                          <a
+                            href={`/api/files/${encodeURIComponent(submission.fileId)}/view`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 rounded-full border border-[#c8d9d2] bg-white px-3 py-2 text-xs font-semibold text-[#1d5146] transition hover:bg-[#e8f1ed]"
+                          >
+                            <Eye size={14} /> View
+                          </a>
+                        )}
+                      <Badge
+                        className={`shrink-0 border-0 ${submission.status === "approved" ? "bg-[#e5f2eb] text-[#34745f]" : submission.status === "rejected" ? "bg-[#fff4f3] text-[#a44e49]" : "bg-[#fff4d5] text-[#94701d]"}`}
+                      >
+                        {submission.status === "approved"
+                          ? submission.approvalMode === "automatic"
+                            ? "published"
+                            : "approved"
+                          : submission.status === "pending" &&
+                              submission.safetyStatus === "held"
+                            ? "held for review"
+                            : submission.status}
+                      </Badge>
+                    </div>
                   </div>
                 ))}
               </div>

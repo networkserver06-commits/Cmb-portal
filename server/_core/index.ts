@@ -170,7 +170,11 @@ export async function createApp() {
       }
     }
   );
-  app.get("/api/files/:fileId/download", async (req, res) => {
+  const handleProtectedFile = async (
+    req: express.Request,
+    res: express.Response,
+    disposition: "inline" | "attachment"
+  ) => {
     try {
       const user = await requestUser(req, res);
       if (!user)
@@ -182,40 +186,54 @@ export async function createApp() {
       if (!allowed) {
         const paper = await db
           .collection<any>("papers")
-          .findOne({ fileId: file.gridFsId });
+          .findOne({ fileId: file.gridFsId, isAvailable: true });
         if (paper)
           allowed = Boolean(await entitlementFor(user.id, paper.legacyId));
       }
       if (!allowed)
         allowed = Boolean(
-          await db
-            .collection("submissions")
-            .findOne({ fileId: file.gridFsId, userId: user.id })
+          await db.collection("submissions").findOne({
+            fileId: file.gridFsId,
+            userId: user.id,
+            status: { $ne: "rejected" },
+          })
         );
       if (!allowed)
         return res
           .status(403)
           .json({ error: "You do not have access to this file." });
+
       await recordOperationalEvent({
-        eventType: "file.downloaded",
+        eventType: disposition === "inline" ? "file.viewed" : "file.downloaded",
         actorId: user.id,
         subjectType: "file",
         subjectId: file.gridFsId,
       });
-      await streamPortalFile(file.gridFsId, res);
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      await streamPortalFile(file.gridFsId, res, { disposition });
     } catch (error) {
-      console.error("GridFS download error", error);
+      console.error("GridFS file access error", error);
       if (!res.headersSent)
         return res
           .status(500)
-          .json({ error: "Unable to prepare the protected download" });
+          .json({ error: "Unable to prepare the protected document" });
     }
-  });
+  };
+  app.get("/api/files/:fileId/download", (req, res) =>
+    handleProtectedFile(req, res, "attachment")
+  );
+  app.get("/api/files/:fileId/view", (req, res) =>
+    handleProtectedFile(req, res, "inline")
+  );
   app.use(express.json({ limit: "1mb" }));
   app.use(express.urlencoded({ limit: "1mb", extended: true }));
   registerStorageProxy(app);
   registerOAuthRoutes(app);
-  app.get("/api/papers/:paperId/download", async (req, res) => {
+  const handleProtectedPaper = async (
+    req: express.Request,
+    res: express.Response,
+    disposition: "inline" | "attachment"
+  ) => {
     try {
       let user = null;
       try {
@@ -246,31 +264,42 @@ export async function createApp() {
         return res
           .status(403)
           .json({ error: "This paper is not unlocked for your account" });
-      await (await mongo()).collection("downloads").insertOne({
-        userId: user.id,
-        paperId,
-        entitlementId: entitlement.legacyId,
-        ipAddress: req.ip,
-        userAgent: req.get("user-agent") ?? null,
-        createdAt: new Date(),
-      });
+      if (disposition === "attachment")
+        await (await mongo()).collection("downloads").insertOne({
+          userId: user.id,
+          paperId,
+          entitlementId: entitlement.legacyId,
+          ipAddress: req.ip,
+          userAgent: req.get("user-agent") ?? null,
+          createdAt: new Date(),
+        });
       if (paper.fileId) {
         await recordOperationalEvent({
-          eventType: "paper.downloaded",
+          eventType:
+            disposition === "inline" ? "paper.viewed" : "paper.downloaded",
           actorId: user.id,
           subjectType: "paper",
           subjectId: String(paperId),
           detail: { fileId: paper.fileId },
         });
-        await streamPortalFile(paper.fileId, res);
+        res.setHeader("X-Content-Type-Options", "nosniff");
+        await streamPortalFile(paper.fileId, res, { disposition });
         return;
       }
       return res.redirect(307, await storageGetSignedUrl(paper.fileKey!));
     } catch (error) {
-      console.error("Protected download error", error);
-      return res.status(500).json({ error: "Unable to prepare download" });
+      console.error("Protected paper access error", error);
+      return res
+        .status(500)
+        .json({ error: "Unable to prepare the protected document" });
     }
-  });
+  };
+  app.get("/api/papers/:paperId/download", (req, res) =>
+    handleProtectedPaper(req, res, "attachment")
+  );
+  app.get("/api/papers/:paperId/view", (req, res) =>
+    handleProtectedPaper(req, res, "inline")
+  );
   // tRPC API
   app.use(
     "/api/trpc",

@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import { ObjectId } from "mongodb";
 import { appRouter } from "./routers";
 import { mongo } from "./mongoStore";
-import { deletePortalFile, uploadPortalFile } from "./fileStore";
+import {
+  deletePortalFile,
+  portalFileById,
+  uploadPortalFile,
+} from "./fileStore";
+import { portalFiles } from "./mongoStore";
 import type { TrpcContext } from "./_core/context";
 
 const runId = `submission-test-${Date.now()}`;
@@ -70,10 +75,158 @@ describe("paper submission ownership and moderation", () => {
     }
   }, 90_000);
 
+  it("auto-publishes safe submissions, holds uncertain files, and purges rejected bytes", async () => {
+    const db = await mongo();
+    const safeFile = await uploadPortalFile({
+      ownerId: studentA,
+      purpose: "submission",
+      fileName: `${runId}-safe.pdf`,
+      mimeType: "application/pdf",
+      bytes: Buffer.from("%PDF-1.4\\nsafe-submission"),
+    });
+    const heldFile = await uploadPortalFile({
+      ownerId: studentA,
+      purpose: "submission",
+      fileName: `${runId}-held.docx`,
+      mimeType:
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      bytes: Buffer.from("PK\\x03\\x04 office-document"),
+    });
+    const suspiciousFile = await uploadPortalFile({
+      ownerId: studentA,
+      purpose: "submission",
+      fileName: `${runId}-suspicious.pdf`,
+      mimeType: "application/pdf",
+      bytes: Buffer.from("%PDF-1.4\\n/JavaScript alert"),
+    });
+    const caller = appRouter.createCaller(context(user(studentA, "user")));
+    try {
+      const safe = await caller.student.submitPaper({
+        title: `${runId}-safe-paper`,
+        course: "ScholarShelf Studies",
+        level: "university",
+        cycle: "June 2026",
+        unit: "Communication Skills",
+        paperType: "Theory",
+        description: "Safe submission",
+        fileId: safeFile.gridFsId,
+        authorized: true,
+      });
+      expect(safe.publication.status).toBe("published");
+      expect(safe.submission.status).toBe("approved");
+      const safePaper = await db.collection<any>("papers").findOne({
+        submissionId: safe.submission.legacyId,
+      });
+      expect(safePaper).toMatchObject({
+        isAvailable: true,
+        accessMode: "free",
+        publicationMode: "automatic",
+        fileId: safeFile.gridFsId,
+      });
+      const catalogue = await appRouter
+        .createCaller(context(null))
+        .catalogue({});
+      expect(catalogue).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            legacyId: safePaper.legacyId,
+            title: `${runId}-safe-paper`,
+            isAvailable: true,
+            accessMode: "free",
+          }),
+        ])
+      );
+
+      const held = await caller.student.submitPaper({
+        title: `${runId}-held-paper`,
+        course: "ScholarShelf Studies",
+        level: "university",
+        cycle: "June 2026",
+        unit: "Communication Skills",
+        paperType: "Theory",
+        description: "Held office document",
+        fileId: heldFile.gridFsId,
+        authorized: true,
+      });
+      expect(held.publication.status).toBe("held_for_review");
+      expect(held.submission.status).toBe("pending");
+      expect(held.submission.safetyStatus).toBe("held");
+      expect(
+        await db.collection("papers").findOne({
+          submissionId: held.submission.legacyId,
+        })
+      ).toBeNull();
+
+      const suspicious = await caller.student.submitPaper({
+        title: `${runId}-suspicious-paper`,
+        course: "ScholarShelf Studies",
+        level: "university",
+        cycle: "June 2026",
+        unit: "Communication Skills",
+        paperType: "Theory",
+        description: "Held active-content PDF",
+        fileId: suspiciousFile.gridFsId,
+        authorized: true,
+      });
+      expect(suspicious.publication.status).toBe("held_for_review");
+      expect(suspicious.submission.safetyReasons).toContain(
+        "The PDF contains an active-content marker and was held for review."
+      );
+
+      const rejected = await appRouter
+        .createCaller(context(user(adminId, "admin")))
+        .admin.reviewSubmission({
+          submissionId: held.submission.legacyId,
+          status: "rejected",
+          reviewNote: "Unsafe format for automatic publication",
+        });
+      expect(rejected).toMatchObject({ success: true, storagePurged: true });
+      expect(await portalFileById(heldFile.gridFsId)).toBeNull();
+      expect(
+        await (await portalFiles())
+          .find({ _id: new ObjectId(heldFile.gridFsId) })
+          .hasNext()
+      ).toBe(false);
+      expect(
+        await db.collection<any>("submissions").findOne({
+          legacyId: held.submission.legacyId,
+        })
+      ).toMatchObject({ status: "rejected", storagePurged: true });
+    } finally {
+      await db
+        .collection("papers")
+        .deleteMany({ title: { $regex: `^${runId}` } });
+      await db
+        .collection("submissions")
+        .deleteMany({ title: { $regex: `^${runId}` } });
+      for (const file of [safeFile, heldFile, suspiciousFile]) {
+        if (await portalFileById(file.gridFsId)) {
+          await db
+            .collection("file_metadata")
+            .updateOne(
+              { gridFsId: file.gridFsId },
+              { $set: { references: [] } }
+            );
+          await deletePortalFile({ fileId: file.gridFsId, actorId: adminId });
+        }
+      }
+      await db
+        .collection("operational_records")
+        .deleteMany({ subjectId: { $regex: `^${runId}` } });
+    }
+  }, 90_000);
+
   it("publishes an approved submission as a free paper and records rejection outcomes", async () => {
     const db = await mongo();
     const approvedId = studentA + 20;
     const rejectedId = studentA + 21;
+    const rejectedFile = await uploadPortalFile({
+      ownerId: studentB,
+      purpose: "submission",
+      fileName: `${runId}-rejected.pdf`,
+      mimeType: "application/pdf",
+      bytes: Buffer.from("%PDF-1.4\\nrejected-submission"),
+    });
     const approvedFile = await uploadPortalFile({
       ownerId: studentA,
       purpose: "submission",
@@ -111,8 +264,9 @@ describe("paper submission ownership and moderation", () => {
         unit: "Communication Skills",
         paperType: "Theory",
         description: "Rejected test paper",
-        fileName: "rejected.pdf",
-        mimeType: "application/pdf",
+        fileId: rejectedFile.gridFsId,
+        fileName: rejectedFile.fileName,
+        mimeType: rejectedFile.mimeType,
         status: "pending",
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -163,7 +317,8 @@ describe("paper submission ownership and moderation", () => {
         status: "rejected",
         reviewNote: "Needs source confirmation",
       });
-      expect(rejected.success).toBe(true);
+      expect(rejected).toMatchObject({ success: true, storagePurged: true });
+      expect(await portalFileById(rejectedFile.gridFsId)).toBeNull();
       const rejection = await db
         .collection<any>("submissions")
         .findOne({ legacyId: rejectedId });
@@ -184,16 +339,17 @@ describe("paper submission ownership and moderation", () => {
         .deleteMany({ title: { $regex: `^${runId}` } });
       if (published)
         await db.collection("papers").deleteOne({ _id: published._id });
-      await db
-        .collection("file_metadata")
-        .updateOne(
-          { gridFsId: approvedFile.gridFsId },
-          { $set: { references: [] } }
-        );
-      await deletePortalFile({
-        fileId: approvedFile.gridFsId,
-        actorId: adminId,
-      });
+      for (const file of [approvedFile, rejectedFile]) {
+        if (await portalFileById(file.gridFsId)) {
+          await db
+            .collection("file_metadata")
+            .updateOne(
+              { gridFsId: file.gridFsId },
+              { $set: { references: [] } }
+            );
+          await deletePortalFile({ fileId: file.gridFsId, actorId: adminId });
+        }
+      }
       await db
         .collection("operational_records")
         .deleteMany({ subjectId: approvedFile.gridFsId });

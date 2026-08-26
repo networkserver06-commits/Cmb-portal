@@ -26,8 +26,9 @@ export default function PublishPaper({
   const [error, setError] = useState("");
   const [progress, setProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
+  const [submissionNotice, setSubmissionNotice] = useState("");
   const submit = trpc.student.submitPaper.useMutation({
-    onSuccess: () => {
+    onSuccess: result => {
       setForm({
         title: "",
         course: "",
@@ -41,6 +42,11 @@ export default function PublishPaper({
       setAuthorized(false);
       setError("");
       setProgress(0);
+      setSubmissionNotice(
+        result.publication.status === "published"
+          ? "Safety check passed. Your paper is now published in the free catalogue."
+          : "Your paper was held for administrator review because the safety detector needs a closer look."
+      );
       onSubmitted?.();
     },
   });
@@ -49,7 +55,8 @@ export default function PublishPaper({
   const send = async (event: React.FormEvent) => {
     event.preventDefault();
     setError("");
-    if (!file) return setError("Choose a PDF examination paper.");
+    setSubmissionNotice("");
+    if (!file) return setError("Choose a supported examination document.");
     const validationError = validatePortalDocument(file, "submission");
     if (validationError) return setError(validationError);
     if (!authorized)
@@ -95,8 +102,9 @@ export default function PublishPaper({
             Submit a paper
           </h2>
           <p className="mt-2 max-w-xl text-sm leading-6 text-[#718780]">
-            Share an authorized PDF for administrator review. We keep this form
-            focused so you can submit in under a minute.
+            Share an authorized examination document. Safe PDFs, text, and CSV
+            files are published immediately; formats or content that need a
+            closer look are held securely for administrator review.
           </p>
         </div>
         <div className="hidden rounded-xl bg-[#e5f2eb] p-3 text-[#34745f] sm:block">
@@ -141,12 +149,12 @@ export default function PublishPaper({
         <span className="min-w-0 flex-1 truncate">
           {file
             ? `${file.name} · ${(file.size / 1024 / 1024).toFixed(2)} MiB`
-            : "Select a PDF file (maximum 4 MiB)"}
+            : "Select a PDF or supported document (maximum 4 MiB)"}
         </span>
         <input
           className="sr-only"
           type="file"
-          accept="application/pdf"
+          accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.csv"
           disabled={busy}
           onChange={event => {
             const next = event.target.files?.[0] ?? null;
@@ -166,8 +174,9 @@ export default function PublishPaper({
           onChange={event => setAuthorized(event.target.checked)}
           className="mt-1 h-4 w-4 accent-[#1d5146]"
         />
-        I confirm I own this material or have permission to share it. It will be
-        reviewed before appearing in the catalogue.
+        I confirm I own this material or have permission to share it. Safe files
+        may appear immediately; anything uncertain is held for administrator
+        review.
       </label>
       {uploading && (
         <div className="mt-4" aria-live="polite">
@@ -191,9 +200,9 @@ export default function PublishPaper({
           {error}
         </p>
       )}
-      {submit.isSuccess && (
+      {submissionNotice && (
         <p className="mt-4 flex items-center gap-2 rounded-xl bg-[#e5f2eb] p-3 text-sm text-[#34745f]">
-          <CheckCircle2 size={17} /> Submitted for administrator review.
+          <CheckCircle2 size={17} /> {submissionNotice}
         </p>
       )}
       <Button
@@ -206,7 +215,7 @@ export default function PublishPaper({
           ? "Uploading securely…"
           : submit.isPending
             ? "Saving submission…"
-            : "Send for review"}
+            : "Submit for safe checking"}
       </Button>
     </form>
   );

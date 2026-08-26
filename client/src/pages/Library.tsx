@@ -9,6 +9,7 @@ import {
   ArrowLeft,
   BookOpen,
   Download,
+  Eye,
   FileText,
   LockKeyhole,
   Receipt,
@@ -148,12 +149,22 @@ export default function Library() {
                         </p>
                       </div>
                     </div>
-                    <a
-                      href={`/api/papers/${item.paper!.legacyId}/download`}
-                      className="ml-3 inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#1d5146] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#153c34]"
-                    >
-                      <Download size={14} /> Download
-                    </a>
+                    <div className="ml-3 flex shrink-0 items-center gap-2">
+                      <a
+                        href={`/api/papers/${item.paper!.legacyId}/view`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-[#c8d9d2] bg-white px-3 py-2 text-xs font-semibold text-[#1d5146] transition hover:bg-[#e8f1ed]"
+                      >
+                        <Eye size={14} /> View
+                      </a>
+                      <a
+                        href={`/api/papers/${item.paper!.legacyId}/download`}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-[#1d5146] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#153c34]"
+                      >
+                        <Download size={14} /> Download
+                      </a>
+                    </div>
                   </div>
                 ))}
             </div>

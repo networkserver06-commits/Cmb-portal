@@ -45,8 +45,10 @@ import {
   linkPortalFile,
   listPortalFiles,
   portalFileById,
+  purgeRejectedPortalFile,
   unlinkPortalFile,
 } from "./fileStore";
+import { detectSubmissionSafety } from "./submissionSafety";
 import {
   auditStorage,
   cleanupStorage,
@@ -75,6 +77,52 @@ const paperInput = z.object({
   priceKes: z.number().positive(),
   fileId: z.string().optional(),
 });
+async function publishSubmissionAsPaper(
+  db: any,
+  submission: any,
+  actorId: number,
+  publicationMode: "automatic" | "admin_review"
+) {
+  const existing = await db.collection("papers").findOne({
+    submissionId: submission.legacyId,
+  });
+  if (existing) return existing;
+
+  const now = new Date();
+  const paper = {
+    _id: new (await import("mongodb")).ObjectId(),
+    legacyId: await nextId("papers"),
+    submissionId: submission.legacyId,
+    course: submission.course,
+    level: normalizeEducationLevel(submission.level),
+    cycle: submission.cycle,
+    unit: submission.unit,
+    paperType: submission.paperType,
+    title: submission.title,
+    description: submission.description ?? "",
+    priceKes: 0,
+    fileId: submission.fileId,
+    fileName: submission.fileName,
+    fileMimeType: submission.mimeType,
+    isAvailable: true,
+    accessMode: "free",
+    createdAt: now,
+    updatedAt: now,
+    publishedBy: actorId,
+    submittedBy: submission.userId,
+    publicationMode,
+  };
+  await db.collection("papers").insertOne(paper);
+  if (submission.fileId)
+    await linkPortalFile({
+      fileId: submission.fileId,
+      actorId,
+      entityType: "paper",
+      entityId: paper.legacyId,
+    });
+  return paper;
+}
+
 const postInput = z
   .object({
     title: z.string().min(2).max(180),
@@ -355,7 +403,10 @@ export const appRouter = router({
           actorId: ctx.user.id,
           purpose: "submission",
         });
+        const safety = await detectSubmissionSafety(file);
+        const automaticallyPublished = safety.decision === "auto_publish";
         const now = new Date();
+        const db = await mongo();
         const submission = {
           _id: new (await import("mongodb")).ObjectId(),
           legacyId: await nextId("submissions"),
@@ -370,18 +421,71 @@ export const appRouter = router({
           fileId: file.gridFsId,
           fileName: file.fileName,
           mimeType: file.mimeType,
-          status: "pending" as const,
+          status: automaticallyPublished
+            ? ("approved" as const)
+            : ("pending" as const),
+          safetyStatus: automaticallyPublished ? "passed" : "held",
+          safetyReasons: safety.reasons,
+          approvalMode: automaticallyPublished ? "automatic" : "admin_review",
+          reviewNote: automaticallyPublished
+            ? "Automatically approved by the ScholarShelf safety detector."
+            : "Held for administrator review by the ScholarShelf safety detector.",
           createdAt: now,
           updatedAt: now,
         };
-        await (await mongo()).collection("submissions").insertOne(submission);
+        await db.collection("submissions").insertOne(submission);
         await linkPortalFile({
           fileId: file.gridFsId,
           actorId: ctx.user.id,
           entityType: "submission",
           entityId: submission.legacyId,
         });
-        return { success: true, submission };
+
+        let paperId: number | undefined;
+        if (automaticallyPublished) {
+          const paper = await publishSubmissionAsPaper(
+            db,
+            submission,
+            ctx.user.id,
+            "automatic"
+          );
+          paperId = paper.legacyId;
+          await db.collection("submissions").updateOne(
+            { _id: submission._id },
+            {
+              $set: {
+                paperId,
+                reviewedBy: ctx.user.id,
+                reviewedAt: now,
+                updatedAt: new Date(),
+              },
+            }
+          );
+          await recordOperationalEvent({
+            eventType: "submission.auto_published",
+            actorId: ctx.user.id,
+            subjectType: "submission",
+            subjectId: String(submission.legacyId),
+            detail: { paperId, detector: "passed" },
+          });
+        } else {
+          await recordOperationalEvent({
+            eventType: "submission.held_for_review",
+            actorId: ctx.user.id,
+            subjectType: "submission",
+            subjectId: String(submission.legacyId),
+            detail: { reasons: safety.reasons },
+          });
+        }
+
+        return {
+          success: true,
+          submission: { ...submission, paperId },
+          publication: {
+            status: automaticallyPublished ? "published" : "held_for_review",
+            reasons: safety.reasons,
+          },
+        };
       }),
     activity: protectedProcedure.query(
       async ({ ctx }) =>
@@ -975,66 +1079,79 @@ export const appRouter = router({
         });
         if (!submission) throw new Error("Submission not found");
         if (input.status === "rejected") {
+          if (submission.status === "rejected") return { success: true };
+          if (submission.paperId)
+            throw new Error(
+              "Published contributions cannot be rejected. Hide or permanently delete the catalogue paper instead."
+            );
+
+          let purgedFileId: string | undefined;
+          if (submission.fileId) {
+            await purgeRejectedPortalFile({
+              fileId: submission.fileId,
+              actorId: ctx.user.id,
+            });
+            purgedFileId = submission.fileId;
+          }
+          const reviewedAt = new Date();
           await submissions.updateOne(
             { _id: submission._id },
             {
               $set: {
                 status: "rejected",
-                reviewNote: input.reviewNote ?? "",
+                reviewNote: input.reviewNote ?? "Not approved for publication.",
                 reviewedBy: ctx.user.id,
-                reviewedAt: new Date(),
-                updatedAt: new Date(),
+                reviewedAt,
+                updatedAt: reviewedAt,
+                safetyStatus: "reviewed",
+                approvalMode: "admin_review",
+                storagePurged: Boolean(purgedFileId),
+                storagePurgedAt: purgedFileId ? reviewedAt : undefined,
               },
             }
           );
-          return { success: true };
-        }
-        if (submission.status === "approved" && submission.paperId)
-          return { success: true, paperId: submission.paperId };
-        const now = new Date();
-        const paperId = await nextId("papers");
-        await db.collection("papers").insertOne({
-          _id: new (await import("mongodb")).ObjectId(),
-          legacyId: paperId,
-          course: submission.course,
-          level: normalizeEducationLevel(String(submission.level)),
-          cycle: submission.cycle,
-          unit: submission.unit,
-          paperType: submission.paperType,
-          title: submission.title,
-          description: submission.description ?? "",
-          priceKes: 0,
-          fileId: submission.fileId,
-          fileName: submission.fileName,
-          fileMimeType: submission.mimeType,
-          isAvailable: true,
-          accessMode: "free",
-          createdAt: now,
-          updatedAt: now,
-          publishedBy: ctx.user.id,
-          submittedBy: submission.userId,
-        });
-        if (submission.fileId)
-          await linkPortalFile({
-            fileId: submission.fileId,
+          await recordOperationalEvent({
+            eventType: "submission.rejected",
             actorId: ctx.user.id,
-            entityType: "paper",
-            entityId: paperId,
+            subjectType: "submission",
+            subjectId: String(submission.legacyId),
+            detail: {
+              storagePurged: Boolean(purgedFileId),
+              fileId: purgedFileId,
+            },
           });
+          return { success: true, storagePurged: Boolean(purgedFileId) };
+        }
+
+        const existingPaper = await db.collection("papers").findOne({
+          submissionId: submission.legacyId,
+        });
+        if (submission.status === "approved" && existingPaper)
+          return { success: true, paperId: existingPaper.legacyId };
+
+        const paper = await publishSubmissionAsPaper(
+          db,
+          submission,
+          ctx.user.id,
+          "admin_review"
+        );
+        const now = new Date();
         await submissions.updateOne(
           { _id: submission._id },
           {
             $set: {
               status: "approved",
-              paperId,
+              paperId: paper.legacyId,
+              safetyStatus: "reviewed",
+              approvalMode: "admin_review",
               reviewNote: input.reviewNote ?? "",
               reviewedBy: ctx.user.id,
-              reviewedAt: new Date(),
-              updatedAt: new Date(),
+              reviewedAt: now,
+              updatedAt: now,
             },
           }
         );
-        return { success: true, paperId };
+        return { success: true, paperId: paper.legacyId };
       }),
   }),
 });

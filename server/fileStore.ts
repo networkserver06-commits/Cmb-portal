@@ -326,7 +326,60 @@ export async function deletePortalFile(input: {
   });
 }
 
-export async function streamPortalFile(fileId: string, response: Response) {
+export async function purgeRejectedPortalFile(input: {
+  fileId: string;
+  actorId: number;
+}) {
+  const metadata = await portalFileById(input.fileId);
+  if (!metadata) return { deleted: false as const };
+  if (metadata.references.some(reference => reference.entityType === "paper"))
+    throw new Error(
+      "A file linked to a published paper cannot be purged as a rejected submission."
+    );
+
+  for (const reference of metadata.references) {
+    await unlinkPortalFile({
+      fileId: input.fileId,
+      actorId: input.actorId,
+      entityType: reference.entityType,
+      entityId: reference.entityId,
+    });
+  }
+  await deletePortalFile(input);
+  await recordWorkflow({
+    entityType: "file",
+    entityId: input.fileId,
+    status: "rejected:purged",
+    actorId: input.actorId,
+    detail: "GridFS bytes and active file metadata deleted",
+  });
+  return { deleted: true as const };
+}
+
+export async function readPortalFileBytes(fileId: string) {
+  const metadata = await portalFileById(fileId);
+  if (!metadata) throw new Error("The requested file is unavailable.");
+  if (metadata.byteLength > MAX_UPLOAD_BYTES)
+    throw new Error("The selected file exceeds the safety scan limit.");
+
+  const stream = (await portalFiles()).openDownloadStream(new ObjectId(fileId));
+  const chunks: Buffer[] = [];
+  let total = 0;
+  for await (const chunk of stream) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    total += buffer.byteLength;
+    if (total > MAX_UPLOAD_BYTES)
+      throw new Error("The selected file exceeds the safety scan limit.");
+    chunks.push(buffer);
+  }
+  return Buffer.concat(chunks, total);
+}
+
+export async function streamPortalFile(
+  fileId: string,
+  response: Response,
+  options: { disposition?: "inline" | "attachment" } = {}
+) {
   const metadata = await portalFileById(fileId);
   if (!metadata) throw new Error("The requested file is unavailable.");
   const stream = (await portalFiles()).openDownloadStream(new ObjectId(fileId));
@@ -334,7 +387,7 @@ export async function streamPortalFile(fileId: string, response: Response) {
   response.setHeader("Content-Length", String(metadata.byteLength));
   response.setHeader(
     "Content-Disposition",
-    `attachment; filename*=UTF-8''${encodeURIComponent(metadata.fileName)}`
+    `${options.disposition ?? "attachment"}; filename*=UTF-8''${encodeURIComponent(metadata.fileName)}`
   );
   response.setHeader("Cache-Control", "private, no-store");
   await new Promise<void>((resolve, reject) => {
