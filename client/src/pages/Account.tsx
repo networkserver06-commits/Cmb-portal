@@ -1190,6 +1190,19 @@ const dashboardTabs: Array<{
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
+function getSafeReturnTo() {
+  const candidate = new URLSearchParams(window.location.search).get("returnTo");
+  if (!candidate || !candidate.startsWith("/") || candidate.startsWith("//"))
+    return null;
+  try {
+    const url = new URL(candidate, window.location.origin);
+    if (url.origin !== window.location.origin) return null;
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return null;
+  }
+}
+
 function getPasswordStrength(password: string) {
   const checks = [
     password.length >= 8,
@@ -1226,6 +1239,10 @@ export default function Account({
   const [dashboardTransition, setDashboardTransition] = useState<
     "administrator" | "student" | null
   >(null);
+  const returnToPath = getSafeReturnTo();
+  const returnToQuery = returnToPath
+    ? `?returnTo=${encodeURIComponent(returnToPath)}`
+    : "";
   const passwordStrength = useMemo(
     () => getPasswordStrength(password),
     [password]
@@ -1246,7 +1263,13 @@ export default function Account({
     setDashboardTransition(destination);
     try {
       await utils.auth.me.invalidate();
-      setLocation(destination === "administrator" ? "/admin" : "/account");
+      setLocation(
+        destination === "student" && returnToPath
+          ? returnToPath
+          : destination === "administrator"
+            ? "/admin"
+            : "/account"
+      );
     } catch (transitionError) {
       setDashboardTransition(null);
       setError(
@@ -1284,7 +1307,7 @@ export default function Account({
     const currentPath = window.location.pathname;
     const nextPath = nextMode === "login" ? "/login" : "/create-account";
     if (currentPath !== "/account" && currentPath !== nextPath)
-      setLocation(nextPath);
+      setLocation(`${nextPath}${returnToQuery}`);
   };
 
   const submit = (event: React.FormEvent) => {
@@ -1379,7 +1402,7 @@ export default function Account({
             </span>
             <div className="mt-7">
               <Link
-                href="/login"
+                href={`/login${returnToQuery}`}
                 className="text-sm font-semibold text-[#1d5146] underline underline-offset-4"
               >
                 Return to sign in

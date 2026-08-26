@@ -86,3 +86,5 @@
 - [x] Push the latest Elite Resources branding refresh and all current ScholarShelf upgrades to GitHub main, preserving newer remote history.
 - [x] Fix the production null education-level crash by making legacy catalogue level normalization null-safe, add regression coverage, and verify the production build.
 - [x] Resolve the repeated live null education-level crash, verify the deployed-safe bundle, and push the correction to GitHub main.
+- [x] Add direct Sign in and Create account actions to the checkout dialog, preserve the selected paper return context, and validate the signed-out purchase journey.
+- [x] Update the stale administrator navigation regression to assert the new role-aware return-target redirect.

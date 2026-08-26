@@ -106,8 +106,17 @@ describe("account route regression coverage", () => {
     expect(homeSource).not.toContain('<a href="/account"');
     expect(accountSource).toContain("await utils.auth.me.invalidate()");
     expect(accountSource).toContain(
-      'destination === "administrator" ? "/admin" : "/account"'
+      'authenticatedUser?.role === "admin" ? "administrator" : "student"'
     );
+    expect(accountSource).toContain(
+      'destination === "student" && returnToPath'
+    );
+    expect(accountSource).toContain('"/admin"');
+    expect(accountSource).toContain('"/account"');
+    expect(accountSource).toContain("getSafeReturnTo");
+    expect(accountSource).toContain("returnToPath");
+    expect(accountSource).toContain("url.origin !== window.location.origin");
+    expect(accountSource).toContain("returnToQuery");
     expect(accountSource).not.toContain('window.location.assign("/account")');
     expect(accountSource).toContain('href="/reset-password"');
     expect(accountSource).toContain("requestEmailVerification");
@@ -157,7 +166,16 @@ describe("account route regression coverage", () => {
     expect(homeSource).toContain('"Buy securely"');
     expect(homeSource).toContain('"Opening Paystack…"');
     expect(homeSource).toContain("confirmation returns you to your library");
-    expect(homeSource).toContain("Sign in is required before secure checkout");
+    expect(homeSource).toContain(
+      "Choose Sign in or Create account to continue from this paper."
+    );
+    expect(homeSource).toContain('authEntryHref("login", selectedPaper.id)');
+    expect(homeSource).toContain(
+      'authEntryHref("create-account", selectedPaper.id)'
+    );
+    expect(homeSource).toContain("checkoutReturnPath");
+    expect(homeSource).toContain("selected paper will stay ready");
+    expect(homeSource).toContain("new URLSearchParams(window.location.search)");
     expect(homeSource).toContain("<Dialog");
     expect(homeSource).toContain("onOpenChange");
     expect(homeSource).toContain("cancelCheckout");

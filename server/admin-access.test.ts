@@ -36,8 +36,13 @@ describe("role-aware administrator access", () => {
     expect(accountSource).toContain("Opening administrator workspace");
     expect(accountSource).toContain("setDashboardTransition(destination)");
     expect(accountSource).toContain(
-      'destination === "administrator" ? "/admin" : "/account"'
+      'authenticatedUser?.role === "admin" ? "administrator" : "student"'
     );
+    expect(accountSource).toContain(
+      'destination === "student" && returnToPath'
+    );
+    expect(accountSource).toContain('"/admin"');
+    expect(accountSource).toContain('"/account"');
   });
 
   it("keeps the administrator route registered and the workspace controls live", () => {
