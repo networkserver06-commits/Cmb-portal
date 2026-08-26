@@ -22,3 +22,23 @@ The refreshed administrator Papers workspace showed a protected `View document` 
 - After reauthentication, the live `/admin/papers` route resolved successfully and displayed `Admin browser proof 1787774382047` plus the other catalogue resources. Every populated Paper inventory row exposed a visible `View document` link, and the redesigned upload station loaded with compact responsive fields and recent catalogue file actions.
 
 - End-to-end visible form verification: The authenticated administrator form successfully published `Admin form verification 2026-08-26` with University + Free access. The resource appeared immediately in the inventory with a working `View document` link. The temporary paper (legacy ID 105) and its GridFS file were then permanently deleted through the guarded administrator mutation, and subsequent checks confirmed the paper is unlisted and the file route returns 404.
+
+- Final validation pass: the authenticated admin Papers route loaded with the empty Free-access form state and the existing Paper inventory View document actions. The form is ready for negative-path checks without creating another document.
+
+- The authenticated admin paper form exposes explicit negative-path messages: `Choose a document before saving this resource.`, `Choose an education level before saving this resource.`, and the server-side paid/free price rules remain enforced. The empty-form browser submission focused the required price control without creating a paper.
+
+- Authenticated negative-path check passed: with Free access selected and no document attached, the visible admin form blocked submission and displayed `Choose a document before saving this resource.` No new catalogue record was created.
+
+- The live form’s explicit missing-document validation is confirmed. The browser session currently exposes four hidden file inputs because the page also renders replacement controls; the upload helper did not accept the raw DOM index, so the next retry will activate the visible picker label first.
+
+- Authenticated paper negative-path check passed: with valid metadata, a READY document, Free access, and no education level, the visible form blocked submission and displayed `Choose an education level before saving this resource.` No catalogue paper was created.
+
+- Authenticated pricing check passed: with Paystack checkout selected and price `0`, the visible paper form blocked submission and displayed `Enter a positive price in KES.` Free access automatically hides the price field and submits with zero KES, so the UI does not permit a non-zero free price.
+
+- Authenticated post negative-path check passed: after switching the same visible station to `Catalogue post with document`, removing the selected file, and pressing `Publish catalogue post`, the form blocked submission and displayed `Choose a document before saving this resource.` No post was created.
+
+- Authenticated post missing-education check passed: with a valid title/course/cycle/unit/paper type, a ready document, and `Choose education level` selected, pressing `Publish catalogue post` blocked submission and displayed `Choose an education level before saving this resource.` No new catalogue resource appeared.
+
+- Authenticated post paid-pricing check passed: after selecting University and Paystack checkout while leaving the price at `0`, pressing `Publish catalogue post` blocked submission and displayed `Enter a positive price in KES.` The catalogue list remained unchanged and no post was created.
+
+- Authenticated Free-access design check passed in the same station: selecting Free access hides the price control, the UI labels the resource as free, and existing verified free resources display `Free access · KES 0`; the earlier successful upload persisted `priceKes: 0` with `accessMode: free`.

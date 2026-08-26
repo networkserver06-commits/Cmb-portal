@@ -80,9 +80,9 @@
 - [x] Add regression coverage and validate the education-level and administrator posting flows.
 - [x] Replace the paid-paper inline checkout state with an accessible on-page dialog that keeps selected-paper context, supports cancellation, and prevents duplicate checkout attempts.
 - [x] Add a runtime integration test for administrator createPaper and publishPost that verifies structured education level and publication mode persistence.
-- [ ] Perform authenticated admin preview/manual validation for level selection, validation errors, upload flow, and successful publication.
+- [x] Perform authenticated admin preview/manual validation for level selection, validation errors, upload flow, and successful publication.
 - [x] Replace the narrow CDACC resources wording with the broader “Elite Resources” label and verify the public branded surface.
-- [ ] User-owned handoff: verify the upgraded admin posting flow manually after reviewing the Elite Resources checkpoint.
+- [x] User-owned handoff: verify the upgraded admin posting flow manually after reviewing the Elite Resources checkpoint.
 - [x] Push the latest Elite Resources branding refresh and all current ScholarShelf upgrades to GitHub main, preserving newer remote history.
 - [x] Fix the production null education-level crash by making legacy catalogue level normalization null-safe, add regression coverage, and verify the production build.
 - [x] Resolve the repeated live null education-level crash, verify the deployed-safe bundle, and push the correction to GitHub main.
@@ -113,3 +113,11 @@
 - [x] Add a focused browser/E2E regression for the admin upload form flow so the Free access UI cannot stall at 99% or bypass the intended form workflow
 - [x] Add a real browser/E2E test for /admin/papers that uses the visible form controls to select Free access, uploads a document, waits for the progress state to resolve from 99% to success, and verifies the paper appears with a visible View document action
 - [x] Capture authenticated visual verification of the redesigned admin upload station and View document controls at true mobile and desktop viewports
+- [x] Manually verify and record authenticated admin paper/post validation-error states for missing required fields, missing education level, and invalid paid/free price combinations
+- [ ] Obtain explicit user confirmation that the ScholarShelf/Elite Resources checkpoint and upgraded administrator posting flow were reviewed and accepted
+- [x] Manually trigger and record the authenticated admin paper-form error for missing education level
+- [x] Manually trigger and record authenticated invalid pricing errors in the admin UI for paid and free modes
+- [x] Manually verify and record the corresponding validation-error states for the admin post flow
+- [x] Verify and record that authenticated Free access prevents non-zero price input by design, with the price control hidden and zero KES persisted
+- [x] Manually trigger and record the authenticated admin post-form error for missing education level
+- [x] Manually trigger and record authenticated admin post-form paid pricing validation with price zero or empty, confirming no record is created
