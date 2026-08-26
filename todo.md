@@ -82,3 +82,5 @@
 - [x] Add a runtime integration test for administrator createPaper and publishPost that verifies structured education level and publication mode persistence.
 - [ ] Perform authenticated admin preview/manual validation for level selection, validation errors, upload flow, and successful publication.
 - [x] Replace the narrow CDACC resources wording with the broader “Elite Resources” label and verify the public branded surface.
+- [ ] User-owned handoff: verify the upgraded admin posting flow manually after reviewing the Elite Resources checkpoint.
+- [x] Push the latest Elite Resources branding refresh and all current ScholarShelf upgrades to GitHub main, preserving newer remote history.
