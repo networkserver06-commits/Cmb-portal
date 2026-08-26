@@ -72,3 +72,5 @@
 - [x] Add an integration test that reconciles a pending successful wallet top-up and proves the balance increases exactly once.
 - [x] Add a webhook-focused runtime test for wallet success, repeat delivery idempotency, and failed/abandoned transitions.
 - [x] Add a regression test proving non-wallet Paystack webhooks still use paper-order fulfilment.
+- [x] Apply the user-confirmed KES 10 correction for the Paystack-successful wallet reference and record an audit event.
+- [x] Push the complete tested ScholarShelf upgrade, including the wallet repair, to GitHub main and verify the remote commit.
