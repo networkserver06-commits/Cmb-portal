@@ -81,3 +81,4 @@
 - [x] Replace the paid-paper inline checkout state with an accessible on-page dialog that keeps selected-paper context, supports cancellation, and prevents duplicate checkout attempts.
 - [x] Add a runtime integration test for administrator createPaper and publishPost that verifies structured education level and publication mode persistence.
 - [ ] Perform authenticated admin preview/manual validation for level selection, validation errors, upload flow, and successful publication.
+- [x] Replace the narrow CDACC resources wording with the broader “Elite Resources” label and verify the public branded surface.

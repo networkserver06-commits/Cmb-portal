@@ -11,6 +11,10 @@ describe("homepage support and credit surfaces", () => {
     resolve(process.cwd(), "server/routers.ts"),
     "utf8"
   );
+  const indexSource = readFileSync(
+    resolve(process.cwd(), "client/index.html"),
+    "utf8"
+  );
 
   it("keeps an accessible WhatsApp support link for the configured number", () => {
     expect(homeSource).toContain("https://wa.me/254116553618");
@@ -19,6 +23,14 @@ describe("homepage support and credit surfaces", () => {
     );
     expect(homeSource).toContain('target="_blank"');
     expect(homeSource).toContain('rel="noreferrer"');
+  });
+
+  it("uses the broader Elite Resources public identity", () => {
+    expect(indexSource).toContain("ScholarShelf · Elite Resources");
+    expect(indexSource).toContain(
+      "Elite examination resources for focused revision"
+    );
+    expect(indexSource).not.toContain("CDACC resources");
   });
 
   it("keeps the Lee Tech attribution in the public footer", () => {
