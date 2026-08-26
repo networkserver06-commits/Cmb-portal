@@ -18,6 +18,7 @@ const emails = [
   `${runId}-owner@example.com`,
   `${runId}-entitled@example.com`,
   `${runId}-stranger@example.com`,
+  `${runId}-free-upload@example.com`,
 ];
 let server: Server;
 let baseUrl = "";
@@ -86,6 +87,91 @@ afterAll(async () => {
 }, 90_000);
 
 describe("protected document access routes", () => {
+  it("uploads and publishes a free administrator paper through HTTP with a working view", async () => {
+    const admin = await createSession(emails[4]!, "Free Upload Admin", "admin");
+    const db = await mongo();
+    let fileId = "";
+    let paperId = 0;
+    try {
+      const upload = await fetch(`${baseUrl}/api/files/upload`, {
+        method: "POST",
+        headers: {
+          cookie: admin.cookie,
+          "content-type": "application/octet-stream",
+          "x-file-name": encodeURIComponent(`${runId}-free-upload.txt`),
+          "x-file-type": "text/plain",
+          "x-file-purpose": "paper",
+        },
+        body: Buffer.from("ScholarShelf browser upload regression"),
+      });
+      expect(upload.status).toBe(201);
+      const uploaded = (await upload.json()) as { fileId?: string };
+      fileId = uploaded.fileId ?? "";
+      expect(fileId).toMatch(/^[a-f0-9]{24}$/);
+
+      const input = {
+        title: `${runId}-free-paper`,
+        course: "ScholarShelf QA",
+        level: "university",
+        cycle: "August 2026",
+        unit: "Document viewing",
+        paperType: "Admin verification",
+        description: "Free upload regression",
+        priceKes: 0,
+        mode: "free",
+        fileId,
+      };
+      const create = await fetch(
+        `${baseUrl}/api/trpc/admin.createPaper?batch=1`,
+        {
+          method: "POST",
+          headers: {
+            cookie: admin.cookie,
+            "content-type": "application/json",
+            accept: "application/json",
+          },
+          body: JSON.stringify({ 0: { json: input } }),
+        }
+      );
+      expect(create.status).toBe(200);
+      const createdPayload = (await create.json()) as Array<{
+        result?: { data?: { json?: { paper?: { legacyId?: number } } } };
+      }>;
+      paperId = createdPayload[0]?.result?.data?.json?.paper?.legacyId ?? 0;
+      expect(paperId).toBeGreaterThan(0);
+
+      const saved = await db.collection<any>("papers").findOne({
+        legacyId: paperId,
+      });
+      expect(saved).toEqual(
+        expect.objectContaining({
+          fileId,
+          priceKes: 0,
+          accessMode: "free",
+          postMode: "free",
+          isAvailable: true,
+        })
+      );
+
+      const view = await fetch(`${baseUrl}/api/files/${fileId}/view`, {
+        headers: { cookie: admin.cookie },
+      });
+      expect(view.status).toBe(200);
+      expect(view.headers.get("content-disposition")).toContain("inline");
+      await expect(view.text()).resolves.toContain("browser upload regression");
+    } finally {
+      if (paperId)
+        await db.collection("papers").deleteOne({ legacyId: paperId });
+      if (fileId) {
+        await db
+          .collection("file_metadata")
+          .updateOne({ gridFsId: fileId }, { $set: { references: [] } });
+        if (await portalFileById(fileId))
+          await deletePortalFile({ fileId, actorId: admin.user.id });
+      }
+    }
+  }, 90_000);
+
   it("allows admin and authorized student viewing while denying unrelated users", async () => {
     const admin = await createSession(emails[0]!, "Document Admin", "admin");
     const owner = await createSession(emails[1]!, "Document Owner", "user");

@@ -43,6 +43,13 @@ describe("administrator posting persistence", () => {
       mimeType: "application/pdf",
       bytes: Buffer.from("%PDF-1.4\nadmin-post"),
     });
+    const freePaperFile = await uploadPortalFile({
+      ownerId: adminId,
+      purpose: "paper",
+      fileName: `${runId}-free-paper.txt`,
+      mimeType: "text/plain",
+      bytes: Buffer.from("free administrator paper"),
+    });
     try {
       const caller = appRouter.createCaller(context());
       const createdPaper = await caller.admin.createPaper({
@@ -68,13 +75,30 @@ describe("administrator posting persistence", () => {
         mode: "free",
         fileId: postFile.gridFsId,
       });
+      const createdFreePaper = await caller.admin.createPaper({
+        title: `${runId}-free-paper`,
+        course: "ScholarShelf Studies",
+        level: "college",
+        cycle: "Term 1",
+        unit: "Free Resources",
+        paperType: "Open revision",
+        description: "Free administrator paper",
+        priceKes: 0,
+        mode: "free",
+        fileId: freePaperFile.gridFsId,
+      });
       const saved = await db
         .collection<any>("papers")
-        .find({ title: { $in: [`${runId}-paper`, `${runId}-post`] } })
+        .find({
+          title: {
+            $in: [`${runId}-paper`, `${runId}-post`, `${runId}-free-paper`],
+          },
+        })
         .toArray();
       expect(createdPaper.success).toBe(true);
       expect(publishedPost.success).toBe(true);
-      expect(saved).toHaveLength(2);
+      expect(createdFreePaper.success).toBe(true);
+      expect(saved).toHaveLength(3);
       expect(saved).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
@@ -92,20 +116,36 @@ describe("administrator posting persistence", () => {
             priceKes: 0,
             isAvailable: true,
           }),
+          expect.objectContaining({
+            title: `${runId}-free-paper`,
+            level: "college",
+            accessMode: "free",
+            postMode: "free",
+            priceKes: 0,
+            isAvailable: true,
+          }),
         ])
       );
     } finally {
       await db.collection("papers").deleteMany({
-        title: { $in: [`${runId}-paper`, `${runId}-post`] },
+        title: {
+          $in: [`${runId}-paper`, `${runId}-post`, `${runId}-free-paper`],
+        },
       });
-      for (const fileId of [paperFile.gridFsId, postFile.gridFsId]) {
+      for (const fileId of [
+        paperFile.gridFsId,
+        postFile.gridFsId,
+        freePaperFile.gridFsId,
+      ]) {
         await db
           .collection("file_metadata")
           .updateOne({ gridFsId: fileId }, { $set: { references: [] } });
         await deletePortalFile({ fileId, actorId: adminId });
       }
       await db.collection("operational_records").deleteMany({
-        subjectId: { $in: [paperFile.gridFsId, postFile.gridFsId] },
+        subjectId: {
+          $in: [paperFile.gridFsId, postFile.gridFsId, freePaperFile.gridFsId],
+        },
       });
     }
   }, 45_000);

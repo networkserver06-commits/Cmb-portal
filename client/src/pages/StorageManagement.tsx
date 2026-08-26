@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import {
   AlertTriangle,
   Database,
+  Eye,
   FileCheck2,
   Loader2,
   ShieldCheck,
@@ -185,6 +186,7 @@ export default function StorageManagement() {
             <tr>
               <th className="w-12 px-6 py-4" />
               <th className="px-3 py-4">File</th>
+              <th className="px-3 py-4">Document</th>
               <th className="px-3 py-4">Origin</th>
               <th className="px-3 py-4">References</th>
               <th className="px-3 py-4">Age</th>
@@ -195,7 +197,7 @@ export default function StorageManagement() {
             {inventory.isLoading ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   className="px-6 py-10 text-center text-sm text-[#82958e]"
                 >
                   Preparing storage inventory…
@@ -229,6 +231,17 @@ export default function StorageManagement() {
                     <div className="mt-1 max-w-[280px] truncate font-mono text-[10px] text-[#9aaca6]">
                       {item.key}
                     </div>
+                  </td>
+                  <td className="px-3 py-3">
+                    <a
+                      href={`/api/files/${encodeURIComponent(item.key)}/view`}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={`View document ${item.fileName || item.key}`}
+                      className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[#c8d9d2] px-3 py-1.5 font-semibold text-[#1d5146] transition hover:bg-[#f5f9f6]"
+                    >
+                      <Eye size={13} /> View document
+                    </a>
                   </td>
                   <td className="px-3 py-3 capitalize">{item.origin}</td>
                   <td className="px-3 py-3">

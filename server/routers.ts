@@ -66,17 +66,33 @@ import {
 
 const educationLevelInput = z.enum(EDUCATION_LEVELS);
 
-const paperInput = z.object({
-  course: z.string().min(2),
-  level: educationLevelInput,
-  cycle: z.string().min(1),
-  unit: z.string().min(2),
-  paperType: z.string().min(2),
-  title: z.string().min(2),
-  description: z.string().optional(),
-  priceKes: z.number().positive(),
-  fileId: z.string().optional(),
-});
+const paperInput = z
+  .object({
+    course: z.string().min(2),
+    level: educationLevelInput,
+    cycle: z.string().min(1),
+    unit: z.string().min(2),
+    paperType: z.string().min(2),
+    title: z.string().min(2),
+    description: z.string().optional(),
+    priceKes: z.number().min(0),
+    fileId: z.string().optional(),
+    mode: z.enum(["free", "paid"]).default("paid"),
+  })
+  .superRefine((input, ctx) => {
+    if (input.mode === "paid" && input.priceKes <= 0)
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["priceKes"],
+        message: "Paid papers must have a price greater than zero.",
+      });
+    if (input.mode === "free" && input.priceKes !== 0)
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["priceKes"],
+        message: "Free papers must have a zero price.",
+      });
+  });
 async function publishSubmissionAsPaper(
   db: any,
   submission: any,
@@ -751,6 +767,7 @@ export const appRouter = router({
       .input(paperInput)
       .mutation(async ({ ctx, input }) => {
         const now = new Date();
+        const { mode, ...paperFields } = input;
         const file = input.fileId
           ? await claimPortalFile({
               fileId: input.fileId,
@@ -760,15 +777,16 @@ export const appRouter = router({
             })
           : null;
         const paper = {
-          ...input,
+          ...paperFields,
           fileId: file?.gridFsId,
           fileName: file?.fileName,
           fileMimeType: file?.mimeType,
           _id: new (await import("mongodb")).ObjectId(),
           legacyId: await nextId("papers"),
-          priceKes: input.priceKes,
+          priceKes: mode === "free" ? 0 : input.priceKes,
           isAvailable: true,
-          accessMode: "purchase",
+          accessMode: mode === "free" ? "free" : "purchase",
+          postMode: mode,
           createdAt: now,
           updatedAt: now,
         };

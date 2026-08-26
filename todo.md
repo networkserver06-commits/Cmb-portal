@@ -101,3 +101,15 @@
 - [x] Verify and expose administrator hide/unpublish control for auto-published papers or prove the existing control is preserved
 - [x] Add runtime coverage that a safe submission appears in the public catalogue immediately
 - [x] Add runtime authorization coverage for admin, owner/entitled, and forbidden document view requests
+- [x] Verify every administrator-visible uploaded-document card exposes a protected View document action in the signed-in admin workspace
+- [x] Allow administrator examination papers with Free access to persist a zero KES price without rejecting the upload
+- [x] Finish an authenticated browser upload of a Free access administrator examination paper, confirm priceKes 0/accessMode free, and verify its View document action
+- [x] Add runtime/browser-level regression coverage for the admin Free access upload flow so zero-KES papers cannot regress into validation failure or stalled submission states
+- [x] Upgrade the administrator upload station with a compact mobile-first hierarchy matching the provided reference
+- [x] Improve access-mode and document-picker feedback so the form is clearer and less error-prone on small screens
+- [x] Verify the upgraded upload station and View document controls at mobile and desktop breakpoints
+- [x] Complete an authenticated end-to-end admin form upload on /admin/papers using the actual UI controls, confirm Free access with priceKes 0, and verify its visible View document action
+- [x] Capture authenticated visual verification of the redesigned admin upload station and View document controls at true mobile and desktop viewports
+- [x] Add a focused browser/E2E regression for the admin upload form flow so the Free access UI cannot stall at 99% or bypass the intended form workflow
+- [x] Add a real browser/E2E test for /admin/papers that uses the visible form controls to select Free access, uploads a document, waits for the progress state to resolve from 99% to success, and verifies the paper appears with a visible View document action
+- [x] Capture authenticated visual verification of the redesigned admin upload station and View document controls at true mobile and desktop viewports

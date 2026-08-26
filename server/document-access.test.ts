@@ -17,6 +17,14 @@ const adminSource = readFileSync(
   new URL("../client/src/pages/AdminOperations.tsx", import.meta.url),
   "utf8"
 );
+const adminDashboardSource = readFileSync(
+  new URL("../client/src/pages/Admin.tsx", import.meta.url),
+  "utf8"
+);
+const storageSource = readFileSync(
+  new URL("../client/src/pages/StorageManagement.tsx", import.meta.url),
+  "utf8"
+);
 const adminControlsSource = readFileSync(
   new URL("../client/src/pages/AdminControls.tsx", import.meta.url),
   "utf8"
@@ -68,6 +76,14 @@ describe("protected document viewing and rejection cleanup", () => {
     expect(adminSource).toContain(
       "/api/files/${encodeURIComponent(submission.fileId)}/view"
     );
+    expect(adminDashboardSource).toContain("View document");
+    expect(adminDashboardSource).toContain(
+      "/api/files/${encodeURIComponent(paper.fileId)}/view"
+    );
+    expect(storageSource).toContain("View document");
+    expect(storageSource).toContain(
+      "/api/files/${encodeURIComponent(item.key)}/view"
+    );
     expect(adminSource).toContain("Reject & purge");
     expect(adminControlsSource).toContain(
       "trpc.admin.setAvailability.useMutation"
@@ -81,6 +97,21 @@ describe("protected document viewing and rejection cleanup", () => {
       "/api/files/${encodeURIComponent(submission.fileId)}/view"
     );
     expect(librarySource).toContain("/api/papers/${item.paper!.legacyId}/view");
+  });
+
+  it("keeps the upload station compact and actionable on mobile", () => {
+    expect(adminControlsSource).toContain(
+      "lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]"
+    );
+    expect(adminControlsSource).toContain(
+      'aria-label="Remove selected document"'
+    );
+    expect(adminControlsSource).toContain("Ready");
+    expect(adminControlsSource).toContain("View document");
+    expect(adminControlsSource).toContain("No catalogue resources yet");
+    expect(adminControlsSource).toContain(
+      "Learners can open this resource without payment."
+    );
   });
 
   it("documents the detector result and keeps student submission messaging accurate", () => {

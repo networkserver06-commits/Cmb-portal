@@ -14,7 +14,17 @@ import {
 import { uploadPortalDocument, validatePortalDocument } from "@/lib/fileUpload";
 import EducationLevelSelect from "@/components/EducationLevelSelect";
 import type { EducationLevel } from "@shared/educationLevels";
-import { Megaphone, Plus, Power, Save, UploadCloud } from "lucide-react";
+import {
+  CheckCircle2,
+  FileText,
+  Megaphone,
+  Plus,
+  Power,
+  Save,
+  ShieldCheck,
+  UploadCloud,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 
 const emptyPaper = {
@@ -153,6 +163,7 @@ export default function AdminControls() {
           ...paper,
           level,
           priceKes,
+          mode: resourceMode,
           fileId: uploaded.fileId,
         });
       }
@@ -171,21 +182,30 @@ export default function AdminControls() {
   };
 
   return (
-    <section className="mt-8 grid gap-6 lg:grid-cols-2">
-      <div className="rounded-2xl border border-[#dfe9e3] bg-white p-6 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="font-serif text-xl font-semibold text-[#173e35]">
-              Catalogue upload station
-            </h2>
-            <p className="mt-1 text-xs text-[#82958e]">
-              One secure uploader for administrator-managed papers and catalogue
-              posts. Student submissions are handled in Operations.
-            </p>
+    <section className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+      <div className="relative overflow-hidden rounded-[1.75rem] border border-[#dfe9e3] bg-white p-4 shadow-sm sm:p-6">
+        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#1d5146] via-[#76a894] to-[#e9c878]" />
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[#e8f1ed] text-[#1d5146]">
+              <ShieldCheck size={19} />
+            </div>
+            <div>
+              <h2 className="font-serif text-xl font-semibold text-[#173e35]">
+                Catalogue upload station
+              </h2>
+              <p className="mt-1 max-w-xl text-xs leading-5 text-[#82958e]">
+                Publish administrator-managed papers and posts through one
+                secure GridFS uploader. Student contributions are reviewed in
+                Operations.
+              </p>
+            </div>
           </div>
-          <Plus size={19} className="text-[#4b8876]" />
+          <Badge className="w-fit border-0 bg-[#f5f8f6] text-[#58766b]">
+            <Plus size={13} className="mr-1" /> New resource
+          </Badge>
         </div>
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-[#789087]">
               Resource type
@@ -222,8 +242,7 @@ export default function AdminControls() {
               className="h-10 w-full rounded-xl border-[#d9e6df]"
             />
             <p className="mt-1 text-xs text-[#82958e]">
-              This label appears on the catalogue and helps learners find the
-              right pathway.
+              Shown on the catalogue so learners can filter by pathway.
             </p>
           </div>
           <div>
@@ -247,6 +266,11 @@ export default function AdminControls() {
                 <SelectItem value="paid">Paystack checkout</SelectItem>
               </SelectContent>
             </Select>
+            <p className="mt-1 text-[11px] leading-4 text-[#82958e]">
+              {resourceMode === "free"
+                ? "Learners can open this resource without payment."
+                : "Learners pay securely through the Paystack checkout flow."}
+            </p>
           </div>
           {(
             Object.keys(resourceFieldLabels) as Array<
@@ -282,7 +306,7 @@ export default function AdminControls() {
             </div>
           )}
         </div>
-        <div className="mt-3">
+        <div className="mt-4 sm:col-span-2">
           <label className="mb-2 block text-xs font-semibold text-[#58766b]">
             Description{" "}
             <span className="font-normal text-[#9aaca5]">(optional)</span>
@@ -294,21 +318,47 @@ export default function AdminControls() {
             className="rounded-xl border-[#d9e6df]"
           />
         </div>
-        <div className="mt-3 text-xs font-semibold text-[#58766b]">
+        <div className="mt-4 text-xs font-semibold text-[#58766b]">
           Document upload
         </div>
-        <label className="mt-2 flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-[#b9d2c5] bg-[#f6faf7] p-4 text-sm text-[#58766b]">
-          <UploadCloud size={19} className="text-[#4b8876]" />
+        <label className="mt-2 flex min-h-20 cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-[#b9d2c5] bg-[#f6faf7] p-3 text-sm text-[#58766b] transition hover:border-[#76a894] hover:bg-[#f1f8f4] sm:p-4">
+          {paperFile ? (
+            <CheckCircle2 size={20} className="shrink-0 text-[#34745f]" />
+          ) : (
+            <UploadCloud size={20} className="shrink-0 text-[#4b8876]" />
+          )}
           <span className="min-w-0 flex-1">
-            <span className="block truncate font-semibold">
-              {paperFile
-                ? `${paperFile.name} · ${(paperFile.size / 1024 / 1024).toFixed(2)} MiB`
-                : "Choose a paper document"}
+            <span className="flex items-center gap-2">
+              <span className="block min-w-0 truncate font-semibold">
+                {paperFile
+                  ? `${paperFile.name} · ${(paperFile.size / 1024 / 1024).toFixed(2)} MiB`
+                  : "Choose a paper document"}
+              </span>
+              {paperFile && (
+                <span className="shrink-0 rounded-full bg-[#dcefe5] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#34745f]">
+                  Ready
+                </span>
+              )}
             </span>
-            <span className="mt-1 block text-xs">
+            <span className="mt-1 block text-xs leading-4 text-[#82958e]">
               PDF, Word, PowerPoint, TXT, or CSV · maximum 4 MiB
             </span>
           </span>
+          {paperFile && (
+            <button
+              type="button"
+              aria-label="Remove selected document"
+              className="rounded-full p-1.5 text-[#82958e] transition hover:bg-white hover:text-[#a44e49]"
+              onClick={event => {
+                event.preventDefault();
+                event.stopPropagation();
+                setPaperFile(null);
+                setPaperProgress(0);
+              }}
+            >
+              <X size={16} />
+            </button>
+          )}
           <input
             type="file"
             accept={acceptedDocuments}
@@ -326,7 +376,7 @@ export default function AdminControls() {
           />
         </label>
         {preparingPaper && (
-          <div className="mt-3" aria-live="polite">
+          <div className="mt-3 rounded-xl bg-[#f7faf8] p-3" aria-live="polite">
             <div className="flex justify-between text-xs font-semibold text-[#4b8876]">
               <span>Secure upload progress</span>
               <span>{paperProgress}%</span>
@@ -340,7 +390,7 @@ export default function AdminControls() {
           </div>
         )}
         <Button
-          className="mt-4 rounded-full bg-[#1d5146]"
+          className="mt-4 w-full rounded-full bg-[#1d5146] shadow-sm shadow-[#1d5146]/15 sm:w-auto"
           disabled={
             createPaper.isPending || publishPost.isPending || preparingPaper
           }
@@ -357,46 +407,88 @@ export default function AdminControls() {
         </Button>
         {paperFeedback && (
           <p
-            className={`mt-3 text-xs ${paperFeedback.tone === "error" ? "text-[#a44e49]" : "text-[#34745f]"}`}
+            className={`mt-3 rounded-xl px-3 py-2.5 text-xs leading-5 ${paperFeedback.tone === "error" ? "bg-[#fff4f2] text-[#a44e49]" : "bg-[#edf8f1] text-[#34745f]"}`}
             role="status"
           >
             {paperFeedback.text}
           </p>
         )}
-        <div className="mt-6 space-y-2">
-          {papers.data?.slice(0, 5).map(item => (
-            <div
-              key={item.id}
-              className="flex items-center justify-between rounded-xl bg-[#f5f9f6] px-3 py-2.5 text-sm"
-            >
-              <div className="min-w-0">
-                <div className="truncate font-medium text-[#274d43]">
-                  {item.title}
+        <div className="mt-7 border-t border-[#edf2ef] pt-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-[#274d43]">
+                Recent catalogue files
+              </h3>
+              <p className="mt-1 text-xs leading-4 text-[#82958e]">
+                View a document or pause its public availability at any time.
+              </p>
+            </div>
+            <Badge className="border-0 bg-[#f5f8f6] text-[#58766b]">
+              {papers.data?.length ?? 0}
+            </Badge>
+          </div>
+          <div className="mt-3 space-y-2">
+            {papers.data?.slice(0, 5).map(item => (
+              <div
+                key={item.id}
+                className="flex flex-col gap-3 rounded-xl bg-[#f5f9f6] px-3 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="flex min-w-0 items-start gap-2.5">
+                  <FileText
+                    size={17}
+                    className="mt-0.5 shrink-0 text-[#4b8876]"
+                  />
+                  <div className="min-w-0">
+                    <div className="truncate font-medium text-[#274d43]">
+                      {item.title}
+                    </div>
+                    <div className="mt-0.5 text-xs text-[#82958e]">
+                      {item.accessMode === "free"
+                        ? "Free access"
+                        : "Paystack checkout"}{" "}
+                      · KES {Number(item.priceKes).toLocaleString()}
+                    </div>
+                  </div>
                 </div>
-                <div className="text-xs text-[#82958e]">
-                  KES {Number(item.priceKes).toLocaleString()}
+                <div className="flex flex-wrap items-center gap-1 pl-7 sm:shrink-0 sm:pl-0">
+                  {item.fileId && (
+                    <a
+                      href={`/api/files/${encodeURIComponent(item.fileId)}/view`}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={`View document for ${item.title}`}
+                      className="inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-semibold text-[#1d5146] transition hover:bg-white"
+                    >
+                      <FileText size={13} /> View document
+                    </a>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-full text-[#3f806d]"
+                    onClick={() =>
+                      toggle.mutate({
+                        paperId: item.id,
+                        isAvailable: !item.isAvailable,
+                      })
+                    }
+                  >
+                    <Power size={14} className="mr-1" />{" "}
+                    {item.isAvailable ? "Live" : "Paused"}
+                  </Button>
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="rounded-full text-[#3f806d]"
-                onClick={() =>
-                  toggle.mutate({
-                    paperId: item.id,
-                    isAvailable: !item.isAvailable,
-                  })
-                }
-              >
-                <Power size={14} className="mr-1" />{" "}
-                {item.isAvailable ? "Live" : "Paused"}
-              </Button>
-            </div>
-          ))}
+            ))}
+            {!papers.isLoading && !papers.data?.length && (
+              <div className="rounded-xl border border-dashed border-[#dfe9e3] px-3 py-5 text-center text-xs text-[#82958e]">
+                No catalogue resources yet. Upload the first one above.
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-[#dfe9e3] bg-white p-6 shadow-sm lg:col-span-2">
+      <div className="rounded-[1.75rem] border border-[#dfe9e3] bg-white p-4 shadow-sm sm:p-6 lg:col-span-2">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-serif text-xl font-semibold text-[#173e35]">

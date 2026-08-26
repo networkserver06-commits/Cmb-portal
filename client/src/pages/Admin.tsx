@@ -691,6 +691,7 @@ function AdminWorkspace() {
                       <th className="px-5 py-4">Paper</th>
                       <th className="px-5 py-4">Price</th>
                       <th className="px-5 py-4">Status</th>
+                      <th className="px-5 py-4">Document</th>
                       <th className="px-5 py-4">Updated</th>
                     </tr>
                   </thead>
@@ -721,6 +722,23 @@ function AdminWorkspace() {
                           >
                             {paper.isAvailable ? "Available" : "Paused"}
                           </Badge>
+                        </td>
+                        <td className="px-5 py-4">
+                          {paper.fileId ? (
+                            <a
+                              href={`/api/files/${encodeURIComponent(paper.fileId)}/view`}
+                              target="_blank"
+                              rel="noreferrer"
+                              aria-label={`View document for ${paper.title}`}
+                              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[#c8d9d2] px-3 py-1.5 text-xs font-semibold text-[#1d5146] transition hover:bg-[#f5f9f6]"
+                            >
+                              View document <ArrowUpRight size={13} />
+                            </a>
+                          ) : (
+                            <span className="text-xs text-[#9aaca6]">
+                              No file
+                            </span>
+                          )}
                         </td>
                         <td className="px-5 py-4 text-xs text-[#82958e]">
                           {paper.updatedAt
