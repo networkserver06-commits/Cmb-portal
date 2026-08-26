@@ -168,5 +168,19 @@ describe("role-aware administrator access", () => {
     expect(routerSource).toContain("Free posts must have a zero price.");
     expect(routerSource).toContain("const educationLevelInput = z.enum");
     expect(routerSource).toContain("normalizeEducationLevel");
+    expect(adminOperationsSource).toContain("Contribution control room");
+    expect(adminOperationsSource).toContain("Review & publish");
+    expect(adminOperationsSource).toContain("Approve once to publish");
+    expect(adminOperationsSource).toContain("submissionFilter");
+    expect(adminOperationsSource).toContain(
+      'aria-label="Filter contributed resources"'
+    );
+    expect(adminOperationsSource).toContain(
+      "Published to catalogue and available as free access"
+    );
+    expect(adminOperationsSource).toContain("Kept out of the catalogue");
+    expect(adminOperationsSource).toContain("Approve & publish");
+    expect(adminOperationsSource).toContain('status: "approved"');
+    expect(adminOperationsSource).toContain('status: "rejected"');
   });
 });

@@ -88,3 +88,6 @@
 - [x] Resolve the repeated live null education-level crash, verify the deployed-safe bundle, and push the correction to GitHub main.
 - [x] Add direct Sign in and Create account actions to the checkout dialog, preserve the selected paper return context, and validate the signed-out purchase journey.
 - [x] Update the stale administrator navigation regression to assert the new role-aware return-target redirect.
+- [x] Add a dedicated administrator contributed-resource review queue with clear pending, approved, and rejected states plus fast safe actions.
+- [x] Ensure approving a contributed resource publishes it to the catalogue exactly once and preserves moderation ownership/history.
+- [x] Add regression coverage for admin review actions, automatic publication, duplicate prevention, and rejection safety.

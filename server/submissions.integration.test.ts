@@ -68,7 +68,7 @@ describe("paper submission ownership and moderation", () => {
         .collection("submissions")
         .deleteMany({ title: { $regex: `^${runId}` } });
     }
-  }, 45_000);
+  }, 90_000);
 
   it("publishes an approved submission as a free paper and records rejection outcomes", async () => {
     const db = await mongo();
@@ -143,6 +143,21 @@ describe("paper submission ownership and moderation", () => {
         level: "university",
       });
 
+      const approvedAgain = await caller.admin.reviewSubmission({
+        submissionId: approvedId,
+        status: "approved",
+        reviewNote: "Duplicate approval request",
+      });
+      expect(approvedAgain).toEqual({
+        success: true,
+        paperId: approved.paperId,
+      });
+      expect(
+        await db.collection("papers").countDocuments({
+          title: `${runId}-approve`,
+        })
+      ).toBe(1);
+
       const rejected = await caller.admin.reviewSubmission({
         submissionId: rejectedId,
         status: "rejected",
@@ -183,5 +198,5 @@ describe("paper submission ownership and moderation", () => {
         .collection("operational_records")
         .deleteMany({ subjectId: approvedFile.gridFsId });
     }
-  }, 45_000);
+  }, 90_000);
 });

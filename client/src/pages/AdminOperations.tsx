@@ -28,6 +28,12 @@ import {
   X,
 } from "lucide-react";
 
+const submissionStatusStyles: Record<string, string> = {
+  pending: "border-[#ead79b] bg-[#fff7dc] text-[#80631a]",
+  approved: "border-[#b9ddc7] bg-[#eef9f1] text-[#327452]",
+  rejected: "border-[#efc8c5] bg-[#fff4f3] text-[#a44e49]",
+};
+
 function PaperReplacement({ paper }: { paper: any }) {
   const utils = trpc.useUtils();
   const replace = trpc.admin.uploadPaper.useMutation({
@@ -157,6 +163,23 @@ export default function AdminOperations() {
   const [deleteConfirmation, setDeleteConfirmation] = useState<number | null>(
     null
   );
+  const [submissionFilter, setSubmissionFilter] = useState<
+    "pending" | "approved" | "rejected" | "all"
+  >("pending");
+  const submissionSummary = useMemo(() => {
+    const rows = submissions.data ?? [];
+    return {
+      all: rows.length,
+      pending: rows.filter(item => item.status === "pending").length,
+      approved: rows.filter(item => item.status === "approved").length,
+      rejected: rows.filter(item => item.status === "rejected").length,
+    };
+  }, [submissions.data]);
+  const visibleSubmissions = useMemo(() => {
+    const rows = submissions.data ?? [];
+    if (submissionFilter === "all") return rows;
+    return rows.filter(item => item.status === submissionFilter);
+  }, [submissionFilter, submissions.data]);
   const filteredPayments = useMemo(
     () =>
       payments.data?.filter(
@@ -379,43 +402,99 @@ export default function AdminOperations() {
           </div>
         </section>
         <section className="rounded-2xl border border-[#dfe9e3] bg-white p-6 shadow-sm lg:col-span-2">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
             <div>
-              <p className="section-eyebrow">Community archive</p>
+              <p className="section-eyebrow">Contribution control room</p>
               <h2 className="mt-1 font-serif text-xl font-semibold text-[#173e35]">
-                Paper submissions
+                Review & publish
               </h2>
-              <p className="mt-1 text-xs text-[#82958e]">
-                Review learner-contributed papers before free publication.
+              <p className="mt-1 max-w-2xl text-xs leading-5 text-[#82958e]">
+                Approve once to publish a learner contribution to the free
+                catalogue. Rejections stay recorded for moderation history.
               </p>
             </div>
-            <Badge className="border-0 bg-[#fff4d5] text-[#94701d]">
-              {submissions.data?.filter(item => item.status === "pending")
-                .length ?? 0}{" "}
-              pending
-            </Badge>
+            <div className="flex flex-wrap gap-2">
+              <Badge className="border-0 bg-[#fff4d5] text-[#80631a]">
+                {submissionSummary.pending} pending
+              </Badge>
+              <Badge className="border-0 bg-[#eef9f1] text-[#327452]">
+                {submissionSummary.approved} published
+              </Badge>
+            </div>
+          </div>
+          <div
+            className="mt-5 flex flex-wrap gap-2"
+            role="group"
+            aria-label="Filter contributed resources"
+          >
+            {(["pending", "approved", "rejected", "all"] as const).map(
+              status => (
+                <button
+                  key={status}
+                  type="button"
+                  aria-pressed={submissionFilter === status}
+                  onClick={() => setSubmissionFilter(status)}
+                  className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d5146] focus-visible:ring-offset-2 ${submissionFilter === status ? "border-[#1d5146] bg-[#1d5146] text-white" : "border-[#d9e6df] bg-white text-[#58766b] hover:bg-[#f0f7f3]"}`}
+                >
+                  {status === "all"
+                    ? "All resources"
+                    : `${status[0].toUpperCase()}${status.slice(1)}`}
+                  <span
+                    className={
+                      submissionFilter === status
+                        ? "text-white/75"
+                        : "text-[#93aaa1]"
+                    }
+                  >
+                    {submissionSummary[status]}
+                  </span>
+                </button>
+              )
+            )}
           </div>
           <div className="mt-5 space-y-3">
-            {submissions.data?.map((submission: any) => (
+            {visibleSubmissions.map((submission: any) => (
               <div
                 key={submission.legacyId}
-                className="flex flex-col gap-4 rounded-xl bg-[#f5f9f6] p-4 md:flex-row md:items-center md:justify-between"
+                className="flex flex-col gap-4 rounded-2xl border border-[#e1ebe5] bg-[#f7fbf8] p-4 md:flex-row md:items-center md:justify-between"
               >
                 <div className="min-w-0">
-                  <div className="truncate text-sm font-semibold text-[#274d43]">
-                    {submission.title}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="truncate text-sm font-semibold text-[#274d43]">
+                      {submission.title}
+                    </div>
+                    <Badge
+                      className={`border ${submissionStatusStyles[submission.status] ?? "border-[#d9e6df] bg-white text-[#58766b]"}`}
+                    >
+                      {submission.status}
+                    </Badge>
                   </div>
-                  <div className="mt-1 text-xs text-[#82958e]">
+                  <div className="mt-2 text-xs text-[#82958e]">
                     {submission.course} ·{" "}
                     {educationLevelLabel(submission.level)} · {submission.unit}{" "}
-                    · {submission.fileName} · submitted by {submission.userId}
+                    · {submission.fileName}
                   </div>
                   <div className="mt-1 text-xs text-[#82958e]">
-                    Status: {submission.status}
+                    Submitted by student {submission.userId}
+                    {submission.reviewedBy
+                      ? ` · reviewed by ${submission.reviewedBy}`
+                      : ""}
                   </div>
+                  <div className="mt-2 text-xs font-medium text-[#58766b]">
+                    {submission.status === "approved" && submission.paperId
+                      ? "✓ Published to catalogue and available as free access"
+                      : submission.status === "rejected"
+                        ? "Kept out of the catalogue · decision recorded"
+                        : "Awaiting administrator decision"}
+                  </div>
+                  {submission.reviewNote && (
+                    <p className="mt-1 text-xs italic text-[#82958e]">
+                      Note: {submission.reviewNote}
+                    </p>
+                  )}
                 </div>
                 {submission.status === "pending" && (
-                  <div className="flex shrink-0 gap-2">
+                  <div className="flex shrink-0 flex-wrap gap-2">
                     <Button
                       size="sm"
                       className="rounded-full bg-[#1d5146]"
@@ -424,10 +503,12 @@ export default function AdminOperations() {
                         reviewSubmission.mutate({
                           submissionId: submission.legacyId,
                           status: "approved",
+                          reviewNote:
+                            "Approved and published to the free catalogue.",
                         })
                       }
                     >
-                      <Check size={14} /> Approve & publish free
+                      <Check size={14} /> Approve & publish
                     </Button>
                     <Button
                       size="sm"
@@ -448,9 +529,13 @@ export default function AdminOperations() {
                 )}
               </div>
             ))}
-            {!submissions.data?.length && (
-              <div className="rounded-xl border border-dashed border-[#cdded7] p-8 text-center text-sm text-[#82958e]">
-                No paper submissions yet.
+            {!visibleSubmissions.length && (
+              <div className="rounded-2xl border border-dashed border-[#cdded7] p-8 text-center text-sm text-[#82958e]">
+                No{" "}
+                {submissionFilter === "all"
+                  ? "contributed resources"
+                  : `${submissionFilter} resources`}{" "}
+                in this view.
               </div>
             )}
           </div>
