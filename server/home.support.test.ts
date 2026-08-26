@@ -49,7 +49,7 @@ describe("homepage support and credit surfaces", () => {
     expect(homeSource).toContain('paper.accessMode === "free"');
     expect(homeSource).toContain("Add to library");
     expect(homeSource).toContain("Paper details");
-    expect(homeSource).toContain("Continue to payment");
+    expect(homeSource).toContain("Buy securely");
     expect(homeSource).toContain("setSelectedPaperId(paper.id)");
     expect(routerSource).toContain("claimFreePaper: protectedProcedure");
     expect(routerSource).toContain('source: "free"');

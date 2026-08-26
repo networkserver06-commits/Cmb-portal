@@ -64,3 +64,5 @@
 - [x] Make selected-paper state behavior explicit during checkout so the selected detail context is intentionally cleared or preserved.
 - [x] Assert the paid payment-result protected download path in the account-route regression suite.
 - [x] Add an accessible confirmation modal for permanent admin paper deletion with paper name, impact warning, cancel, and final delete actions.
+- [x] Integrate the newer GitHub main history with the tested ScholarShelf deletion-modal checkpoint without overwriting remote work, then verify and push the combined result.
+- [x] Update the stale homepage checkout regression assertion to match the current secure purchase CTA.
