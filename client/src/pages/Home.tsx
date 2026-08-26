@@ -21,8 +21,19 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
+import EducationLevelSelect from "@/components/EducationLevelSelect";
+import { educationLevelLabel } from "@shared/educationLevels";
+import type { EducationLevel } from "@shared/educationLevels";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const accentMap: Record<string, string> = {
   sage: "bg-[#e4efe9] text-[#1f5a4b]",
@@ -34,14 +45,20 @@ const accentMap: Record<string, string> = {
 export default function Home() {
   const { user, isAuthenticated, logout } = useAuth();
   const [query, setQuery] = useState("");
+  const [levelFilter, setLevelFilter] = useState<EducationLevel | "">("");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const checkoutIntent = useRef(0);
   const [paymentStatus, setPaymentStatus] = useState<{
     state: "idle" | "processing" | "authorizing" | "success" | "error";
     message: string;
     reference?: string;
   }>({ state: "idle", message: "" });
   const [selectedPaperId, setSelectedPaperId] = useState<number | null>(null);
-  const catalogue = trpc.catalogue.useQuery({ search: query });
+  const catalogueInput = useMemo(
+    () => ({ search: query, level: levelFilter || undefined }),
+    [levelFilter, query]
+  );
+  const catalogue = trpc.catalogue.useQuery(catalogueInput);
   const initializePayment = trpc.student.initializePayment.useMutation();
   const claimFreePaper = trpc.student.claimFreePaper.useMutation();
   const paymentCheck = trpc.student.paymentStatus.useQuery(
@@ -97,8 +114,14 @@ export default function Home() {
   const selectedPaper = filteredPapers.find(
     paper => paper.id === selectedPaperId
   );
+  const cancelCheckout = () => {
+    checkoutIntent.current += 1;
+    setSelectedPaperId(null);
+    setPaymentStatus({ state: "idle", message: "" });
+  };
   const buy = (paperId: number) => {
     if (!isAuthenticated) return startLogin();
+    const intent = ++checkoutIntent.current;
     const paper = catalogue.data?.find(item => item.legacyId === paperId);
     if (!paper)
       return setPaymentStatus({
@@ -115,6 +138,7 @@ export default function Home() {
         { paperId },
         {
           onSuccess: () => {
+            if (intent !== checkoutIntent.current) return;
             setSelectedPaperId(null);
             setPaymentStatus({
               state: "success",
@@ -140,6 +164,7 @@ export default function Home() {
       { paperId },
       {
         onSuccess: result => {
+          if (intent !== checkoutIntent.current) return;
           setPaymentStatus({
             state: "processing",
             message: "Redirecting you to Paystack’s secure checkout…",
@@ -394,21 +419,33 @@ export default function Home() {
                 Find your paper
               </h2>
               <p className="mt-3 max-w-lg text-[#6a8179]">
-                Search by subject, unit, level, or category. Availability is
-                clearly marked before you pay.
+                Search by subject, unit, education level, or category.
+                Availability is clearly marked before you pay.
               </p>
             </div>
-            <div className="relative w-full md:w-80">
-              <Search
-                size={18}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-[#87a097]"
-              />
-              <input
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                placeholder="Search papers"
-                className="h-12 w-full rounded-full border border-[#cdded7] bg-white pl-11 pr-4 text-sm outline-none transition focus:border-[#4d8978] focus:ring-4 focus:ring-[#4d8978]/10"
-              />
+            <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row">
+              <div className="relative w-full md:w-80">
+                <Search
+                  size={18}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-[#87a097]"
+                />
+                <input
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                  placeholder="Search papers"
+                  aria-label="Search papers"
+                  className="h-12 w-full rounded-full border border-[#cdded7] bg-white pl-11 pr-4 text-sm outline-none transition focus:border-[#4d8978] focus:ring-4 focus:ring-[#4d8978]/10"
+                />
+              </div>
+              <div className="w-full md:w-56">
+                <label className="sr-only">Filter by education level</label>
+                <EducationLevelSelect
+                  value={levelFilter}
+                  onChange={setLevelFilter}
+                  includeAll
+                  className="h-12 w-full rounded-full border-[#cdded7] bg-white"
+                />
+              </div>
             </div>
           </div>
           {paymentStatus.state !== "idle" && (
@@ -471,93 +508,136 @@ export default function Home() {
               </button>
             </div>
           )}
-          {selectedPaper && (
-            <div
-              className="mt-8 rounded-3xl border border-[#c9ddd4] bg-[#edf6f1] p-5 shadow-sm"
-              role="dialog"
-              aria-modal="false"
-              aria-label={`Paper details for ${selectedPaper.title}`}
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
+          <Dialog
+            open={Boolean(selectedPaper)}
+            onOpenChange={open => {
+              if (!open) cancelCheckout();
+            }}
+          >
+            {selectedPaper && (
+              <DialogContent
+                className="max-h-[90vh] overflow-y-auto rounded-3xl border-[#c9ddd4] bg-[#edf6f1] p-5 text-[#19312c] shadow-2xl sm:max-w-xl"
+                aria-describedby="paper-checkout-description"
+              >
+                <DialogHeader className="pr-8 text-left">
                   <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-[#6b8f83]">
-                    Paper details
+                    Paper details · secure checkout
                   </p>
-                  <h3 className="mt-2 font-serif text-2xl font-semibold text-[#173e35]">
+                  <DialogTitle className="font-serif text-2xl font-semibold text-[#173e35]">
                     {selectedPaper.title}
-                  </h3>
-                  <p className="mt-2 text-sm text-[#648078]">
+                  </DialogTitle>
+                  <DialogDescription
+                    id="paper-checkout-description"
+                    className="text-sm text-[#648078]"
+                  >
                     {selectedPaper.code} · {selectedPaper.unit} ·{" "}
-                    {selectedPaper.level}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className="rounded-full p-2 text-[#5d7b71] transition hover:bg-white"
-                  onClick={() => setSelectedPaperId(null)}
-                  aria-label="Close paper details"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-              <p className="mt-4 max-w-2xl text-sm leading-6 text-[#5f786f]">
-                {selectedPaper.description}
-              </p>
-              <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-[#5f786f]">
-                <Badge className="border-0 bg-white text-[#1d5146]">
-                  {selectedPaper.accessMode === "free" ||
-                  selectedPaper.price === 0
-                    ? "Free access"
-                    : "Paid resource"}
-                </Badge>
-                <span>
-                  {isAuthenticated
-                    ? "You are signed in; confirmation returns you to your library."
-                    : "Sign in is required before secure checkout."}
-                </span>
-              </div>
-              <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[#c9ddd4] pt-4">
-                <div>
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-[#6b8f83]">
+                    {educationLevelLabel(selectedPaper.level)}
+                  </DialogDescription>
+                </DialogHeader>
+                <p className="max-w-2xl text-sm leading-6 text-[#5f786f]">
+                  {selectedPaper.description}
+                </p>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-[#5f786f]">
+                  <Badge className="border-0 bg-white text-[#1d5146]">
                     {selectedPaper.accessMode === "free" ||
                     selectedPaper.price === 0
-                      ? "Access"
-                      : "Price"}
-                  </div>
-                  <div className="mt-1 font-semibold text-[#1d5146]">
-                    {selectedPaper.accessMode === "free" ||
-                    selectedPaper.price === 0
-                      ? "Free"
-                      : `KES ${selectedPaper.price.toLocaleString()}`}
-                  </div>
+                      ? "Free access"
+                      : "Paid resource"}
+                  </Badge>
+                  <span>
+                    {isAuthenticated
+                      ? "You are signed in; confirmation returns you to your library."
+                      : "Sign in is required before secure checkout."}
+                  </span>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    className="rounded-full border-[#b8d1c5] bg-white/70 text-[#1d5146]"
-                    onClick={() => setSelectedPaperId(null)}
+                {paymentStatus.state !== "idle" && (
+                  <div
+                    className={`flex items-start gap-3 rounded-2xl border p-4 text-sm ${paymentStatus.state === "error" ? "border-[#efc8c5] bg-[#fff4f3] text-[#a44e49]" : paymentStatus.state === "success" ? "border-[#b9ddc7] bg-[#eef9f1] text-[#327452]" : "border-[#d8c47d] bg-[#fff9e8] text-[#7a5b16]"}`}
+                    role="status"
+                    aria-live="polite"
                   >
-                    Close
-                  </Button>
-                  <Button
-                    className="rounded-full bg-[#1d5146] hover:bg-[#153c34]"
-                    onClick={() => buy(selectedPaper.id)}
-                    disabled={
-                      initializePayment.isPending || claimFreePaper.isPending
-                    }
-                  >
-                    {selectedPaper.accessMode === "free" ||
-                    selectedPaper.price === 0
-                      ? "Add to library"
-                      : initializePayment.isPending
-                        ? "Opening Paystack…"
-                        : "Buy securely"}{" "}
-                    <ChevronRight size={15} />
-                  </Button>
+                    {paymentStatus.state === "processing" && (
+                      <Loader2 className="mt-0.5 h-5 w-5 shrink-0 animate-spin" />
+                    )}
+                    {paymentStatus.state === "authorizing" && (
+                      <Clock3 className="mt-0.5 h-5 w-5 shrink-0 animate-pulse" />
+                    )}
+                    {paymentStatus.state === "success" && (
+                      <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
+                    )}
+                    {paymentStatus.state === "error" && (
+                      <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                    )}
+                    <div className="min-w-0">
+                      <div className="font-semibold">
+                        {paymentStatus.state === "processing"
+                          ? "Preparing checkout"
+                          : paymentStatus.state === "authorizing"
+                            ? "Redirecting to secure checkout"
+                            : paymentStatus.state === "success"
+                              ? "Payment status received"
+                              : "Checkout needs attention"}
+                      </div>
+                      <div className="mt-1 leading-6">
+                        {paymentStatus.message}
+                      </div>
+                      {paymentStatus.reference && (
+                        <a
+                          href={`/payment-result?reference=${encodeURIComponent(paymentStatus.reference)}`}
+                          className="mt-2 inline-flex font-mono text-xs font-semibold underline underline-offset-4"
+                        >
+                          Open payment result
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#c9ddd4] pt-4">
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-[#6b8f83]">
+                      {selectedPaper.accessMode === "free" ||
+                      selectedPaper.price === 0
+                        ? "Access"
+                        : "Price"}
+                    </div>
+                    <div className="mt-1 font-semibold text-[#1d5146]">
+                      {selectedPaper.accessMode === "free" ||
+                      selectedPaper.price === 0
+                        ? "Free"
+                        : `KES ${selectedPaper.price.toLocaleString()}`}
+                    </div>
+                  </div>
+                  <DialogFooter className="flex-row gap-2 sm:justify-end">
+                    <Button
+                      variant="outline"
+                      className="rounded-full border-[#b8d1c5] bg-white/70 text-[#1d5146]"
+                      onClick={cancelCheckout}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      className="rounded-full bg-[#1d5146] hover:bg-[#153c34]"
+                      onClick={() => buy(selectedPaper.id)}
+                      disabled={
+                        initializePayment.isPending ||
+                        claimFreePaper.isPending ||
+                        paymentStatus.state === "processing" ||
+                        paymentStatus.state === "authorizing"
+                      }
+                    >
+                      {selectedPaper.accessMode === "free" ||
+                      selectedPaper.price === 0
+                        ? "Add to library"
+                        : initializePayment.isPending
+                          ? "Opening Paystack…"
+                          : "Buy securely"}{" "}
+                      <ChevronRight size={15} />
+                    </Button>
+                  </DialogFooter>
                 </div>
-              </div>
-            </div>
-          )}
+              </DialogContent>
+            )}
+          </Dialog>
 
           <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {filteredPapers.map(paper => (
@@ -579,7 +659,7 @@ export default function Home() {
                     {paper.title}
                   </h3>
                   <p className="mt-2 text-xs font-medium text-[#709087]">
-                    {paper.unit} · {paper.level}
+                    {paper.unit} · {educationLevelLabel(paper.level)}
                   </p>
                   <p className="mt-4 text-sm leading-6 text-[#718780]">
                     {paper.description}

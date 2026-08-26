@@ -2,6 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { useEffect } from "react";
 import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
+import { educationLevelLabel } from "@shared/educationLevels";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import RouteProgress from "@/components/RouteProgress";
@@ -231,7 +232,8 @@ export default function PaymentResult() {
                 {paper.title}
               </h2>
               <p className="mt-1 text-sm text-[#718780]">
-                {paper.course} · {paper.unit} · {paper.level} · {paper.cycle}
+                {paper.course} · {paper.unit} ·{" "}
+                {educationLevelLabel(paper.level)} · {paper.cycle}
               </p>
             </div>
             <Badge

@@ -1,6 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
+import { educationLevelLabel } from "@shared/educationLevels";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import RouteProgress from "@/components/RouteProgress";
@@ -142,7 +143,8 @@ export default function Library() {
                           {item.paper!.title}
                         </h3>
                         <p className="mt-1 text-xs text-[#82958e]">
-                          {item.paper!.unit} · {item.paper!.level}
+                          {item.paper!.unit} ·{" "}
+                          {educationLevelLabel(item.paper!.level)}
                         </p>
                       </div>
                     </div>

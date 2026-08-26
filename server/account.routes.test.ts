@@ -158,6 +158,12 @@ describe("account route regression coverage", () => {
     expect(homeSource).toContain('"Opening Paystack…"');
     expect(homeSource).toContain("confirmation returns you to your library");
     expect(homeSource).toContain("Sign in is required before secure checkout");
+    expect(homeSource).toContain("<Dialog");
+    expect(homeSource).toContain("onOpenChange");
+    expect(homeSource).toContain("cancelCheckout");
+    expect(homeSource).toContain("checkoutIntent");
+    expect(homeSource).toContain("EducationLevelSelect");
+    expect(homeSource).toContain("levelFilter");
   });
 
   it("wires route progress into library, payment, and admin data loading", () => {

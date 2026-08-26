@@ -88,7 +88,7 @@ describe("paper submission ownership and moderation", () => {
         userId: studentA,
         title: `${runId}-approve`,
         course: "CDACC",
-        level: "Level 5",
+        level: "university",
         cycle: "June 2026",
         unit: "Communication Skills",
         paperType: "Theory",
@@ -106,7 +106,7 @@ describe("paper submission ownership and moderation", () => {
         userId: studentB,
         title: `${runId}-reject`,
         course: "CDACC",
-        level: "Level 5",
+        level: "university",
         cycle: "June 2026",
         unit: "Communication Skills",
         paperType: "Theory",
@@ -140,6 +140,7 @@ describe("paper submission ownership and moderation", () => {
         accessMode: "free",
         isAvailable: true,
         submittedBy: studentA,
+        level: "university",
       });
 
       const rejected = await caller.admin.reviewSubmission({

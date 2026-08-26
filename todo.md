@@ -74,3 +74,10 @@
 - [x] Add a regression test proving non-wallet Paystack webhooks still use paper-order fulfilment.
 - [x] Apply the user-confirmed KES 10 correction for the Paystack-successful wallet reference and record an audit event.
 - [x] Push the complete tested ScholarShelf upgrade, including the wallet repair, to GitHub main and verify the remote commit.
+- [x] Add a shared education-level vocabulary and persist level consistently for student submissions, approved catalogue papers, and administrator uploads.
+- [x] Upgrade student submission and catalogue presentation to show and filter by education level.
+- [x] Upgrade administrator posting controls with structured level selection, concise metadata guidance, and consistent publication behavior.
+- [x] Add regression coverage and validate the education-level and administrator posting flows.
+- [x] Replace the paid-paper inline checkout state with an accessible on-page dialog that keeps selected-paper context, supports cancellation, and prevents duplicate checkout attempts.
+- [x] Add a runtime integration test for administrator createPaper and publishPost that verifies structured education level and publication mode persistence.
+- [ ] Perform authenticated admin preview/manual validation for level selection, validation errors, upload flow, and successful publication.

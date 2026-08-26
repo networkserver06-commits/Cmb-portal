@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
+import { educationLevelLabel } from "@shared/educationLevels";
 import { uploadPortalDocument } from "@/lib/fileUpload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -405,8 +406,9 @@ export default function AdminOperations() {
                     {submission.title}
                   </div>
                   <div className="mt-1 text-xs text-[#82958e]">
-                    {submission.course} · {submission.unit} ·{" "}
-                    {submission.fileName} · submitted by {submission.userId}
+                    {submission.course} ·{" "}
+                    {educationLevelLabel(submission.level)} · {submission.unit}{" "}
+                    · {submission.fileName} · submitted by {submission.userId}
                   </div>
                   <div className="mt-1 text-xs text-[#82958e]">
                     Status: {submission.status}

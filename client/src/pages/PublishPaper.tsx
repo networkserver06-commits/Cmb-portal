@@ -1,5 +1,7 @@
 import { trpc } from "@/lib/trpc";
 import { uploadPortalDocument, validatePortalDocument } from "@/lib/fileUpload";
+import EducationLevelSelect from "@/components/EducationLevelSelect";
+import type { EducationLevel } from "@shared/educationLevels";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +15,7 @@ export default function PublishPaper({
   const [form, setForm] = useState({
     title: "",
     course: "",
-    level: "",
+    level: "" as EducationLevel | "",
     cycle: "Not specified",
     unit: "General revision",
     paperType: "Revision paper",
@@ -29,7 +31,7 @@ export default function PublishPaper({
       setForm({
         title: "",
         course: "",
-        level: "",
+        level: "" as EducationLevel | "",
         cycle: "Not specified",
         unit: "General revision",
         paperType: "Revision paper",
@@ -54,6 +56,8 @@ export default function PublishPaper({
       return setError(
         "Confirm that you own or are authorized to share this paper."
       );
+    if (!form.level) return setError("Choose an education level.");
+    const level = form.level as EducationLevel;
     setUploading(true);
     try {
       const uploaded = await uploadPortalDocument({
@@ -63,6 +67,7 @@ export default function PublishPaper({
       });
       await submit.mutateAsync({
         ...form,
+        level,
         fileId: uploaded.fileId,
         authorized: true,
       });
@@ -120,14 +125,15 @@ export default function PublishPaper({
           />
         </label>
         <label className="text-sm font-medium text-[#3c5d53]">
-          Level
-          <Input
-            required
+          Education level
+          <EducationLevelSelect
             value={form.level}
-            onChange={event => update("level", event.target.value)}
-            className="mt-2 rounded-xl border-[#d9e6df]"
-            placeholder="Level 5"
+            onChange={value => update("level", value)}
+            className="mt-2 h-10 rounded-xl border-[#d9e6df]"
           />
+          <span className="mt-1 block text-xs font-normal text-[#82958e]">
+            Choose the learner pathway for this paper.
+          </span>
         </label>
       </div>
       <label className="mt-4 flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-[#b9d2c5] bg-[#f6faf7] p-4 text-sm text-[#58766b]">

@@ -12,12 +12,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { uploadPortalDocument, validatePortalDocument } from "@/lib/fileUpload";
+import EducationLevelSelect from "@/components/EducationLevelSelect";
+import type { EducationLevel } from "@shared/educationLevels";
 import { Megaphone, Plus, Power, Save, UploadCloud } from "lucide-react";
 import { toast } from "sonner";
 
 const emptyPaper = {
   course: "",
-  level: "",
+  level: "" as EducationLevel | "",
   cycle: "",
   unit: "",
   paperType: "",
@@ -29,7 +31,6 @@ const acceptedDocuments = ".pdf,.doc,.docx,.ppt,.pptx,.txt,.csv";
 const resourceFieldLabels = {
   title: "Title",
   course: "Course",
-  level: "Level",
   cycle: "Cycle",
   unit: "Unit",
   paperType: "Paper type",
@@ -116,6 +117,12 @@ export default function AdminControls() {
         tone: "error",
         text: "Choose a document before saving this resource.",
       });
+    if (!paper.level)
+      return setPaperFeedback({
+        tone: "error",
+        text: "Choose an education level before saving this resource.",
+      });
+    const level = paper.level as EducationLevel;
     const priceKes = resourceMode === "free" ? 0 : Number(paper.priceKes);
     if (
       resourceMode === "paid" &&
@@ -136,6 +143,7 @@ export default function AdminControls() {
       if (resourceType === "post") {
         await publishPost.mutateAsync({
           ...paper,
+          level,
           priceKes,
           mode: resourceMode,
           fileId: uploaded.fileId,
@@ -143,6 +151,7 @@ export default function AdminControls() {
       } else {
         await createPaper.mutateAsync({
           ...paper,
+          level,
           priceKes,
           fileId: uploaded.fileId,
         });
@@ -203,6 +212,20 @@ export default function AdminControls() {
               </SelectContent>
             </Select>
           </div>
+          <div className="sm:col-span-2">
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-[#789087]">
+              Education level
+            </label>
+            <EducationLevelSelect
+              value={paper.level}
+              onChange={value => setPaperField("level", value)}
+              className="h-10 w-full rounded-xl border-[#d9e6df]"
+            />
+            <p className="mt-1 text-xs text-[#82958e]">
+              This label appears on the catalogue and helps learners find the
+              right pathway.
+            </p>
+          </div>
           <div>
             <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-[#789087]">
               Access
@@ -235,6 +258,7 @@ export default function AdminControls() {
                 {resourceFieldLabels[key]}
               </label>
               <Input
+                required
                 value={paper[key]}
                 onChange={e => setPaperField(key, e.target.value)}
                 placeholder={`Enter ${resourceFieldLabels[key].toLowerCase()}`}

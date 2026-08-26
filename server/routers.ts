@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { parse } from "cookie";
 import { COOKIE_NAME } from "../shared/const";
+import {
+  EDUCATION_LEVELS,
+  normalizeEducationLevel,
+} from "../shared/educationLevels";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import {
@@ -58,9 +62,11 @@ import {
   verifyPaystackTransaction,
 } from "./paystack";
 
+const educationLevelInput = z.enum(EDUCATION_LEVELS);
+
 const paperInput = z.object({
   course: z.string().min(2),
-  level: z.string().min(1),
+  level: educationLevelInput,
   cycle: z.string().min(1),
   unit: z.string().min(2),
   paperType: z.string().min(2),
@@ -73,7 +79,7 @@ const postInput = z
   .object({
     title: z.string().min(2).max(180),
     course: z.string().min(2).max(100),
-    level: z.string().min(1).max(60),
+    level: educationLevelInput,
     cycle: z.string().min(1).max(60),
     unit: z.string().min(2).max(120),
     paperType: z.string().min(2).max(80),
@@ -206,7 +212,14 @@ export const appRouter = router({
       ),
   }),
   catalogue: publicProcedure
-    .input(z.object({ search: z.string().optional() }).optional())
+    .input(
+      z
+        .object({
+          search: z.string().optional(),
+          level: educationLevelInput.optional(),
+        })
+        .optional()
+    )
     .query(async ({ input }) => {
       const rows = await (await mongo())
         .collection("papers")
@@ -214,13 +227,17 @@ export const appRouter = router({
         .sort({ createdAt: -1 })
         .toArray();
       const search = input?.search?.trim().toLowerCase();
-      return search
-        ? rows.filter((p: any) =>
-            [p.title, p.course, p.unit, p.level, p.cycle].some(v =>
-              v?.toLowerCase().includes(search)
-            )
-          )
-        : rows;
+      const level = input?.level;
+      return rows.filter((p: any) => {
+        const matchesLevel =
+          !level || normalizeEducationLevel(String(p.level)) === level;
+        const matchesSearch =
+          !search ||
+          [p.title, p.course, p.unit, p.level, p.cycle].some(v =>
+            v?.toLowerCase().includes(search)
+          );
+        return matchesLevel && matchesSearch;
+      });
     }),
   announcements: publicProcedure.query(
     async () =>
@@ -323,7 +340,7 @@ export const appRouter = router({
         z.object({
           title: z.string().min(2),
           course: z.string().min(2),
-          level: z.string().min(1),
+          level: educationLevelInput,
           cycle: z.string().min(1),
           unit: z.string().min(2),
           paperType: z.string().min(2),
@@ -980,7 +997,7 @@ export const appRouter = router({
           _id: new (await import("mongodb")).ObjectId(),
           legacyId: paperId,
           course: submission.course,
-          level: submission.level,
+          level: normalizeEducationLevel(String(submission.level)),
           cycle: submission.cycle,
           unit: submission.unit,
           paperType: submission.paperType,

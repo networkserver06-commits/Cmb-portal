@@ -148,6 +148,8 @@ describe("role-aware administrator access", () => {
     expect(layoutSource).toContain("CollapsibleTrigger");
     expect(mainSource).toContain('Toaster position="top-right"');
     expect(controlsSource).toContain("accept={acceptedDocuments}");
+    expect(controlsSource).toContain("EducationLevelSelect");
+    expect(controlsSource).toContain("Choose an education level before saving");
     expect(controlsSource).toContain('purpose: "paper"');
     expect(routerSource).toMatch(
       /publishPost:\s*adminProcedure\s*\.input\(postInput\)/
@@ -159,5 +161,7 @@ describe("role-aware administrator access", () => {
       "Paid posts must have a price greater than zero."
     );
     expect(routerSource).toContain("Free posts must have a zero price.");
+    expect(routerSource).toContain("const educationLevelInput = z.enum");
+    expect(routerSource).toContain("normalizeEducationLevel");
   });
 });
