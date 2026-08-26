@@ -60,8 +60,9 @@ export function isEducationLevel(value: string): value is EducationLevel {
   return (EDUCATION_LEVELS as readonly string[]).includes(value);
 }
 
-export function normalizeEducationLevel(value: string): EducationLevel {
-  const normalized = value.trim().toLowerCase();
+export function normalizeEducationLevel(value: unknown): EducationLevel {
+  const normalized =
+    typeof value === "string" ? value.trim().toLowerCase() : "";
   if (isEducationLevel(normalized)) return normalized;
   if (/primary|elementary/.test(normalized)) return "primary";
   if (/secondary|high school/.test(normalized)) return "secondary";
@@ -72,7 +73,10 @@ export function normalizeEducationLevel(value: string): EducationLevel {
   return "other";
 }
 
-export function educationLevelLabel(value: string): string {
-  const normalized = value.trim().toLowerCase();
-  return isEducationLevel(normalized) ? LABELS[normalized] : value.trim();
+export function educationLevelLabel(value: unknown): string {
+  const rawValue = typeof value === "string" ? value.trim() : "";
+  const normalized = rawValue.toLowerCase();
+  return isEducationLevel(normalized)
+    ? LABELS[normalized]
+    : rawValue || "Other";
 }

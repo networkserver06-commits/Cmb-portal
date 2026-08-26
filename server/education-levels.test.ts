@@ -30,4 +30,11 @@ describe("ScholarShelf education levels", () => {
     expect(educationLevelLabel("university")).toBe("University");
     expect(educationLevelLabel("Level 5")).toBe("Level 5");
   });
+
+  it("handles null and undefined legacy levels without crashing", () => {
+    expect(normalizeEducationLevel(null)).toBe("other");
+    expect(normalizeEducationLevel(undefined)).toBe("other");
+    expect(educationLevelLabel(null)).toBe("Other");
+    expect(educationLevelLabel(undefined)).toBe("Other");
+  });
 });

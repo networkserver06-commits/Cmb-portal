@@ -84,3 +84,4 @@
 - [x] Replace the narrow CDACC resources wording with the broader “Elite Resources” label and verify the public branded surface.
 - [ ] User-owned handoff: verify the upgraded admin posting flow manually after reviewing the Elite Resources checkpoint.
 - [x] Push the latest Elite Resources branding refresh and all current ScholarShelf upgrades to GitHub main, preserving newer remote history.
+- [x] Fix the production null education-level crash by making legacy catalogue level normalization null-safe, add regression coverage, and verify the production build.
