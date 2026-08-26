@@ -30,6 +30,8 @@ import {
   walletForUser,
   walletSummaryForAdmin,
   walletTopUpByReference,
+  walletTopUpPaymentMatches,
+  fulfillWalletTopUp,
   recordOperationalEvent,
 } from "./mongoStore";
 import { getUserById } from "./db";
@@ -94,6 +96,55 @@ const postInput = z
         message: "Free posts must have a zero price.",
       });
   });
+
+export async function reconcileWalletTopUp(userId: number, reference: string) {
+  const db = await mongo();
+  const topUp = await walletTopUpByReference(userId, reference);
+  if (!topUp || topUp.status !== "pending") return topUp;
+  try {
+    const verified = await verifyPaystackTransaction(reference);
+    const data = verified.data;
+    if (
+      verified.status &&
+      data?.status === "success" &&
+      walletTopUpPaymentMatches(
+        {
+          reference: data.reference,
+          amount: data.amount,
+          currency: data.currency,
+        },
+        reference,
+        topUp.amountKes
+      )
+    ) {
+      await fulfillWalletTopUp(reference, data);
+    } else if (
+      ["failed", "abandoned", "cancelled"].includes(data?.status ?? "")
+    ) {
+      await db
+        .collection("wallet_topups")
+        .updateOne(
+          { _id: topUp._id, status: "pending" },
+          { $set: { status: "failed", updatedAt: new Date() } }
+        );
+    }
+  } catch {
+    /* Keep pending for a transient provider or database error. */
+  }
+  return await walletTopUpByReference(userId, reference);
+}
+
+async function reconcilePendingWalletTopUps(userId: number) {
+  const wallet = await walletForUser(userId);
+  const pending = wallet.transactions
+    .filter(topUp => topUp.status === "pending")
+    .slice(0, 10);
+  await Promise.allSettled(
+    pending.map(topUp => reconcileWalletTopUp(userId, topUp.reference))
+  );
+  return await walletForUser(userId);
+}
+
 export const appRouter = router({
   system: systemRouter,
   auth: router({
@@ -243,7 +294,9 @@ export const appRouter = router({
           .sort({ createdAt: -1 })
           .toArray()
     ),
-    wallet: protectedProcedure.query(({ ctx }) => walletForUser(ctx.user.id)),
+    wallet: protectedProcedure.query(({ ctx }) =>
+      reconcilePendingWalletTopUps(ctx.user.id)
+    ),
     updateProfile: protectedProcedure
       .input(z.object({ name: z.string().trim().min(2).max(120) }))
       .mutation(async ({ ctx, input }) => {
@@ -492,47 +545,9 @@ export const appRouter = router({
           reference: z.string().regex(/^WALLET-\\d+-\\d+-[A-Za-z0-9]+$/),
         })
       )
-      .query(async ({ ctx, input }) => {
-        const db = await mongo();
-        const topUp = await walletTopUpByReference(
-          ctx.user.id,
-          input.reference
-        );
-        if (!topUp) return null;
-        if (topUp.status === "pending") {
-          try {
-            const verified = await verifyPaystackTransaction(input.reference);
-            const data = verified.data;
-            if (
-              verified.status &&
-              data?.status === "success" &&
-              paymentMatchesOrder(
-                {
-                  reference: data.reference,
-                  amount: data.amount,
-                  currency: data.currency,
-                },
-                input.reference,
-                topUp.amountKes
-              )
-            )
-              await db.collection("wallet_topups").updateOne(
-                { _id: topUp._id, status: "pending" },
-                {
-                  $set: {
-                    status: "paid",
-                    providerReference: data.reference,
-                    paidAt: new Date(),
-                    updatedAt: new Date(),
-                  },
-                }
-              );
-          } catch {
-            /* webhook or next poll can complete the pending top-up */
-          }
-        }
-        return await walletTopUpByReference(ctx.user.id, input.reference);
-      }),
+      .query(({ ctx, input }) =>
+        reconcileWalletTopUp(ctx.user.id, input.reference)
+      ),
   }),
   admin: router({
     summary: adminProcedure.query(async () => {

@@ -301,6 +301,81 @@ export async function walletForUser(userId: number) {
   };
 }
 
+export function walletTopUpPaymentMatches(
+  provider: {
+    reference?: string;
+    amount?: number;
+    currency?: string;
+  },
+  reference: string,
+  amountKes: number
+) {
+  return (
+    provider.reference === reference &&
+    provider.currency === "KES" &&
+    provider.amount === Math.round(amountKes * 100)
+  );
+}
+
+export async function fulfillWalletTopUp(
+  reference: string,
+  provider: {
+    reference?: string;
+    amount?: number;
+    currency?: string;
+    channel?: string;
+  }
+) {
+  const db = await mongo();
+  const topUps = db.collection<WalletTopUpDoc>("wallet_topups");
+  const topUp = await topUps.findOne({ reference });
+  if (!topUp) throw new Error("Wallet top-up not found");
+  if (!walletTopUpPaymentMatches(provider, reference, topUp.amountKes))
+    throw new Error("Payment does not match wallet top-up");
+  if (topUp.status === "paid")
+    return {
+      fulfilled: false as const,
+      status: "paid" as const,
+      topUpId: topUp.legacyId,
+    };
+
+  const result = await topUps.updateOne(
+    { _id: topUp._id, status: { $ne: "paid" } },
+    {
+      $set: {
+        status: "paid",
+        providerReference: provider.reference,
+        paidAt: new Date(),
+        updatedAt: new Date(),
+      },
+    }
+  );
+  if (result.modifiedCount === 0)
+    return {
+      fulfilled: false as const,
+      status: "paid" as const,
+      topUpId: topUp.legacyId,
+    };
+
+  await recordOperationalEvent({
+    eventType: "wallet.top_up_confirmed",
+    actorId: topUp.userId,
+    subjectType: "wallet_top_up",
+    subjectId: String(topUp.legacyId),
+    detail: {
+      reference,
+      providerReference: provider.reference,
+      amountKes: topUp.amountKes,
+      channel: provider.channel ?? "paystack-hosted",
+    },
+  });
+  return {
+    fulfilled: true as const,
+    status: "paid" as const,
+    topUpId: topUp.legacyId,
+  };
+}
+
 export async function walletSummaryForAdmin() {
   const db = await mongo();
   const [

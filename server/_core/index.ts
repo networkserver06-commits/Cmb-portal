@@ -12,6 +12,7 @@ import {
   entitlementFor,
   paperById,
   recordOperationalEvent,
+  fulfillWalletTopUp,
 } from "../mongoStore";
 import { parse } from "cookie";
 import { ACCOUNT_COOKIE, authenticateAccount } from "../mongoAuth";
@@ -88,8 +89,10 @@ export async function createApp() {
           const verified = await verifyPaystackTransaction(
             event.data.reference
           );
+          if (verified.data?.status !== "success")
+            return res.status(400).send("Verification mismatch");
           if (
-            verified.data?.status !== "success" ||
+            !event.data.reference.startsWith("WALLET-") &&
             !paymentMatchesOrder(
               verified.data,
               event.data.reference,
@@ -98,12 +101,16 @@ export async function createApp() {
           ) {
             return res.status(400).send("Verification mismatch");
           }
-          // Fulfilment is intentionally idempotent: existing entitlements are checked before access is granted.
-          await fulfillSuccessfulPayment(
-            event.data.reference,
-            verified.data,
-            rawBody
-          );
+          if (event.data.reference.startsWith("WALLET-")) {
+            await fulfillWalletTopUp(event.data.reference, verified.data);
+          } else {
+            // Fulfilment is intentionally idempotent: existing entitlements are checked before access is granted.
+            await fulfillSuccessfulPayment(
+              event.data.reference,
+              verified.data,
+              rawBody
+            );
+          }
         }
         return res.sendStatus(200);
       } catch (error) {

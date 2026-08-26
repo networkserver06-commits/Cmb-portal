@@ -66,3 +66,9 @@
 - [x] Add an accessible confirmation modal for permanent admin paper deletion with paper name, impact warning, cancel, and final delete actions.
 - [x] Integrate the newer GitHub main history with the tested ScholarShelf deletion-modal checkpoint without overwriting remote work, then verify and push the combined result.
 - [x] Update the stale homepage checkout regression assertion to match the current secure purchase CTA.
+- [x] Diagnose and repair wallet top-ups that appear in activity but are not reflected in the available balance, with regression coverage.
+- [x] Route verified Paystack wallet charge.success webhooks to an idempotent wallet settlement helper and add regression coverage.
+- [x] Label wallet activity entries with confirmed, pending, or failed status and explain that only confirmed funds affect the balance.
+- [x] Add an integration test that reconciles a pending successful wallet top-up and proves the balance increases exactly once.
+- [x] Add a webhook-focused runtime test for wallet success, repeat delivery idempotency, and failed/abandoned transitions.
+- [x] Add a regression test proving non-wallet Paystack webhooks still use paper-order fulfilment.

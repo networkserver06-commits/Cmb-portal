@@ -2,7 +2,10 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createWalletTopUpReference } from "./paystack";
-import { calculateWalletSummary } from "./mongoStore";
+import {
+  calculateWalletSummary,
+  walletTopUpPaymentMatches,
+} from "./mongoStore";
 
 const source = (file: string) =>
   readFileSync(resolve(process.cwd(), file), "utf8");
@@ -10,6 +13,7 @@ const source = (file: string) =>
 describe("wallet security safeguards", () => {
   const routerSource = source("server/routers.ts");
   const storeSource = source("server/mongoStore.ts");
+  const webhookSource = source("server/_core/index.ts");
   const accountSource = source("client/src/pages/Account.tsx");
 
   it("creates wallet references that are scoped by user and are not predictable-only", () => {
@@ -30,9 +34,51 @@ describe("wallet security safeguards", () => {
     ).toEqual({ balanceKes: 110, totalTopUps: 2 });
   });
 
+  it("matches wallet payments only when reference, KES currency, and amount agree", () => {
+    expect(
+      walletTopUpPaymentMatches(
+        {
+          reference: "WALLET-42-1000-abcd1234",
+          amount: 10000,
+          currency: "KES",
+        },
+        "WALLET-42-1000-abcd1234",
+        100
+      )
+    ).toBe(true);
+    expect(
+      walletTopUpPaymentMatches(
+        {
+          reference: "WALLET-42-1000-abcd1234",
+          amount: 9900,
+          currency: "KES",
+        },
+        "WALLET-42-1000-abcd1234",
+        100
+      )
+    ).toBe(false);
+    expect(
+      walletTopUpPaymentMatches(
+        {
+          reference: "WALLET-42-1000-abcd1234",
+          amount: 10000,
+          currency: "USD",
+        },
+        "WALLET-42-1000-abcd1234",
+        100
+      )
+    ).toBe(false);
+  });
+
   it("does not prefill an automatic wallet amount", () => {
     expect(accountSource).toContain('useState<number | "">("")');
     expect(accountSource).not.toContain("useState(100)");
+    expect(accountSource).toContain(
+      "Pending or failed checkouts are not included"
+    );
+    expect(accountSource).toContain('"Confirmed"');
+    expect(accountSource).toContain('"Pending"');
+    expect(accountSource).toContain('"Failed"');
   });
 
   it("keeps wallet operations protected and verifies ownership and payment fields", () => {
@@ -47,17 +93,22 @@ describe("wallet security safeguards", () => {
     expect(routerSource).toContain("wallet: protectedProcedure");
     expect(routerSource).toContain("initializeWalletTopUp: protectedProcedure");
     expect(routerSource).toContain("walletTopUpStatus: protectedProcedure");
-    expect(routerSource).toContain(
-      "walletTopUpByReference(ctx.user.id, input.reference)"
-    );
+    expect(routerSource).toContain("walletTopUpByReference(userId, reference)");
     expect(routerSource).toContain("paymentMatchesOrder(");
     expect(routerSource).toContain("topUp.amountKes");
-    expect(routerSource).toMatch(
-      /status:\s*"pending"\s*\},\s*\{\s*\$set:\s*\{\s*status:\s*"paid"/
-    );
+    expect(routerSource).toContain("await fulfillWalletTopUp(reference, data)");
     expect(storeSource).toContain(
       "createIndex({ reference: 1 }, { unique: true })"
     );
     expect(storeSource).toContain('status: "paid"');
+    expect(storeSource).toContain('status: { $ne: "paid" }');
+    expect(storeSource).toContain('eventType: "wallet.top_up_confirmed"');
+    expect(routerSource).toContain("await fulfillWalletTopUp(reference, data)");
+    expect(webhookSource).toContain(
+      'event.data.reference.startsWith("WALLET-")'
+    );
+    expect(webhookSource).toContain(
+      "fulfillWalletTopUp(event.data.reference, verified.data)"
+    );
   });
 });

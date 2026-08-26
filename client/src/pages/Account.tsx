@@ -739,6 +739,10 @@ function AccountDashboard({
                   <p className="mt-2 text-sm text-[#648078]">
                     {wallet.data?.totalTopUps ?? 0} confirmed top-ups
                   </p>
+                  <p className="mt-1 max-w-xs text-xs leading-5 text-[#718780]">
+                    Pending or failed checkouts are not included until Paystack
+                    confirms them.
+                  </p>
                 </div>
                 <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-[#2d7965]">
                   <WalletCards size={22} />
@@ -838,11 +842,22 @@ function AccountDashboard({
                           {new Date(transaction.createdAt).toLocaleString()}
                         </span>
                       </span>
-                      <span
-                        className={`font-semibold ${transaction.status === "paid" ? "text-[#34745f]" : "text-[#94701d]"}`}
-                      >
-                        {transaction.status === "paid" ? "+" : ""}KES{" "}
-                        {Number(transaction.amountKes).toLocaleString()}
+                      <span className="flex shrink-0 flex-col items-end gap-1">
+                        <span
+                          className={`font-semibold ${transaction.status === "paid" ? "text-[#34745f]" : transaction.status === "pending" ? "text-[#94701d]" : "text-[#a44e49]"}`}
+                        >
+                          {transaction.status === "paid" ? "+" : ""}KES{" "}
+                          {Number(transaction.amountKes).toLocaleString()}
+                        </span>
+                        <span
+                          className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${transaction.status === "paid" ? "text-[#34745f]" : transaction.status === "pending" ? "text-[#94701d]" : "text-[#a44e49]"}`}
+                        >
+                          {transaction.status === "paid"
+                            ? "Confirmed"
+                            : transaction.status === "pending"
+                              ? "Pending"
+                              : "Failed"}
+                        </span>
                       </span>
                     </div>
                   ))}
