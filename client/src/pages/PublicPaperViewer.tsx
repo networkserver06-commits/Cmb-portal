@@ -6,12 +6,18 @@ import {
   FileText,
   Loader2,
 } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
+import * as pdfjsLib from "pdfjs-dist";
+import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { trpc } from "@/lib/trpc";
 import { educationLevelLabel } from "@shared/educationLevels";
 
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+
 const catalogueInput = {};
+
+type DocumentStatus = "loading" | "ready" | "error";
 
 function isFreePaper(paper: any) {
   return paper.accessMode === "free" && Number(paper.priceKes) === 0;
@@ -50,6 +56,233 @@ function ViewerShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+function DocumentFallback({
+  href,
+  message,
+}: {
+  href: string;
+  message: string;
+}) {
+  return (
+    <div className="grid min-h-[420px] place-items-center bg-[#fbfcfb] p-6 text-center">
+      <div className="max-w-md">
+        <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#fff5df] text-[#9a721c]">
+          <FileText size={25} />
+        </div>
+        <h2 className="mt-5 font-serif text-2xl font-semibold text-[#173e35]">
+          This format needs a separate viewer.
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-[#718780]">{message}</p>
+        <a
+          href={href}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#1d5146] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#153c34]"
+        >
+          <Download size={15} /> Open document separately
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function TextDocumentPreview({ href, title }: { href: string; title: string }) {
+  const [status, setStatus] = useState<DocumentStatus>("loading");
+  const [content, setContent] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    setStatus("loading");
+    setContent("");
+    fetch(href)
+      .then(response => {
+        if (!response.ok) throw new Error("The document could not be loaded.");
+        return response.text();
+      })
+      .then(text => {
+        if (cancelled) return;
+        setContent(text);
+        setStatus("ready");
+      })
+      .catch(() => {
+        if (!cancelled) setStatus("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [href]);
+
+  if (status === "loading")
+    return (
+      <div
+        className="grid min-h-[420px] place-items-center bg-white text-sm text-[#58766b]"
+        role="status"
+      >
+        <span className="flex items-center gap-3">
+          <Loader2 className="animate-spin" size={18} /> Opening the full paper…
+        </span>
+      </div>
+    );
+  if (status === "error")
+    return (
+      <DocumentFallback
+        href={href}
+        message={`The ${title} text could not be displayed inside the portal right now.`}
+      />
+    );
+
+  return (
+    <pre
+      aria-label={`Full paper text: ${title}`}
+      className="min-h-[420px] overflow-x-auto whitespace-pre-wrap break-words bg-white p-5 text-left font-mono text-[13px] leading-6 text-[#243f37] md:p-8"
+    >
+      {content}
+    </pre>
+  );
+}
+
+function PdfDocumentPreview({ href, title }: { href: string; title: string }) {
+  const [status, setStatus] = useState<DocumentStatus>("loading");
+  const [pageCount, setPageCount] = useState<number | null>(null);
+  const [error, setError] = useState("");
+  const canvasRefs = useRef<Array<HTMLCanvasElement | null>>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let loadingTask: ReturnType<typeof pdfjsLib.getDocument> | null = null;
+    setStatus("loading");
+    setPageCount(null);
+    setError("");
+    canvasRefs.current = [];
+
+    const renderPdf = async () => {
+      try {
+        loadingTask = pdfjsLib.getDocument({ url: href });
+        const pdf = await loadingTask.promise;
+        if (cancelled) {
+          pdf.cleanup();
+          return;
+        }
+        setPageCount(pdf.numPages);
+        await new Promise<void>(resolve =>
+          requestAnimationFrame(() => resolve())
+        );
+        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+          if (cancelled) break;
+          const page = await pdf.getPage(pageNumber);
+          const canvas = canvasRefs.current[pageNumber - 1];
+          if (!canvas) continue;
+          const holderWidth = canvas.parentElement?.clientWidth ?? 900;
+          const baseViewport = page.getViewport({ scale: 1 });
+          const displayWidth = Math.max(260, Math.min(holderWidth - 32, 920));
+          const displayScale = Math.max(0.8, displayWidth / baseViewport.width);
+          const pixelRatio = Math.min(globalThis.devicePixelRatio || 1, 2);
+          const displayViewport = page.getViewport({ scale: displayScale });
+          const renderViewport = page.getViewport({
+            scale: displayScale * pixelRatio,
+          });
+          canvas.width = Math.ceil(renderViewport.width);
+          canvas.height = Math.ceil(renderViewport.height);
+          canvas.style.width = `${Math.ceil(displayViewport.width)}px`;
+          canvas.style.height = `${Math.ceil(displayViewport.height)}px`;
+          const context = canvas.getContext("2d");
+          if (!context) throw new Error("Canvas rendering is unavailable.");
+          await page.render({
+            canvas,
+            canvasContext: context,
+            viewport: renderViewport,
+          }).promise;
+        }
+        if (!cancelled) setStatus("ready");
+        pdf.cleanup();
+      } catch (renderError) {
+        if (cancelled) return;
+        setError(
+          renderError instanceof Error
+            ? renderError.message
+            : "The PDF could not be rendered inside the portal."
+        );
+        setStatus("error");
+      }
+    };
+
+    void renderPdf();
+    return () => {
+      cancelled = true;
+      void loadingTask?.destroy();
+    };
+  }, [href]);
+
+  if (status === "loading")
+    return (
+      <div
+        className="grid min-h-[420px] place-items-center bg-[#fbfcfb] text-sm text-[#58766b]"
+        role="status"
+      >
+        <span className="flex items-center gap-3">
+          <Loader2 className="animate-spin" size={18} /> Opening every page…
+        </span>
+      </div>
+    );
+  if (status === "error")
+    return (
+      <DocumentFallback
+        href={href}
+        message={
+          error || `The ${title} PDF could not be rendered inside the portal.`
+        }
+      />
+    );
+
+  return (
+    <div
+      className="space-y-4 bg-[#edf2ef] p-3 md:p-5"
+      aria-label={`Full paper: ${title}`}
+    >
+      {Array.from({ length: pageCount ?? 0 }, (_, index) => (
+        <article
+          key={index + 1}
+          className="overflow-hidden rounded-xl bg-white shadow-[0_8px_28px_rgba(29,81,70,0.12)]"
+          aria-label={`Page ${index + 1} of ${pageCount ?? 0}`}
+        >
+          <div className="border-b border-[#edf1ee] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#78938a]">
+            Page {index + 1}
+          </div>
+          <div className="flex justify-center overflow-x-auto p-2 md:p-4">
+            <canvas
+              ref={node => {
+                canvasRefs.current[index] = node;
+              }}
+              className="block max-w-full"
+            />
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function PublicDocumentPreview({
+  href,
+  mimeType,
+  title,
+}: {
+  href: string;
+  mimeType: string;
+  title: string;
+}) {
+  if (mimeType === "application/pdf" || mimeType.endsWith("+pdf"))
+    return <PdfDocumentPreview href={href} title={title} />;
+  if (mimeType.startsWith("text/") || mimeType === "application/csv")
+    return <TextDocumentPreview href={href} title={title} />;
+  return (
+    <DocumentFallback
+      href={href}
+      message="This file format is not supported for automatic in-page reading yet."
+    />
+  );
+}
+
 export default function PublicPaperViewer() {
   const [location] = useLocation();
   const paperId = useMemo(() => {
@@ -67,6 +300,7 @@ export default function PublicPaperViewer() {
   const documentHref = publicPaper
     ? `/api/papers/${publicPaper.legacyId}/free-view`
     : "";
+  const mimeType = String(publicPaper?.fileMimeType ?? "").toLowerCase();
 
   if (catalogue.isLoading) {
     return (
@@ -124,7 +358,7 @@ export default function PublicPaperViewer() {
               <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#6b8f83]">
                 <span>Public free resource</span>
                 <span className="text-[#bdcfc6]">·</span>
-                <span> {publicPaper.course}</span>
+                <span>{publicPaper.course}</span>
               </div>
               <h1 className="mt-3 max-w-4xl break-words font-serif text-3xl font-semibold leading-tight tracking-tight text-[#173e35] md:text-5xl">
                 {publicPaper.title}
@@ -149,7 +383,7 @@ export default function PublicPaperViewer() {
                 rel="noreferrer"
                 className="inline-flex items-center gap-2 rounded-full border border-[#b8d1c5] bg-white px-4 py-2.5 text-sm font-semibold text-[#1d5146] transition hover:bg-[#e8f1ed]"
               >
-                <Download size={15} /> Open document
+                <Download size={15} /> Open separately
               </a>
             </div>
           </div>
@@ -162,10 +396,10 @@ export default function PublicPaperViewer() {
               </div>
               <span>No account required to read this resource.</span>
             </div>
-            <iframe
-              src={documentHref}
-              title={`Full paper preview: ${publicPaper.title}`}
-              className="h-[72vh] min-h-[520px] w-full bg-[#f7f8f6]"
+            <PublicDocumentPreview
+              href={documentHref}
+              mimeType={mimeType}
+              title={publicPaper.title}
             />
           </section>
 

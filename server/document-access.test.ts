@@ -77,14 +77,23 @@ describe("protected document viewing and rejection cleanup", () => {
       'app.get("/api/papers/:paperId/free-view", handlePublicFreePaper)'
     );
     expect(serverSource).toContain('paper.accessMode !== "free"');
-    expect(serverSource).toContain('Number(paper.priceKes) !== 0');
-    expect(serverSource).toContain('!paper?.isAvailable');
+    expect(serverSource).toContain("Number(paper.priceKes) !== 0");
+    expect(serverSource).toContain("!paper?.isAvailable");
     expect(homeSource).toContain("publicPaperHref");
     expect(homeSource).toContain("View free paper");
     expect(homeSource).toContain("View full paper");
     expect(appSource).toContain('path={"/paper/:paperId"}');
-    expect(publicViewerSource).toContain("No account required to read this resource.");
-    expect(publicViewerSource).toContain("/api/papers/${publicPaper.legacyId}/free-view");
+    expect(publicViewerSource).toContain(
+      "No account required to read this resource."
+    );
+    expect(publicViewerSource).toContain(
+      "/api/papers/${publicPaper.legacyId}/free-view"
+    );
+    expect(publicViewerSource).toContain("pdfjsLib.getDocument({ url: href })");
+    expect(publicViewerSource).toContain("Opening every page…");
+    expect(publicViewerSource).toContain("Open separately");
+    expect(publicViewerSource).toContain("Open document separately");
+    expect(publicViewerSource).not.toContain("<iframe");
   });
 
   it("keeps file access scoped to administrators, owners, active submissions, and entitlements", () => {

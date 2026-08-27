@@ -127,3 +127,7 @@
 - [x] Add regression coverage for anonymous Free-paper viewing and paid/private access denial
 - [x] Verify the visitor viewing flow at desktop and mobile breakpoints and save a checkpoint
 - [x] Save a post-change checkpoint containing the verified public Free-paper viewer and anonymous-access tests
+- [x] Make the public Free-paper document open automatically inside the ScholarShelf reader without requiring a second browser Open action
+- [x] Keep a clear fallback action for browsers or file formats that cannot render inline
+- [x] Add regression coverage and verify the automatic-open reader at mobile and desktop sizes
+- [ ] Save a checkpoint containing the automatic in-portal PDF/text reader refinement and its final responsive verification

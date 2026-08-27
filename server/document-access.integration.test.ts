@@ -38,6 +38,30 @@ function responseStub() {
   };
 }
 
+function renderablePdf() {
+  const stream =
+    "BT\n/F1 18 Tf\n72 720 Td\n(ScholarShelf public viewer test) Tj\nET\n";
+  const objects = [
+    "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
+    "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n",
+    "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n",
+    "4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n",
+    `5 0 obj\n<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}endstream\nendobj\n`,
+  ];
+  let pdf = "%PDF-1.4\n";
+  const offsets = [0];
+  for (const object of objects) {
+    offsets.push(Buffer.byteLength(pdf));
+    pdf += object;
+  }
+  const xrefOffset = Buffer.byteLength(pdf);
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (const offset of offsets.slice(1))
+    pdf += `${String(offset).padStart(10, "0")} 00000 n \n`;
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
+  return pdf;
+}
+
 async function createSession(
   email: string,
   name: string,
@@ -100,11 +124,11 @@ describe("protected document access routes", () => {
         headers: {
           cookie: admin.cookie,
           "content-type": "application/octet-stream",
-          "x-file-name": encodeURIComponent(`${runId}-free-upload.txt`),
-          "x-file-type": "text/plain",
+          "x-file-name": encodeURIComponent(`${runId}-free-upload.pdf`),
+          "x-file-type": "application/pdf",
           "x-file-purpose": "paper",
         },
-        body: Buffer.from("ScholarShelf browser upload regression"),
+        body: Buffer.from(renderablePdf()),
       });
       expect(upload.status).toBe(201);
       const uploaded = (await upload.json()) as { fileId?: string };
@@ -204,9 +228,8 @@ describe("protected document access routes", () => {
       expect(anonymousFreeView.headers.get("content-disposition")).toContain(
         "inline"
       );
-      await expect(anonymousFreeView.text()).resolves.toContain(
-        "browser upload regression"
-      );
+      const anonymousPdf = Buffer.from(await anonymousFreeView.arrayBuffer());
+      expect(anonymousPdf.subarray(0, 8).toString()).toBe("%PDF-1.4");
 
       const anonymousPaidView = await fetch(
         `${baseUrl}/api/papers/${paidPaperId}/free-view`
@@ -228,7 +251,8 @@ describe("protected document access routes", () => {
       });
       expect(view.status).toBe(200);
       expect(view.headers.get("content-disposition")).toContain("inline");
-      await expect(view.text()).resolves.toContain("browser upload regression");
+      const adminPdf = Buffer.from(await view.arrayBuffer());
+      expect(adminPdf.subarray(0, 8).toString()).toBe("%PDF-1.4");
     } finally {
       if (paperId)
         await db.collection("papers").deleteMany({
