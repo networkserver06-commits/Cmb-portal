@@ -144,3 +144,7 @@
 - [x] Add regression coverage and verify the fixed reader at mobile and desktop sizes
 - [x] Save a checkpoint containing the visible PDF page-rendering fix and responsive verification
 - [x] Push the latest verified ScholarShelf reader and portal upgrade to GitHub `main` and verify the remote validation workflow
+- [x] Upgrade the public document reader with page selection, jump-to-page controls, and direct page navigation
+- [x] Implement performance improvements such as lazy page rendering and optimized document loading
+- [x] Add regression coverage and verify the upgraded reading experience at mobile and desktop sizes
+- [ ] Save a checkpoint containing the upgraded page-selection reader and its final responsive verification

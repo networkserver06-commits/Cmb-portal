@@ -1,6 +1,8 @@
 import {
   ArrowLeft,
   BookOpen,
+  ChevronLeft,
+  ChevronRight,
   Download,
   Eye,
   FileText,
@@ -270,15 +272,18 @@ function PdfPageCanvas({ pdf, pageNumber }: { pdf: any; pageNumber: number }) {
 
   useEffect(() => {
     let cancelled = false;
+    let renderTask: any = null;
+    let pageProxy: any = null;
     setStatus("loading");
     setError("");
 
     const renderPage = async () => {
       try {
-        const page = await pdf.getPage(pageNumber);
+        pageProxy = await pdf.getPage(pageNumber);
         await new Promise<void>(resolve =>
           requestAnimationFrame(() => resolve())
         );
+        const page = pageProxy as any;
         const canvas = canvasRef.current;
         if (!canvas) throw new Error("The PDF page surface is unavailable.");
         const holderWidth = canvas.parentElement?.clientWidth ?? 900;
@@ -297,13 +302,15 @@ function PdfPageCanvas({ pdf, pageNumber }: { pdf: any; pageNumber: number }) {
         context.fillStyle = "#ffffff";
         context.fillRect(0, 0, canvas.width, canvas.height);
         context.restore();
-        await page.render({
+        renderTask = page.render({
           canvas,
           canvasContext: context,
           viewport: displayViewport,
           transform:
             pixelRatio !== 1 ? [pixelRatio, 0, 0, pixelRatio, 0, 0] : undefined,
-        }).promise;
+        });
+        await renderTask.promise;
+        if (pageProxy) pageProxy.cleanup?.();
         if (!cancelled) setStatus("ready");
       } catch (renderError) {
         if (cancelled) return;
@@ -319,6 +326,8 @@ function PdfPageCanvas({ pdf, pageNumber }: { pdf: any; pageNumber: number }) {
     void renderPage();
     return () => {
       cancelled = true;
+      renderTask?.cancel();
+      pageProxy?.cleanup?.();
     };
   }, [pageNumber, pdf]);
 
@@ -348,6 +357,8 @@ function PdfDocumentPreview({ href, title }: { href: string; title: string }) {
   const [status, setStatus] = useState<DocumentStatus>("loading");
   const [pageCount, setPageCount] = useState<number | null>(null);
   const [pdf, setPdf] = useState<any>(null);
+  const [selectedPage, setSelectedPage] = useState(1);
+  const [showAllPages, setShowAllPages] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -357,6 +368,8 @@ function PdfDocumentPreview({ href, title }: { href: string; title: string }) {
     setStatus("loading");
     setPageCount(null);
     setPdf(null);
+    setSelectedPage(1);
+    setShowAllPages(false);
     setError("");
 
     const loadPdf = async () => {
@@ -389,6 +402,17 @@ function PdfDocumentPreview({ href, title }: { href: string; title: string }) {
     };
   }, [href]);
 
+  useEffect(() => {
+    if (pageCount === null) return;
+    setSelectedPage(current => Math.min(Math.max(current, 1), pageCount));
+  }, [pageCount]);
+
+  useEffect(() => {
+    if (showAllPages || status !== "ready") return;
+    const pageElement = document.getElementById(`pdf-page-${selectedPage}`);
+    pageElement?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [selectedPage, showAllPages, status]);
+
   if (status === "loading")
     return (
       <div
@@ -396,7 +420,7 @@ function PdfDocumentPreview({ href, title }: { href: string; title: string }) {
         role="status"
       >
         <span className="flex items-center gap-3">
-          <Loader2 className="animate-spin" size={18} /> Opening every page…
+          <Loader2 className="animate-spin" size={18} /> Opening the reader…
         </span>
       </div>
     );
@@ -410,25 +434,100 @@ function PdfDocumentPreview({ href, title }: { href: string; title: string }) {
       />
     );
 
+  const totalPages = pageCount ?? 0;
+  const pagesToRender = showAllPages
+    ? Array.from({ length: totalPages }, (_, index) => index + 1)
+    : [selectedPage];
+
+  const changePage = (page: number) => {
+    setShowAllPages(false);
+    setSelectedPage(Math.min(Math.max(page, 1), totalPages));
+  };
+
   return (
     <div
       className="space-y-4 bg-[#edf2ef] p-3 md:p-5"
       aria-label={`Full paper: ${title}`}
     >
-      {Array.from({ length: pageCount ?? 0 }, (_, index) => (
-        <article
-          key={index + 1}
-          className="overflow-hidden rounded-xl bg-white shadow-[0_8px_28px_rgba(29,81,70,0.12)]"
-          aria-label={`Page ${index + 1} of ${pageCount ?? 0}`}
-        >
-          <div className="border-b border-[#edf1ee] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#78938a]">
-            Page {index + 1}
+      <div className="sticky top-0 z-10 rounded-2xl border border-[#cfe0d9] bg-[#f7fbf8]/95 p-3 shadow-sm backdrop-blur md:p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#78938a]">
+              Focused reading mode
+            </p>
+            <p className="mt-1 text-sm font-semibold text-[#244b40]">
+              {showAllPages
+                ? `All ${totalPages} pages visible`
+                : `Page ${selectedPage} of ${totalPages}`}
+            </p>
           </div>
-          <div className="flex justify-center overflow-x-auto p-2 md:p-4">
-            {pdf ? <PdfPageCanvas pdf={pdf} pageNumber={index + 1} /> : null}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => changePage(selectedPage - 1)}
+              disabled={selectedPage <= 1 || showAllPages}
+              aria-label="Previous page"
+              className="grid h-10 w-10 place-items-center rounded-full border border-[#c8d9d2] bg-white text-[#1d5146] transition hover:bg-[#e8f1ed] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ChevronLeft size={17} />
+            </button>
+            <label htmlFor="reader-page-select" className="sr-only">
+              Select page to read
+            </label>
+            <select
+              id="reader-page-select"
+              value={String(selectedPage)}
+              onChange={event => changePage(Number(event.target.value))}
+              className="h-10 min-w-[112px] rounded-full border border-[#c8d9d2] bg-white px-3 text-sm font-semibold text-[#1d5146] outline-none transition focus:border-[#1d5146] focus:ring-2 focus:ring-[#1d5146]/15"
+              aria-label="Select page to read"
+            >
+              {Array.from({ length: totalPages }, (_, index) => (
+                <option key={index + 1} value={index + 1}>
+                  Page {index + 1}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => changePage(selectedPage + 1)}
+              disabled={selectedPage >= totalPages || showAllPages}
+              aria-label="Next page"
+              className="grid h-10 w-10 place-items-center rounded-full border border-[#c8d9d2] bg-white text-[#1d5146] transition hover:bg-[#e8f1ed] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ChevronRight size={17} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowAllPages(current => !current)}
+              className="h-10 rounded-full bg-[#1d5146] px-4 text-sm font-semibold text-white transition hover:bg-[#153c34]"
+            >
+              {showAllPages ? "Focus a page" : "Show all pages"}
+            </button>
           </div>
-        </article>
-      ))}
+        </div>
+        <p className="mt-3 text-xs leading-5 text-[#6f887f]">
+          Choose a page to render only what you need. Use Show all pages when
+          you want to scan the complete paper.
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        {pagesToRender.map(pageNumber => (
+          <article
+            key={pageNumber}
+            id={`pdf-page-${pageNumber}`}
+            className="overflow-hidden rounded-xl bg-white shadow-[0_8px_28px_rgba(29,81,70,0.12)]"
+            aria-label={`Page ${pageNumber} of ${totalPages}`}
+          >
+            <div className="border-b border-[#edf1ee] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#78938a]">
+              Page {pageNumber} of {totalPages}
+            </div>
+            <div className="flex justify-center overflow-x-auto p-2 md:p-4">
+              {pdf ? <PdfPageCanvas pdf={pdf} pageNumber={pageNumber} /> : null}
+            </div>
+          </article>
+        ))}
+      </div>
     </div>
   );
 }
