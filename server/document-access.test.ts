@@ -96,6 +96,12 @@ describe("protected document viewing and rejection cleanup", () => {
     );
     expect(publicViewerSource).toContain("pdfjsLib.getDocument({ url: href })");
     expect(publicViewerSource).toContain("Opening every page…");
+    expect(publicViewerSource).toContain("function PdfPageCanvas");
+    expect(publicViewerSource).toContain("Rendering page…");
+    expect(publicViewerSource).toContain(
+      "canvas.width = Math.ceil(displayViewport.width * pixelRatio)"
+    );
+    expect(publicViewerSource).toContain("pixelRatio !== 1");
     expect(publicViewerSource).toContain("Open separately");
     expect(publicViewerSource).toContain("DOMPurify.sanitize");
     expect(publicViewerSource).toContain("officeFormatLabel");

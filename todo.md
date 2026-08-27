@@ -139,3 +139,7 @@
 - [x] Fix the commit-identity workflow validation without weakening repository push checks
 - [x] Run local workflow/configuration checks and push the repair to GitHub `main`
 - [x] Reconfirm that DOCX and supported office/document formats automatically open in the ScholarShelf portal reader and that the synchronized GitHub main contains the implementation
+- [x] Diagnose why the public Free-paper reader shows blank PDF page cards after rendering on mobile
+- [x] Make PDF page content visibly render with reliable loading and failure feedback
+- [x] Add regression coverage and verify the fixed reader at mobile and desktop sizes
+- [ ] Save a checkpoint containing the visible PDF page-rendering fix and responsive verification

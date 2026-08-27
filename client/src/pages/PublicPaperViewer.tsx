@@ -263,75 +263,129 @@ function OfficeDocumentPreview({
   );
 }
 
-function PdfDocumentPreview({ href, title }: { href: string; title: string }) {
+function PdfPageCanvas({ pdf, pageNumber }: { pdf: any; pageNumber: number }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [status, setStatus] = useState<DocumentStatus>("loading");
-  const [pageCount, setPageCount] = useState<number | null>(null);
   const [error, setError] = useState("");
-  const canvasRefs = useRef<Array<HTMLCanvasElement | null>>([]);
 
   useEffect(() => {
     let cancelled = false;
-    let loadingTask: ReturnType<typeof pdfjsLib.getDocument> | null = null;
     setStatus("loading");
-    setPageCount(null);
     setError("");
-    canvasRefs.current = [];
 
-    const renderPdf = async () => {
+    const renderPage = async () => {
       try {
-        loadingTask = pdfjsLib.getDocument({ url: href });
-        const pdf = await loadingTask.promise;
-        if (cancelled) {
-          pdf.cleanup();
-          return;
-        }
-        setPageCount(pdf.numPages);
+        const page = await pdf.getPage(pageNumber);
         await new Promise<void>(resolve =>
           requestAnimationFrame(() => resolve())
         );
-        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
-          if (cancelled) break;
-          const page = await pdf.getPage(pageNumber);
-          const canvas = canvasRefs.current[pageNumber - 1];
-          if (!canvas) continue;
-          const holderWidth = canvas.parentElement?.clientWidth ?? 900;
-          const baseViewport = page.getViewport({ scale: 1 });
-          const displayWidth = Math.max(260, Math.min(holderWidth - 32, 920));
-          const displayScale = Math.max(0.8, displayWidth / baseViewport.width);
-          const pixelRatio = Math.min(globalThis.devicePixelRatio || 1, 2);
-          const displayViewport = page.getViewport({ scale: displayScale });
-          const renderViewport = page.getViewport({
-            scale: displayScale * pixelRatio,
-          });
-          canvas.width = Math.ceil(renderViewport.width);
-          canvas.height = Math.ceil(renderViewport.height);
-          canvas.style.width = `${Math.ceil(displayViewport.width)}px`;
-          canvas.style.height = `${Math.ceil(displayViewport.height)}px`;
-          const context = canvas.getContext("2d");
-          if (!context) throw new Error("Canvas rendering is unavailable.");
-          await page.render({
-            canvas,
-            canvasContext: context,
-            viewport: renderViewport,
-          }).promise;
-        }
+        const canvas = canvasRef.current;
+        if (!canvas) throw new Error("The PDF page surface is unavailable.");
+        const holderWidth = canvas.parentElement?.clientWidth ?? 900;
+        const baseViewport = page.getViewport({ scale: 1 });
+        const displayWidth = Math.max(260, Math.min(holderWidth - 32, 920));
+        const displayScale = Math.max(0.8, displayWidth / baseViewport.width);
+        const pixelRatio = Math.min(globalThis.devicePixelRatio || 1, 2);
+        const displayViewport = page.getViewport({ scale: displayScale });
+        canvas.width = Math.ceil(displayViewport.width * pixelRatio);
+        canvas.height = Math.ceil(displayViewport.height * pixelRatio);
+        canvas.style.width = `${Math.ceil(displayViewport.width)}px`;
+        canvas.style.height = `${Math.ceil(displayViewport.height)}px`;
+        const context = canvas.getContext("2d", { alpha: false });
+        if (!context) throw new Error("Canvas rendering is unavailable.");
+        context.save();
+        context.fillStyle = "#ffffff";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.restore();
+        await page.render({
+          canvas,
+          canvasContext: context,
+          viewport: displayViewport,
+          transform:
+            pixelRatio !== 1 ? [pixelRatio, 0, 0, pixelRatio, 0, 0] : undefined,
+        }).promise;
         if (!cancelled) setStatus("ready");
-        pdf.cleanup();
       } catch (renderError) {
         if (cancelled) return;
         setError(
           renderError instanceof Error
             ? renderError.message
-            : "The PDF could not be rendered inside the portal."
+            : "This PDF page could not be rendered."
         );
         setStatus("error");
       }
     };
 
-    void renderPdf();
+    void renderPage();
+    return () => {
+      cancelled = true;
+    };
+  }, [pageNumber, pdf]);
+
+  return (
+    <div className="relative grid min-h-[220px] place-items-center bg-white">
+      <canvas ref={canvasRef} className="block max-w-full" />
+      {status === "loading" && (
+        <div
+          className="absolute inset-0 grid min-h-[220px] place-items-center bg-[#fbfcfb] text-sm text-[#78938a]"
+          role="status"
+        >
+          <span className="flex items-center gap-2">
+            <Loader2 className="animate-spin" size={16} /> Rendering page…
+          </span>
+        </div>
+      )}
+      {status === "error" && (
+        <div className="absolute inset-0 grid min-h-[220px] place-items-center bg-[#fffaf0] p-5 text-center text-sm text-[#8b6a2b]">
+          <span>{error || "This PDF page could not be rendered."}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PdfDocumentPreview({ href, title }: { href: string; title: string }) {
+  const [status, setStatus] = useState<DocumentStatus>("loading");
+  const [pageCount, setPageCount] = useState<number | null>(null);
+  const [pdf, setPdf] = useState<any>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    let loadingTask: ReturnType<typeof pdfjsLib.getDocument> | null = null;
+    let documentProxy: any = null;
+    setStatus("loading");
+    setPageCount(null);
+    setPdf(null);
+    setError("");
+
+    const loadPdf = async () => {
+      try {
+        loadingTask = pdfjsLib.getDocument({ url: href });
+        documentProxy = await loadingTask.promise;
+        if (cancelled) {
+          await documentProxy.cleanup();
+          return;
+        }
+        setPageCount(documentProxy.numPages);
+        setPdf(documentProxy);
+        setStatus("ready");
+      } catch (loadError) {
+        if (cancelled) return;
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "The PDF could not be opened inside the portal."
+        );
+        setStatus("error");
+      }
+    };
+
+    void loadPdf();
     return () => {
       cancelled = true;
       void loadingTask?.destroy();
+      if (documentProxy) void documentProxy.cleanup();
     };
   }, [href]);
 
@@ -371,12 +425,7 @@ function PdfDocumentPreview({ href, title }: { href: string; title: string }) {
             Page {index + 1}
           </div>
           <div className="flex justify-center overflow-x-auto p-2 md:p-4">
-            <canvas
-              ref={node => {
-                canvasRefs.current[index] = node;
-              }}
-              className="block max-w-full"
-            />
+            {pdf ? <PdfPageCanvas pdf={pdf} pageNumber={index + 1} /> : null}
           </div>
         </article>
       ))}
