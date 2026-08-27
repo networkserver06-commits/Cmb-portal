@@ -2,6 +2,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ObjectId } from "mongodb";
+import { strToU8, zipSync } from "fflate";
 import { createAccount, loginAccount, ACCOUNT_COOKIE } from "./mongoAuth";
 import { createApp } from "./_core/index";
 import {
@@ -36,6 +37,31 @@ function responseStub() {
     clearCookie: () => undefined,
     getToken: () => token,
   };
+}
+
+function renderableDocx() {
+  const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>`;
+  const relationships = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`;
+  const document = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:p><w:r><w:t>ScholarShelf runtime DOCX preview</w:t></w:r></w:p>
+    <w:p><w:r><w:t>Anonymous visitors can read this office document.</w:t></w:r></w:p>
+  </w:body>
+</w:document>`;
+  return zipSync({
+    "[Content_Types].xml": strToU8(contentTypes),
+    "_rels/.rels": strToU8(relationships),
+    "word/document.xml": strToU8(document),
+  });
 }
 
 function renderablePdf() {
@@ -115,7 +141,9 @@ describe("protected document access routes", () => {
     const admin = await createSession(emails[4]!, "Free Upload Admin", "admin");
     const db = await mongo();
     let fileId = "";
+    let officeFileId = "";
     let paperId = 0;
+    let officePaperId = 0;
     let paidPaperId = 0;
     let privatePaperId = 0;
     try {
@@ -134,6 +162,23 @@ describe("protected document access routes", () => {
       const uploaded = (await upload.json()) as { fileId?: string };
       fileId = uploaded.fileId ?? "";
       expect(fileId).toMatch(/^[a-f0-9]{24}$/);
+
+      const officeUpload = await fetch(`${baseUrl}/api/files/upload`, {
+        method: "POST",
+        headers: {
+          cookie: admin.cookie,
+          "content-type": "application/octet-stream",
+          "x-file-name": encodeURIComponent(`${runId}-office-upload.docx`),
+          "x-file-type":
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "x-file-purpose": "paper",
+        },
+        body: renderableDocx(),
+      });
+      expect(officeUpload.status).toBe(201);
+      officeFileId =
+        ((await officeUpload.json()) as { fileId?: string }).fileId ?? "";
+      expect(officeFileId).toMatch(/^[a-f0-9]{24}$/);
 
       const input = {
         title: `${runId}-free-paper`,
@@ -178,6 +223,46 @@ describe("protected document access routes", () => {
           isAvailable: true,
         })
       );
+
+      const officeCreate = await fetch(
+        `${baseUrl}/api/trpc/admin.createPaper?batch=1`,
+        {
+          method: "POST",
+          headers: {
+            cookie: admin.cookie,
+            "content-type": "application/json",
+            accept: "application/json",
+          },
+          body: JSON.stringify({
+            0: {
+              json: {
+                ...input,
+                title: `${runId}-office-paper`,
+                fileId: officeFileId,
+              },
+            },
+          }),
+        }
+      );
+      expect(officeCreate.status).toBe(200);
+      const officeCreatedPayload = (await officeCreate.json()) as Array<{
+        result?: { data?: { json?: { paper?: { legacyId?: number } } } };
+      }>;
+      officePaperId =
+        officeCreatedPayload[0]?.result?.data?.json?.paper?.legacyId ?? 0;
+      expect(officePaperId).toBeGreaterThan(0);
+
+      const anonymousOfficePreview = await fetch(
+        `${baseUrl}/api/papers/${officePaperId}/office-preview`
+      );
+      expect(anonymousOfficePreview.status).toBe(200);
+      expect(anonymousOfficePreview.headers.get("content-type")).toContain(
+        "text/html"
+      );
+      await expect(anonymousOfficePreview.text()).resolves.toContain(
+        "ScholarShelf runtime DOCX preview"
+      );
+
       paidPaperId = await nextId("papers");
       privatePaperId = await nextId("papers");
       await db.collection("papers").insertMany([
@@ -256,14 +341,23 @@ describe("protected document access routes", () => {
     } finally {
       if (paperId)
         await db.collection("papers").deleteMany({
-          legacyId: { $in: [paperId, paidPaperId, privatePaperId] },
+          legacyId: {
+            $in: [paperId, officePaperId, paidPaperId, privatePaperId],
+          },
         });
-      if (fileId) {
+      for (const uploadedFileId of [fileId, officeFileId]) {
+        if (!uploadedFileId) continue;
         await db
           .collection("file_metadata")
-          .updateOne({ gridFsId: fileId }, { $set: { references: [] } });
-        if (await portalFileById(fileId))
-          await deletePortalFile({ fileId, actorId: admin.user.id });
+          .updateOne(
+            { gridFsId: uploadedFileId },
+            { $set: { references: [] } }
+          );
+        if (await portalFileById(uploadedFileId))
+          await deletePortalFile({
+            fileId: uploadedFileId,
+            actorId: admin.user.id,
+          });
       }
     }
   }, 180_000);

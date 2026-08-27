@@ -102,9 +102,9 @@ export default function PublishPaper({
             Submit a paper
           </h2>
           <p className="mt-2 max-w-xl text-sm leading-6 text-[#718780]">
-            Share an authorized examination document. Safe PDFs, text, and CSV
-            files are published immediately; formats or content that need a
-            closer look are held securely for administrator review.
+            Share an authorized examination document. Safe PDFs, text, CSV, and
+            supported office files can publish immediately; formats or content
+            that need a closer look are held securely for administrator review.
           </p>
         </div>
         <div className="hidden rounded-xl bg-[#e5f2eb] p-3 text-[#34745f] sm:block">
@@ -149,12 +149,12 @@ export default function PublishPaper({
         <span className="min-w-0 flex-1 truncate">
           {file
             ? `${file.name} · ${(file.size / 1024 / 1024).toFixed(2)} MiB`
-            : "Select a PDF or supported document (maximum 4 MiB)"}
+            : "Select a PDF, Word, Excel, PowerPoint, or supported document (maximum 4 MiB)"}
         </span>
         <input
           className="sr-only"
           type="file"
-          accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.csv"
+          accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.odt,.odp,.ods,.rtf,.epub,.md,.html,.txt,.csv"
           disabled={busy}
           onChange={event => {
             const next = event.target.files?.[0] ?? null;

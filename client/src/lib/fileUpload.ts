@@ -1,6 +1,23 @@
 export const MAX_PORTAL_UPLOAD_BYTES = 4 * 1024 * 1024;
 
-const extensions = new Set(["pdf", "doc", "docx", "ppt", "pptx", "txt", "csv"]);
+const extensions = new Set([
+  "pdf",
+  "doc",
+  "docx",
+  "ppt",
+  "pptx",
+  "xls",
+  "xlsx",
+  "odt",
+  "odp",
+  "ods",
+  "rtf",
+  "epub",
+  "md",
+  "html",
+  "txt",
+  "csv",
+]);
 
 function extensionOf(fileName: string) {
   return fileName.toLowerCase().split(".").pop() ?? "";
@@ -20,7 +37,7 @@ export function validatePortalDocument(
   purpose: "submission" | "paper"
 ) {
   if (!extensions.has(extensionOf(file.name)))
-    return "Use a PDF, DOC, DOCX, PPT, PPTX, TXT, or CSV document.";
+    return "Use a PDF, Word, Excel, PowerPoint, OpenDocument, RTF, EPUB, Markdown, HTML, TXT, or CSV document.";
   if (file.size < 1) return "Select a non-empty document.";
   if (file.size > MAX_PORTAL_UPLOAD_BYTES)
     return "Files must be 4 MiB or smaller for reliable uploads.";

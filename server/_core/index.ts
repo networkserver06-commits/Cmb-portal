@@ -20,9 +20,11 @@ import { storageGetSignedUrl } from "../storage";
 import {
   MAX_UPLOAD_BYTES,
   portalFileById,
+  readPortalFileBytes,
   streamPortalFile,
   uploadPortalFile,
 } from "../fileStore";
+import { officePreviewFileType, renderOfficePreview } from "../officePreview";
 import { sdk } from "./sdk";
 import { ENV } from "./env";
 
@@ -331,7 +333,76 @@ export async function createApp() {
           .json({ error: "Unable to prepare the public document" });
     }
   };
+  const handlePublicOfficePreview = async (
+    req: express.Request,
+    res: express.Response
+  ) => {
+    try {
+      const paperId = Number(req.params.paperId);
+      if (!Number.isInteger(paperId))
+        return res.status(404).json({ error: "Paper not found" });
+      const paper = await paperById(paperId);
+      if (
+        !paper?.isAvailable ||
+        paper.accessMode !== "free" ||
+        Number(paper.priceKes) !== 0
+      )
+        return res
+          .status(403)
+          .json({ error: "This paper is not available for public preview" });
+
+      const fileName = String(paper.fileName ?? paper.fileKey ?? "document");
+      const mimeType = String(paper.fileMimeType ?? "application/octet-stream");
+      if (!officePreviewFileType(mimeType, fileName))
+        return res.status(415).json({
+          error:
+            "This document format is not supported for automatic in-portal preview.",
+        });
+
+      let bytes: Buffer;
+      if (paper.fileId) {
+        if (!(await portalFileById(paper.fileId)))
+          return res.status(404).json({ error: "Paper document not found" });
+        bytes = await readPortalFileBytes(paper.fileId);
+      } else if (paper.fileKey) {
+        const signedUrl = await storageGetSignedUrl(paper.fileKey);
+        const response = await fetch(signedUrl);
+        if (!response.ok)
+          return res.status(404).json({ error: "Paper document not found" });
+        const arrayBuffer = await response.arrayBuffer();
+        if (arrayBuffer.byteLength > MAX_UPLOAD_BYTES)
+          return res
+            .status(413)
+            .json({ error: "The selected file is too large" });
+        bytes = Buffer.from(arrayBuffer);
+      } else {
+        return res.status(404).json({ error: "Paper document not found" });
+      }
+
+      const preview = await renderOfficePreview({ bytes, fileName, mimeType });
+      if (!preview)
+        return res.status(415).json({
+          error:
+            "This document format is not supported for automatic in-portal preview.",
+        });
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader(
+        "Content-Security-Policy",
+        "default-src 'none'; img-src data:; style-src 'unsafe-inline';"
+      );
+      res.setHeader("Cache-Control", "private, no-store");
+      return res.type("html").send(preview.html);
+    } catch (error) {
+      console.error("Public office preview error", error);
+      if (!res.headersSent)
+        return res.status(422).json({
+          error:
+            "This document could not be converted for automatic in-portal preview.",
+        });
+    }
+  };
   app.get("/api/papers/:paperId/free-view", handlePublicFreePaper);
+  app.get("/api/papers/:paperId/office-preview", handlePublicOfficePreview);
   app.get("/api/papers/:paperId/download", (req, res) =>
     handleProtectedPaper(req, res, "attachment")
   );

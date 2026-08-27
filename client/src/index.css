@@ -585,3 +585,104 @@
     color: #f2faf6 !important;
   }
 }
+
+@layer components {
+  .office-preview {
+    color: #243f37;
+    font-size: 0.94rem;
+    line-height: 1.7;
+  }
+
+  .office-preview h1,
+  .office-preview h2,
+  .office-preview h3,
+  .office-preview h4,
+  .office-preview h5,
+  .office-preview h6 {
+    margin: 1.35rem 0 0.55rem;
+    color: #173e35;
+    font-family: "Fraunces", Georgia, serif;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  .office-preview h1 {
+    font-size: clamp(1.65rem, 4vw, 2.35rem);
+  }
+
+  .office-preview h2 {
+    font-size: clamp(1.35rem, 3vw, 1.85rem);
+  }
+
+  .office-preview h3,
+  .office-preview h4,
+  .office-preview h5,
+  .office-preview h6 {
+    font-size: 1.15rem;
+  }
+
+  .office-preview p {
+    margin: 0.7rem 0;
+  }
+
+  .office-preview ul,
+  .office-preview ol {
+    margin: 0.75rem 0;
+    padding-left: 1.5rem;
+  }
+
+  .office-preview li {
+    margin: 0.25rem 0;
+  }
+
+  .office-preview table {
+    width: 100%;
+    margin: 1rem 0;
+    border-collapse: collapse;
+    font-size: 0.86rem;
+  }
+
+  .office-preview th,
+  .office-preview td {
+    border: 1px solid #d8e5df;
+    padding: 0.55rem 0.65rem;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .office-preview th {
+    background: #edf6f1;
+    color: #1d5146;
+    font-weight: 700;
+  }
+
+  .office-preview img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .office-preview a {
+    color: #1d6a58;
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+
+  .office-preview blockquote {
+    margin: 1rem 0;
+    border-left: 3px solid #d0a854;
+    padding-left: 1rem;
+    color: #58766b;
+  }
+
+  .office-preview pre,
+  .office-preview code {
+    overflow-x: auto;
+    border-radius: 0.5rem;
+    background: #f1f5f2;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  .office-preview pre {
+    padding: 0.85rem;
+  }
+}

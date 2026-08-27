@@ -76,6 +76,11 @@ describe("protected document viewing and rejection cleanup", () => {
     expect(serverSource).toContain(
       'app.get("/api/papers/:paperId/free-view", handlePublicFreePaper)'
     );
+    expect(serverSource).toContain(
+      'app.get("/api/papers/:paperId/office-preview", handlePublicOfficePreview)'
+    );
+    expect(serverSource).toContain("officePreviewFileType");
+    expect(serverSource).toContain("renderOfficePreview");
     expect(serverSource).toContain('paper.accessMode !== "free"');
     expect(serverSource).toContain("Number(paper.priceKes) !== 0");
     expect(serverSource).toContain("!paper?.isAvailable");
@@ -92,8 +97,24 @@ describe("protected document viewing and rejection cleanup", () => {
     expect(publicViewerSource).toContain("pdfjsLib.getDocument({ url: href })");
     expect(publicViewerSource).toContain("Opening every page…");
     expect(publicViewerSource).toContain("Open separately");
+    expect(publicViewerSource).toContain("DOMPurify.sanitize");
+    expect(publicViewerSource).toContain("officeFormatLabel");
+    expect(publicViewerSource).toContain('"/office-preview", "/free-view"');
     expect(publicViewerSource).toContain("Open document separately");
     expect(publicViewerSource).not.toContain("<iframe");
+  });
+
+  it("supports modern office uploads while retaining legacy fallbacks", () => {
+    expect(fileStoreSource).toContain("xlsx: [");
+    expect(fileStoreSource).toContain(
+      'odt: ["application/vnd.oasis.opendocument.text"]'
+    );
+    expect(fileStoreSource).toContain('epub: ["application/epub+zip"]');
+    expect(adminControlsSource).toContain(".xlsx");
+    expect(publishSource).toContain(".docx");
+    expect(publicViewerSource).toContain(
+      "DOCX, XLSX, PPTX, ODT, ODS, ODP, RTF, and EPUB"
+    );
   });
 
   it("keeps file access scoped to administrators, owners, active submissions, and entitlements", () => {

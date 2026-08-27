@@ -39,7 +39,7 @@ describe("GridFS upload validation", () => {
         mimeType: "application/octet-stream",
         byteLength: 1,
       })
-    ).toThrow("Only PDF");
+    ).toThrow("Supported files include PDF");
     expect(() =>
       validateUpload({
         fileName: "revision.pdf",
@@ -62,6 +62,39 @@ describe("GridFS upload validation", () => {
         bytes: Buffer.from("NOTPDF"),
       })
     ).toThrow("signature");
+  });
+
+  it("accepts modern office formats and legacy document fallbacks", () => {
+    const cases = [
+      [
+        "revision.docx",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      ],
+      [
+        "revision.xlsx",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      ],
+      [
+        "revision.pptx",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      ],
+      ["revision.odt", "application/vnd.oasis.opendocument.text"],
+      ["revision.ods", "application/vnd.oasis.opendocument.spreadsheet"],
+      ["revision.odp", "application/vnd.oasis.opendocument.presentation"],
+      ["revision.rtf", "application/rtf"],
+      ["revision.epub", "application/epub+zip"],
+      ["revision.md", "text/markdown"],
+      ["revision.html", "text/html"],
+      ["revision.doc", "application/msword"],
+      ["revision.xls", "application/vnd.ms-excel"],
+      ["revision.ppt", "application/vnd.ms-powerpoint"],
+    ] as const;
+
+    for (const [fileName, mimeType] of cases) {
+      expect(
+        validateUpload({ fileName, mimeType, byteLength: 4 }).extension
+      ).toBe(fileName.split(".").pop());
+    }
   });
 
   it("persists an uploaded document in GridFS with MongoDB metadata and removes it safely when unreferenced", async () => {

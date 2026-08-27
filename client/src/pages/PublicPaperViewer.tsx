@@ -6,6 +6,7 @@ import {
   FileText,
   Loader2,
 } from "lucide-react";
+import DOMPurify from "dompurify";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import * as pdfjsLib from "pdfjs-dist";
@@ -21,6 +22,39 @@ type DocumentStatus = "loading" | "ready" | "error";
 
 function isFreePaper(paper: any) {
   return paper.accessMode === "free" && Number(paper.priceKes) === 0;
+}
+
+const officeMimeLabels: Record<string, string> = {
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+    "DOCX",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "XLSX",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation":
+    "PPTX",
+  "application/vnd.oasis.opendocument.text": "ODT",
+  "application/vnd.oasis.opendocument.presentation": "ODP",
+  "application/vnd.oasis.opendocument.spreadsheet": "ODS",
+  "application/rtf": "RTF",
+  "text/rtf": "RTF",
+  "application/epub+zip": "EPUB",
+};
+
+const officeExtensions = new Set([
+  "docx",
+  "xlsx",
+  "pptx",
+  "odt",
+  "odp",
+  "ods",
+  "rtf",
+  "epub",
+]);
+
+function officeFormatLabel(mimeType: string, fileName: string) {
+  const normalizedMimeType = mimeType.split(";", 1)[0].trim().toLowerCase();
+  if (officeMimeLabels[normalizedMimeType])
+    return officeMimeLabels[normalizedMimeType];
+  const extension = fileName.toLowerCase().split(".").pop() ?? "";
+  return officeExtensions.has(extension) ? extension.toUpperCase() : null;
 }
 
 function ViewerShell({ children }: { children: React.ReactNode }) {
@@ -138,6 +172,94 @@ function TextDocumentPreview({ href, title }: { href: string; title: string }) {
     >
       {content}
     </pre>
+  );
+}
+
+function OfficeDocumentPreview({
+  href,
+  fallbackHref,
+  format,
+  title,
+}: {
+  href: string;
+  fallbackHref: string;
+  format: string;
+  title: string;
+}) {
+  const [status, setStatus] = useState<DocumentStatus>("loading");
+  const [markup, setMarkup] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 45_000);
+    setStatus("loading");
+    setMarkup("");
+    setError("");
+
+    const parseOfficeFile = async () => {
+      try {
+        const response = await fetch(href, { signal: controller.signal });
+        if (!response.ok) throw new Error("The document could not be loaded.");
+        const html = await response.text();
+        if (cancelled) return;
+        setMarkup(
+          DOMPurify.sanitize(html, {
+            USE_PROFILES: { html: true },
+          })
+        );
+        setStatus("ready");
+      } catch (parseError) {
+        if (cancelled) return;
+        setError(
+          parseError instanceof Error
+            ? parseError.message
+            : `The ${format} document could not be converted.`
+        );
+        setStatus("error");
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
+    };
+
+    void parseOfficeFile();
+    return () => {
+      cancelled = true;
+      controller.abort();
+      window.clearTimeout(timeoutId);
+    };
+  }, [format, href]);
+
+  if (status === "loading")
+    return (
+      <div
+        className="grid min-h-[420px] place-items-center bg-[#fbfcfb] p-6 text-sm text-[#58766b]"
+        role="status"
+      >
+        <span className="flex items-center gap-3 text-center">
+          <Loader2 className="animate-spin" size={18} />
+          Preparing the full {format} document…
+        </span>
+      </div>
+    );
+  if (status === "error")
+    return (
+      <DocumentFallback
+        href={fallbackHref}
+        message={
+          error ||
+          `This ${format} document could not be rendered inside the portal.`
+        }
+      />
+    );
+
+  return (
+    <article
+      aria-label={`Full ${format} document: ${title}`}
+      className="office-preview min-h-[420px] overflow-x-auto bg-white p-5 text-[#243f37] md:p-8"
+      dangerouslySetInnerHTML={{ __html: markup }}
+    />
   );
 }
 
@@ -264,10 +386,12 @@ function PdfDocumentPreview({ href, title }: { href: string; title: string }) {
 
 function PublicDocumentPreview({
   href,
+  fileName,
   mimeType,
   title,
 }: {
   href: string;
+  fileName: string;
   mimeType: string;
   title: string;
 }) {
@@ -275,10 +399,20 @@ function PublicDocumentPreview({
     return <PdfDocumentPreview href={href} title={title} />;
   if (mimeType.startsWith("text/") || mimeType === "application/csv")
     return <TextDocumentPreview href={href} title={title} />;
+  const format = officeFormatLabel(mimeType, fileName);
+  if (format)
+    return (
+      <OfficeDocumentPreview
+        href={href}
+        fallbackHref={href.replace("/office-preview", "/free-view")}
+        format={format}
+        title={title}
+      />
+    );
   return (
     <DocumentFallback
       href={href}
-      message="This file format is not supported for automatic in-page reading yet."
+      message="This file format is not supported for automatic in-page reading yet. DOCX, XLSX, PPTX, ODT, ODS, ODP, RTF, and EPUB files are supported."
     />
   );
 }
@@ -299,6 +433,9 @@ export default function PublicPaperViewer() {
     paper && isFreePaper(paper) && paper.isAvailable ? paper : null;
   const documentHref = publicPaper
     ? `/api/papers/${publicPaper.legacyId}/free-view`
+    : "";
+  const officePreviewHref = publicPaper
+    ? `/api/papers/${publicPaper.legacyId}/office-preview`
     : "";
   const mimeType = String(publicPaper?.fileMimeType ?? "").toLowerCase();
 
@@ -397,7 +534,12 @@ export default function PublicPaperViewer() {
               <span>No account required to read this resource.</span>
             </div>
             <PublicDocumentPreview
-              href={documentHref}
+              href={
+                officeFormatLabel(mimeType, String(publicPaper.fileName ?? ""))
+                  ? officePreviewHref
+                  : documentHref
+              }
+              fileName={String(publicPaper.fileName ?? "")}
               mimeType={mimeType}
               title={publicPaper.title}
             />

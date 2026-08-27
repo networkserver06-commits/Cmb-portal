@@ -37,7 +37,8 @@ const emptyPaper = {
   priceKes: "",
   description: "",
 };
-const acceptedDocuments = ".pdf,.doc,.docx,.ppt,.pptx,.txt,.csv";
+const acceptedDocuments =
+  ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.odt,.odp,.ods,.rtf,.epub,.md,.html,.txt,.csv";
 const resourceFieldLabels = {
   title: "Title",
   course: "Course",
@@ -341,7 +342,8 @@ export default function AdminControls() {
               )}
             </span>
             <span className="mt-1 block text-xs leading-4 text-[#82958e]">
-              PDF, Word, PowerPoint, TXT, or CSV · maximum 4 MiB
+              PDF, Word, Excel, PowerPoint, OpenDocument, RTF, EPUB, TXT, CSV,
+              or HTML · maximum 4 MiB
             </span>
           </span>
           {paperFile && (

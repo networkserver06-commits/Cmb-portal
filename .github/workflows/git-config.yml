@@ -29,9 +29,11 @@ jobs:
           zero="0000000000000000000000000000000000000000"
           if [ "$EVENT_NAME" = "pull_request" ]; then
             range="$BASE_SHA..$CURRENT_SHA"
-          elif [ -n "${BEFORE_SHA:-}" ] && [ "$BEFORE_SHA" != "$zero" ]; then
+          elif [ -n "${BEFORE_SHA:-}" ] && [ "$BEFORE_SHA" != "$zero" ] && git cat-file -e "$BEFORE_SHA^{commit}" 2>/dev/null; then
             range="$BEFORE_SHA..$CURRENT_SHA"
           else
+            # Force-pushes can report a before SHA that is not present in the new checkout.
+            # Validate the complete reachable history rather than passing an invalid range.
             range="$CURRENT_SHA"
           fi
           node scripts/validate-git-config.mjs --range "$range"

@@ -130,4 +130,11 @@
 - [x] Make the public Free-paper document open automatically inside the ScholarShelf reader without requiring a second browser Open action
 - [x] Keep a clear fallback action for browsers or file formats that cannot render inline
 - [x] Add regression coverage and verify the automatic-open reader at mobile and desktop sizes
-- [ ] Save a checkpoint containing the automatic in-portal PDF/text reader refinement and its final responsive verification
+- [x] Save a checkpoint containing the automatic in-portal PDF/text reader refinement and its final responsive verification
+- [x] Automatically render supported Word documents such as DOCX inside the public Free-paper reader
+- [x] Support safe inline rendering for additional common office/document formats where the client parser is reliable
+- [x] Preserve original protected file access and show a clear separate-viewer/download fallback for unsupported or malformed files
+- [ ] Add regression coverage for DOCX and unsupported-format behavior, then verify the responsive reader and save a checkpoint
+- [x] Diagnose why GitHub Actions `Validate commit identity` fails on the synchronized `main` push
+- [x] Fix the commit-identity workflow validation without weakening repository push checks
+- [ ] Run local workflow/configuration checks and push the repair to GitHub `main`

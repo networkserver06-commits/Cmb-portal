@@ -1,9 +1,15 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   isValidGitHubEmail,
   parsePrePushInput,
   validateGitEmail,
 } from "./validate-git-config.mjs";
+
+const workflowSource = readFileSync(
+  new URL("../.github/workflows/git-config.yml", import.meta.url),
+  "utf8"
+);
 
 describe("Git configuration validation", () => {
   it("accepts a GitHub numeric-ID noreply address", () => {
@@ -27,6 +33,14 @@ describe("Git configuration validation", () => {
         "networkserver06-commits"
       )
     ).toMatch(/does not match/);
+  });
+
+  it("falls back to the current history when a force-push base is unavailable", () => {
+    expect(workflowSource).toContain(
+      'git cat-file -e "$BEFORE_SHA^{commit}" 2>/dev/null'
+    );
+    expect(workflowSource).toContain('range="$CURRENT_SHA"');
+    expect(workflowSource).toContain("Validate the complete reachable history");
   });
 
   it("parses standard pre-push reference lines", () => {

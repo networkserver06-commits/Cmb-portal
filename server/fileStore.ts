@@ -21,6 +21,15 @@ const fileTypes = {
   pptx: [
     "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   ],
+  xls: ["application/vnd.ms-excel"],
+  xlsx: ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+  odt: ["application/vnd.oasis.opendocument.text"],
+  odp: ["application/vnd.oasis.opendocument.presentation"],
+  ods: ["application/vnd.oasis.opendocument.spreadsheet"],
+  rtf: ["application/rtf", "text/rtf"],
+  epub: ["application/epub+zip"],
+  md: ["text/markdown", "text/plain"],
+  html: ["text/html", "application/xhtml+xml"],
   txt: ["text/plain"],
   csv: ["text/csv", "application/csv"],
 } as const;
@@ -82,7 +91,7 @@ export function validateUpload(input: {
   const extension = extensionOf(fileName) as keyof typeof fileTypes;
   if (!(extension in fileTypes))
     throw new Error(
-      "Only PDF, DOC, DOCX, PPT, PPTX, TXT, and CSV files are supported."
+      "Supported files include PDF, Word, Excel, PowerPoint, OpenDocument, RTF, EPUB, Markdown, HTML, TXT, and CSV."
     );
   if (!Number.isInteger(input.byteLength) || input.byteLength < 1)
     throw new Error("Select a non-empty document to upload.");
