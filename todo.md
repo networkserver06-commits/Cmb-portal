@@ -126,4 +126,4 @@
 - [x] Preserve protected access for paid, private, inactive, and unauthorized document requests
 - [x] Add regression coverage for anonymous Free-paper viewing and paid/private access denial
 - [x] Verify the visitor viewing flow at desktop and mobile breakpoints and save a checkpoint
-- [ ] Save a post-change checkpoint containing the verified public Free-paper viewer and anonymous-access tests
+- [x] Save a post-change checkpoint containing the verified public Free-paper viewer and anonymous-access tests
