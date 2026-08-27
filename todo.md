@@ -137,4 +137,5 @@
 - [x] Add regression coverage for DOCX and unsupported-format behavior, then verify the responsive reader and save a checkpoint
 - [x] Diagnose why GitHub Actions `Validate commit identity` fails on the synchronized `main` push
 - [x] Fix the commit-identity workflow validation without weakening repository push checks
-- [ ] Run local workflow/configuration checks and push the repair to GitHub `main`
+- [x] Run local workflow/configuration checks and push the repair to GitHub `main`
+- [x] Reconfirm that DOCX and supported office/document formats automatically open in the ScholarShelf portal reader and that the synchronized GitHub main contains the implementation
