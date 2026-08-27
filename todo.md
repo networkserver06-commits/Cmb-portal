@@ -142,4 +142,5 @@
 - [x] Diagnose why the public Free-paper reader shows blank PDF page cards after rendering on mobile
 - [x] Make PDF page content visibly render with reliable loading and failure feedback
 - [x] Add regression coverage and verify the fixed reader at mobile and desktop sizes
-- [ ] Save a checkpoint containing the visible PDF page-rendering fix and responsive verification
+- [x] Save a checkpoint containing the visible PDF page-rendering fix and responsive verification
+- [x] Push the latest verified ScholarShelf reader and portal upgrade to GitHub `main` and verify the remote validation workflow
