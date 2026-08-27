@@ -160,3 +160,7 @@
 - [x] Add regression coverage for retention selectors, preservation guarantees, idempotency, and cron-only route mounting.
 - [ ] Deploy the latest checkpoint, then activate the hourly Manus Heartbeat job against `/api/scheduled/retentionCleanup`.
 - [ ] Obtain explicit user confirmation that the ScholarShelf administrator flow and Vercel CLI build status have been reviewed.
+
+- [x] Add dashboard resource filtering by search text and relevant catalogue metadata.
+- [x] Add dashboard resource sorting with a clear default and stable empty-state behavior.
+- [x] Add regression coverage and responsive visual verification for dashboard filtering and sorting.

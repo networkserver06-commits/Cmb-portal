@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import {
+  filterAndSortLibrary,
+  type LibrarySort,
+} from "@/lib/libraryFilters";
+import { educationLevelLabel } from "@shared/educationLevels";
 import PublishPaper from "./PublishPaper";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -18,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   AlertCircle,
   ArrowLeft,
+  ArrowUpDown,
   BadgeCheck,
   CalendarDays,
   CheckCircle2,
@@ -43,6 +49,8 @@ import {
   UserRound,
   WalletCards,
   Smartphone,
+  Search,
+  X,
 } from "lucide-react";
 
 function LoadingLine({ className = "" }: { className?: string }) {
@@ -164,6 +172,18 @@ function AccountDashboard({
   const activity = trpc.student.activity.useQuery(undefined);
   const utils = trpc.useUtils();
   const available = library.data?.filter(item => item.paper) ?? [];
+  const [libraryQuery, setLibraryQuery] = useState("");
+  const [libraryLevel, setLibraryLevel] = useState("all");
+  const [librarySort, setLibrarySort] = useState<LibrarySort>("recent");
+  const filteredAvailable = filterAndSortLibrary(available, {
+    query: libraryQuery,
+    level: libraryLevel === "all" ? "" : libraryLevel,
+    sort: librarySort,
+  });
+  const libraryLevels = Array.from(
+    new Set(available.map(item => item.paper?.level).filter(Boolean))
+  ).sort((left, right) => String(left).localeCompare(String(right)));
+  const hasLibraryFilters = Boolean(libraryQuery.trim()) || libraryLevel !== "all";
   const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
   const [profileName, setProfileName] = useState(user.name ?? "");
   const [profileNotice, setProfileNotice] = useState("");
@@ -481,59 +501,166 @@ function AccountDashboard({
           <section
             className={`mt-12 account-reveal account-reveal-delay-2 ${activeTab !== "downloads" ? "hidden" : ""}`}
           >
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex items-center justify-between gap-4">
               <div>
                 <p className="section-eyebrow">Unlocked resources</p>
                 <h2 className="mt-1 font-serif text-2xl font-semibold text-[#173e35]">
                   Available downloads
                 </h2>
               </div>
-              <Badge className="border-0 bg-[#e5f2eb] text-[#34745f]">
-                {available.length} papers
+              <Badge className="shrink-0 border-0 bg-[#e5f2eb] text-[#34745f]">
+                {library.isLoading
+                  ? "— papers"
+                  : `${filteredAvailable.length} ${filteredAvailable.length === 1 ? "paper" : "papers"}`}
               </Badge>
             </div>
             {library.isLoading ? (
               <LoadingCard message="Loading your available downloads…" />
             ) : available.length ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                {available.map(item => (
-                  <article
-                    key={item.entitlement.legacyId}
-                    className="account-resource-card flex items-center justify-between gap-4 rounded-2xl border border-[#dfe9e3] bg-white p-5 shadow-sm"
-                  >
-                    <div className="flex min-w-0 items-center gap-4">
-                      <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#e8f1ed] text-[#2d7965]">
-                        <FileText size={19} />
-                      </div>
-                      <div className="min-w-0">
-                        <h3 className="truncate font-medium text-[#274d43]">
-                          {item.paper!.title}
-                        </h3>
-                        <p className="mt-1 text-xs text-[#82958e]">
-                          {item.paper!.unit} · {item.paper!.level} ·{" "}
-                          {item.paper!.cycle}
-                        </p>
-                      </div>
+              <>
+                <div className="mb-5 rounded-3xl border border-[#dfe9e3] bg-white p-4 shadow-sm sm:p-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="flex items-center gap-2 text-sm font-semibold text-[#274d43]">
+                        <Search size={16} className="text-[#4b8876]" /> Find a paper
+                      </p>
+                      <p className="mt-1 text-xs text-[#82958e]">
+                        Search your unlocked resources or narrow them by level.
+                      </p>
                     </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      <a
-                        href={`/api/papers/${item.paper!.legacyId}/view`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 rounded-full border border-[#c8d9d2] bg-white px-3 py-2 text-xs font-semibold text-[#1d5146] transition hover:bg-[#e8f1ed]"
+                    {hasLibraryFilters && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLibraryQuery("");
+                          setLibraryLevel("all");
+                        }}
+                        className="inline-flex items-center gap-1.5 self-start rounded-full border border-[#c8d9d2] px-3 py-1.5 text-xs font-semibold text-[#34745f] transition hover:bg-[#e8f1ed] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4b8876]"
+                        aria-label="Clear library filters"
                       >
-                        <Eye size={14} /> View
-                      </a>
-                      <a
-                        href={`/api/papers/${item.paper!.legacyId}/download`}
-                        className="inline-flex items-center gap-1.5 rounded-full bg-[#1d5146] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#153c34]"
+                        <X size={13} /> Clear filters
+                      </button>
+                    )}
+                  </div>
+                  <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1.5fr)_minmax(10rem,0.8fr)_minmax(10rem,0.8fr)]">
+                    <label className="block">
+                      <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-[#94aaa2]">
+                        Search
+                      </span>
+                      <span className="relative block">
+                        <Search
+                          size={16}
+                          aria-hidden="true"
+                          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#82958e]"
+                        />
+                        <Input
+                          value={libraryQuery}
+                          onChange={event => setLibraryQuery(event.target.value)}
+                          placeholder="Title, course, unit, or cycle"
+                          aria-label="Search unlocked papers"
+                          className="h-11 rounded-2xl border-[#c8d9d2] bg-[#fbfdfb] pl-9 text-sm shadow-none focus-visible:ring-[#4b8876]"
+                        />
+                      </span>
+                    </label>
+                    <label className="block">
+                      <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-[#94aaa2]">
+                        Education level
+                      </span>
+                      <select
+                        value={libraryLevel}
+                        onChange={event => setLibraryLevel(event.target.value)}
+                        aria-label="Filter by education level"
+                        className="h-11 w-full rounded-2xl border border-[#c8d9d2] bg-[#fbfdfb] px-3 text-sm text-[#274d43] outline-none transition focus:border-[#4b8876] focus:ring-2 focus:ring-[#4b8876]/25"
                       >
-                        <Download size={14} /> Download
-                      </a>
-                    </div>
-                  </article>
-                ))}
-              </div>
+                        <option value="all">All levels</option>
+                        {libraryLevels.map(level => (
+                          <option key={String(level)} value={String(level)}>
+                            {educationLevelLabel(String(level))}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="block">
+                      <span className="mb-1.5 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#94aaa2]">
+                        <ArrowUpDown size={12} /> Sort by
+                      </span>
+                      <select
+                        value={librarySort}
+                        onChange={event => setLibrarySort(event.target.value as LibrarySort)}
+                        aria-label="Sort unlocked papers"
+                        className="h-11 w-full rounded-2xl border border-[#c8d9d2] bg-[#fbfdfb] px-3 text-sm text-[#274d43] outline-none transition focus:border-[#4b8876] focus:ring-2 focus:ring-[#4b8876]/25"
+                      >
+                        <option value="recent">Recently added</option>
+                        <option value="oldest">Oldest first</option>
+                        <option value="title">Title A–Z</option>
+                      </select>
+                    </label>
+                  </div>
+                  <p className="mt-3 text-xs text-[#718780]" role="status" aria-live="polite">
+                    {hasLibraryFilters
+                      ? `${filteredAvailable.length} of ${available.length} papers shown`
+                      : `${available.length} ${available.length === 1 ? "paper" : "papers"} in your library`}
+                  </p>
+                </div>
+                {filteredAvailable.length ? (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {filteredAvailable.map(item => (
+                      <article
+                        key={item.entitlement.legacyId}
+                        className="account-resource-card flex items-center justify-between gap-4 rounded-2xl border border-[#dfe9e3] bg-white p-5 shadow-sm"
+                      >
+                        <div className="flex min-w-0 items-center gap-4">
+                          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#e8f1ed] text-[#2d7965]">
+                            <FileText size={19} />
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="truncate font-medium text-[#274d43]">
+                              {item.paper!.title}
+                            </h3>
+                            <p className="mt-1 text-xs text-[#82958e]">
+                              {item.paper!.unit} · {educationLevelLabel(item.paper!.level)} ·{" "}
+                              {item.paper!.cycle}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <a
+                            href={`/api/papers/${item.paper!.legacyId}/view`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 rounded-full border border-[#c8d9d2] bg-white px-3 py-2 text-xs font-semibold text-[#1d5146] transition hover:bg-[#e8f1ed]"
+                          >
+                            <Eye size={14} /> View
+                          </a>
+                          <a
+                            href={`/api/papers/${item.paper!.legacyId}/download`}
+                            className="inline-flex items-center gap-1.5 rounded-full bg-[#1d5146] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#153c34]"
+                          >
+                            <Download size={14} /> Download
+                          </a>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-[#cdded7] bg-white p-10 text-center account-empty-state">
+                    <Search className="mx-auto h-9 w-9 text-[#9bb9ab]" />
+                    <p className="mt-4 text-sm text-[#718780]">
+                      No unlocked papers match these filters.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLibraryQuery("");
+                        setLibraryLevel("all");
+                      }}
+                      className="mt-5 inline-flex rounded-full bg-[#1d5146] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#153c34] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4b8876]"
+                    >
+                      Show all papers
+                    </button>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="rounded-2xl border border-dashed border-[#cdded7] bg-white p-10 text-center account-empty-state">
                 <FileText className="mx-auto h-9 w-9 text-[#9bb9ab]" />
