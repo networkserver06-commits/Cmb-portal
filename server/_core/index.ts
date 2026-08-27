@@ -25,6 +25,7 @@ import {
   uploadPortalFile,
 } from "../fileStore";
 import { officePreviewFileType, renderOfficePreview } from "../officePreview";
+import { runRetentionCleanup } from "../retentionCleanup";
 import { sdk } from "./sdk";
 import { ENV } from "./env";
 
@@ -58,6 +59,25 @@ export async function createApp() {
       paymentCollection: "paystack-hosted",
     })
   );
+
+  app.post("/api/scheduled/retentionCleanup", async (req, res) => {
+    try {
+      const user = await sdk.authenticateRequest(req);
+      if (!user.isCron || !user.taskUid)
+        return res.status(403).json({ error: "cron-only" });
+      const result = await runRetentionCleanup({ actorId: user.id });
+      return res.status(200).json({ ok: true, ...result });
+    } catch (error) {
+      return res.status(500).json({
+        error: error instanceof Error ? error.message : String(error),
+        context: {
+          url: req.originalUrl,
+          taskUid: req.headers["x-manus-task-uid"] ?? null,
+        },
+        timestamp: new Date().toISOString(),
+      });
+    }
+  });
   // Paystack signs the exact raw payload. Keep this endpoint before JSON parsing.
   app.post(
     "/api/paystack/webhook",

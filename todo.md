@@ -147,4 +147,16 @@
 - [x] Upgrade the public document reader with page selection, jump-to-page controls, and direct page navigation
 - [x] Implement performance improvements such as lazy page rendering and optimized document loading
 - [x] Add regression coverage and verify the upgraded reading experience at mobile and desktop sizes
-- [ ] Save a checkpoint containing the upgraded page-selection reader and its final responsive verification
+- [x] Save a checkpoint containing the upgraded page-selection reader and its final responsive verification
+- [x] Push the latest verified page-selection reading upgrade to GitHub `main` and verify the remote validation workflow
+- [x] Define explicit disposable-history categories and retention exceptions before deletion logic
+- [x] Implement idempotent cleanup that permanently removes eligible MongoDB records and linked GridFS bytes after 24 hours or less
+- [x] Add protected scheduled endpoint, dry-run-safe tests, and regression coverage for retained versus disposable records
+- [x] Verify the cleanup locally and prepare a deployment-ready checkpoint; activate the recurring job only after production deployment
+- [x] Apply the confirmed safest policy: hourly cleanup; eligible categories limited to rejected submissions, unreferenced disposable upload artifacts, and failed/expired payment attempts; moderation/audit metadata, active papers, successful payments, and entitlements retained
+
+- [x] Implement idempotent 24-hour retention cleanup for rejected submission metadata, failed/abandoned payment attempts, and unreferenced disposable GridFS files while preserving active papers, paid records, entitlements, and audit metadata.
+- [x] Mount the cron-authenticated POST retention endpoint at `/api/scheduled/retentionCleanup`.
+- [x] Add regression coverage for retention selectors, preservation guarantees, idempotency, and cron-only route mounting.
+- [ ] Deploy the latest checkpoint, then activate the hourly Manus Heartbeat job against `/api/scheduled/retentionCleanup`.
+- [ ] Obtain explicit user confirmation that the ScholarShelf administrator flow and Vercel CLI build status have been reviewed.
