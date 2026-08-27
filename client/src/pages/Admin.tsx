@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
+import { formatBytes } from "@/lib/formatBytes";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "wouter";
@@ -20,6 +21,7 @@ import {
   Clock3,
   CreditCard,
   FileText,
+  HardDrive,
   Loader2,
   Plus,
   ShieldCheck,
@@ -60,6 +62,7 @@ function AdminWorkspace() {
   const payments = trpc.admin.listPayments.useQuery();
   const walletSummary = trpc.admin.walletSummary.useQuery();
   const files = trpc.admin.files.useQuery();
+  const storageAudit = trpc.admin.storageAudit.useQuery();
   const operationalRecords = trpc.admin.operationalRecords.useQuery();
 
   const isLoading =
@@ -67,7 +70,8 @@ function AdminWorkspace() {
     papers.isLoading ||
     users.isLoading ||
     payments.isLoading ||
-    walletSummary.isLoading;
+    walletSummary.isLoading ||
+    storageAudit.isLoading;
   const paperRows = papers.data?.slice(0, 6) ?? [];
   const paymentCounts = payments.data?.reduce(
     (counts, row) => {
@@ -312,13 +316,23 @@ function AdminWorkspace() {
                 <FileText size={18} />
               </div>
             </div>
-            <div className="mt-6 grid grid-cols-3 gap-3">
+            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div className="rounded-2xl bg-[#f5f9f6] p-3">
                 <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#789087]">
                   Stored
                 </div>
                 <div className="mt-1 text-xl font-semibold text-[#173e35]">
                   {files.isLoading ? "—" : (files.data?.length ?? 0)}
+                </div>
+              </div>
+              <div className="rounded-2xl bg-[#eef6f2] p-3">
+                <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#4b8876]">
+                  <HardDrive size={12} /> Used
+                </div>
+                <div className="mt-1 text-xl font-semibold text-[#1d5146]">
+                  {storageAudit.isLoading
+                    ? "—"
+                    : formatBytes(storageAudit.data?.usage.trackedBytes)}
                 </div>
               </div>
               <div className="rounded-2xl bg-[#fff9e8] p-3">
@@ -343,6 +357,18 @@ function AdminWorkspace() {
                         .length ?? 0)}
                 </div>
               </div>
+            </div>
+            <div className="mt-4 flex flex-col gap-2 rounded-2xl bg-[#fbfdfb] p-3 text-xs text-[#718780] sm:flex-row sm:items-center sm:justify-between">
+              <span>
+                Usage is calculated from tracked GridFS file metadata, not a provider quota.
+              </span>
+              <button
+                type="button"
+                onClick={() => jumpTo("storage-management", "storage")}
+                className="inline-flex items-center gap-1 self-start font-semibold text-[#1d5146] underline decoration-[#b6d0c4] underline-offset-4 transition hover:text-[#153c34]"
+              >
+                Run storage checks <ArrowUpRight size={13} />
+              </button>
             </div>
             <Button
               variant="outline"

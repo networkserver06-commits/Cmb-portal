@@ -164,3 +164,7 @@
 - [x] Add dashboard resource filtering by search text and relevant catalogue metadata.
 - [x] Add dashboard resource sorting with a clear default and stable empty-state behavior.
 - [x] Add regression coverage and responsive visual verification for dashboard filtering and sorting.
+
+- [x] Add byte-accurate tracked storage usage to the administrator storage audit and overview.
+- [x] Add protected/reclaimable capacity breakdown and conservative storage-health suggestions without inventing a provider quota.
+- [x] Add storage usage regression tests and verify desktop/mobile administrator storage layouts.

@@ -22,11 +22,29 @@ export type StorageAuditItem = {
   fileName?: string;
   mimeType?: string;
   createdAt: Date | null;
+  byteLength: number;
   ageDays: number;
   referenceCount: number;
   references: string[];
   status: StorageAuditStatus;
   cleanupEligible: boolean;
+};
+
+export type StorageUsage = {
+  trackedBytes: number;
+  protectedBytes: number;
+  cleanupEligibleBytes: number;
+  recentBytes: number;
+  temporaryBytes: number;
+  largestFileBytes: number;
+  largestFileName: string | null;
+};
+
+export type StorageHealthCheck = {
+  id: "cleanup" | "temporary" | "large-file" | "tracking";
+  tone: "good" | "attention" | "info";
+  title: string;
+  detail: string;
 };
 
 export type StorageAudit = {
@@ -42,6 +60,8 @@ export type StorageAudit = {
     temporary: number;
     orphaned: number;
   };
+  usage: StorageUsage;
+  healthChecks: StorageHealthCheck[];
 };
 
 function ageInDays(createdAt: Date | null, now = Date.now()) {
@@ -75,6 +95,7 @@ function itemFromMetadata(
     fileName: metadata.fileName,
     mimeType: metadata.mimeType,
     createdAt: metadata.createdAt,
+    byteLength: Math.max(0, Number(metadata.byteLength) || 0),
     ageDays,
     referenceCount: references.length,
     references,
@@ -82,6 +103,78 @@ function itemFromMetadata(
     cleanupEligible:
       references.length === 0 && ageDays >= STORAGE_RETENTION_DAYS,
   };
+}
+
+export function summarizeStorageUsage(items: StorageAuditItem[]): StorageUsage {
+  return items.reduce<StorageUsage>(
+    (usage, item) => {
+      const bytes = Math.max(0, Number(item.byteLength) || 0);
+      usage.trackedBytes += bytes;
+      if (item.status === "protected") usage.protectedBytes += bytes;
+      if (item.cleanupEligible) usage.cleanupEligibleBytes += bytes;
+      if (item.status === "recent") usage.recentBytes += bytes;
+      if (item.status === "temporary") usage.temporaryBytes += bytes;
+      if (bytes > usage.largestFileBytes) {
+        usage.largestFileBytes = bytes;
+        usage.largestFileName = item.fileName || item.key;
+      }
+      return usage;
+    },
+    {
+      trackedBytes: 0,
+      protectedBytes: 0,
+      cleanupEligibleBytes: 0,
+      recentBytes: 0,
+      temporaryBytes: 0,
+      largestFileBytes: 0,
+      largestFileName: null,
+    }
+  );
+}
+
+export function buildStorageHealthChecks(
+  totals: StorageAudit["totals"],
+  usage: StorageUsage
+): StorageHealthCheck[] {
+  const checks: StorageHealthCheck[] = [];
+  if (totals.orphaned > 0) {
+    checks.push({
+      id: "cleanup",
+      tone: "attention",
+      title: "Review cleanup candidates",
+      detail: `${totals.orphaned} unreferenced file${totals.orphaned === 1 ? " is" : "s are"} ready for a protected cleanup review.`,
+    });
+  } else {
+    checks.push({
+      id: "cleanup",
+      tone: "good",
+      title: "No safe cleanup candidates",
+      detail: "Referenced and recent files are protected from manual cleanup.",
+    });
+  }
+  if (totals.temporary > 0) {
+    checks.push({
+      id: "temporary",
+      tone: "info",
+      title: "Submission files remain protected",
+      detail: `${totals.temporary} recent submission file${totals.temporary === 1 ? " is" : "s are"} retained while the review workflow completes.`,
+    });
+  }
+  if (usage.largestFileBytes >= 3.5 * 1024 * 1024) {
+    checks.push({
+      id: "large-file",
+      tone: "attention",
+      title: "Largest file is near the upload ceiling",
+      detail: `${usage.largestFileName ?? "A tracked file"} is close to the 4 MiB per-file upload limit; keep future uploads optimized.`,
+    });
+  }
+  checks.push({
+    id: "tracking",
+    tone: "info",
+    title: "Usage is based on tracked GridFS metadata",
+    detail: "The summary reflects active file metadata and is not a provider-wide quota estimate.",
+  });
+  return checks;
 }
 
 export async function auditStorage(): Promise<StorageAudit> {
@@ -96,6 +189,7 @@ export async function auditStorage(): Promise<StorageAudit> {
     temporary: items.filter(item => item.status === "temporary").length,
     orphaned: items.filter(item => item.status === "orphaned").length,
   };
+  const usage = summarizeStorageUsage(items);
   return {
     generatedAt: now,
     retentionDays: STORAGE_RETENTION_DAYS,
@@ -103,6 +197,8 @@ export async function auditStorage(): Promise<StorageAudit> {
     coverage: "gridfs-file-metadata-and-live-references",
     items,
     totals,
+    usage,
+    healthChecks: buildStorageHealthChecks(totals, usage),
   };
 }
 

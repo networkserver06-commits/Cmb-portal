@@ -1,9 +1,12 @@
 import { useMemo, useState } from "react";
 import {
   AlertTriangle,
+  CheckCircle2,
   Database,
   Eye,
   FileCheck2,
+  HardDrive,
+  Lightbulb,
   Loader2,
   ShieldCheck,
   Trash2,
@@ -12,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import RouteProgress from "@/components/RouteProgress";
 import { trpc } from "@/lib/trpc";
+import { formatBytes } from "@/lib/formatBytes";
 import StorageTooltip from "@/components/StorageTooltip";
 
 const statusLabel = {
@@ -45,6 +49,14 @@ export default function StorageManagement() {
   const selectedCandidates = selected.filter(key =>
     candidates.some(item => item.key === key)
   );
+  const usage = inventory.data?.usage;
+  const healthChecks = inventory.data?.healthChecks ?? [];
+  const protectedShare = usage?.trackedBytes
+    ? Math.round((usage.protectedBytes / usage.trackedBytes) * 100)
+    : 0;
+  const cleanupShare = usage?.trackedBytes
+    ? Math.round((usage.cleanupEligibleBytes / usage.trackedBytes) * 100)
+    : 0;
 
   const toggle = (key: string) =>
     setSelected(current =>
@@ -107,6 +119,111 @@ export default function StorageManagement() {
         visible={inventory.isLoading}
         label="Auditing storage references…"
       />
+      <div className="border-b border-[#edf2ef] bg-[#fbfdfb] p-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#eef6f2] text-[#2d7965]">
+              <HardDrive size={18} />
+            </div>
+            <div>
+              <p className="section-eyebrow">Capacity snapshot</p>
+              <h3 className="mt-1 font-serif text-xl font-semibold text-[#173e35]">
+                Tracked storage used
+              </h3>
+              <p className="mt-1 max-w-2xl text-xs leading-5 text-[#82958e]">
+                Byte usage from active GridFS metadata. This is an operational
+                view of the portal, not a provider-wide quota estimate.
+              </p>
+            </div>
+          </div>
+          <div className="rounded-full bg-[#e5f2eb] px-3 py-1.5 text-xs font-semibold text-[#34745f]">
+            {inventory.isLoading ? "Calculating…" : formatBytes(usage?.trackedBytes)}
+          </div>
+        </div>
+        <div className="mt-6">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-[#506c63]">
+            <span>Protected files {protectedShare}%</span>
+            <span>Reviewable bytes {cleanupShare}%</span>
+          </div>
+          <div
+            className="flex h-3 overflow-hidden rounded-full bg-[#e5eee9]"
+            role="img"
+            aria-label={`Storage composition: ${protectedShare}% protected files and ${cleanupShare}% reviewable cleanup bytes`}
+          >
+            <div
+              className="bg-[#2d7965] transition-all duration-300"
+              style={{ width: `${protectedShare}%` }}
+            />
+            <div
+              className="bg-[#e8c979] transition-all duration-300"
+              style={{ width: `${cleanupShare}%` }}
+            />
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl bg-white p-3 shadow-sm">
+              <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#789087]">
+                Total tracked
+              </div>
+              <div className="mt-1 text-lg font-semibold text-[#173e35]">
+                {formatBytes(usage?.trackedBytes)}
+              </div>
+            </div>
+            <div className="rounded-2xl bg-white p-3 shadow-sm">
+              <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#789087]">
+                Protected bytes
+              </div>
+              <div className="mt-1 text-lg font-semibold text-[#1d5146]">
+                {formatBytes(usage?.protectedBytes)}
+              </div>
+            </div>
+            <div className="rounded-2xl bg-[#fff9e8] p-3 shadow-sm">
+              <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#94701d]">
+                Reclaimable review
+              </div>
+              <div className="mt-1 text-lg font-semibold text-[#7a5b16]">
+                {formatBytes(usage?.cleanupEligibleBytes)}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="border-b border-[#edf2ef] p-6">
+        <div className="flex items-center gap-2">
+          <Lightbulb size={17} className="text-[#b88327]" />
+          <div>
+            <p className="section-eyebrow">Storage checks</p>
+            <h3 className="mt-1 font-serif text-xl font-semibold text-[#173e35]">
+              Suggested next checks
+            </h3>
+          </div>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {healthChecks.map(check => {
+            const attention = check.tone === "attention";
+            const good = check.tone === "good";
+            return (
+              <div
+                key={check.id}
+                className={`rounded-2xl border p-4 ${attention ? "border-[#ecd9a2] bg-[#fff9e8]" : good ? "border-[#d6e8dc] bg-[#f5fbf7]" : "border-[#dfe9e3] bg-[#fbfdfb]"}`}
+              >
+                <div className="flex items-start gap-2.5">
+                  {attention ? (
+                    <AlertTriangle size={16} className="mt-0.5 shrink-0 text-[#b88327]" />
+                  ) : good ? (
+                    <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-[#34745f]" />
+                  ) : (
+                    <Lightbulb size={16} className="mt-0.5 shrink-0 text-[#607887]" />
+                  )}
+                  <div>
+                    <p className="text-sm font-semibold text-[#274d43]">{check.title}</p>
+                    <p className="mt-1 text-xs leading-5 text-[#718780]">{check.detail}</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
       <div className="grid gap-4 border-b border-[#edf2ef] p-6 sm:grid-cols-3">
         <div className="rounded-xl bg-[#f5f9f6] p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#789087]">
