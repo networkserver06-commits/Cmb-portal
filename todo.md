@@ -121,3 +121,9 @@
 - [x] Verify and record that authenticated Free access prevents non-zero price input by design, with the price control hidden and zero KES persisted
 - [x] Manually trigger and record the authenticated admin post-form error for missing education level
 - [x] Manually trigger and record authenticated admin post-form paid pricing validation with price zero or empty, confirming no record is created
+- [x] Add a public inline-view route for complete Free-access catalogue papers that does not require authentication
+- [x] Update the public catalogue card/detail flow with a clear visitor-friendly View free paper action and document viewer state
+- [x] Preserve protected access for paid, private, inactive, and unauthorized document requests
+- [x] Add regression coverage for anonymous Free-paper viewing and paid/private access denial
+- [x] Verify the visitor viewing flow at desktop and mobile breakpoints and save a checkpoint
+- [ ] Save a post-change checkpoint containing the verified public Free-paper viewer and anonymous-access tests

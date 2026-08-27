@@ -294,6 +294,44 @@ export async function createApp() {
         .json({ error: "Unable to prepare the protected document" });
     }
   };
+  const handlePublicFreePaper = async (
+    req: express.Request,
+    res: express.Response
+  ) => {
+    try {
+      const paperId = Number(req.params.paperId);
+      if (!Number.isInteger(paperId))
+        return res.status(404).json({ error: "Paper not found" });
+      const paper = await paperById(paperId);
+      if (
+        !paper?.isAvailable ||
+        paper.accessMode !== "free" ||
+        Number(paper.priceKes) !== 0
+      )
+        return res
+          .status(403)
+          .json({ error: "This paper is not available for public viewing" });
+      if (paper.fileId) {
+        if (!(await portalFileById(paper.fileId)))
+          return res.status(404).json({ error: "Paper document not found" });
+        res.setHeader("X-Content-Type-Options", "nosniff");
+        await streamPortalFile(paper.fileId, res, { disposition: "inline" });
+        return;
+      }
+      if (paper.fileKey) {
+        res.setHeader("X-Content-Type-Options", "nosniff");
+        return res.redirect(307, await storageGetSignedUrl(paper.fileKey));
+      }
+      return res.status(404).json({ error: "Paper document not found" });
+    } catch (error) {
+      console.error("Public Free paper access error", error);
+      if (!res.headersSent)
+        return res
+          .status(500)
+          .json({ error: "Unable to prepare the public document" });
+    }
+  };
+  app.get("/api/papers/:paperId/free-view", handlePublicFreePaper);
   app.get("/api/papers/:paperId/download", (req, res) =>
     handleProtectedPaper(req, res, "attachment")
   );

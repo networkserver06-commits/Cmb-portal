@@ -51,6 +51,10 @@ function authEntryHref(mode: "login" | "create-account", paperId: number) {
   return `/${mode}?${params.toString()}`;
 }
 
+function publicPaperHref(paperId: number) {
+  return `/paper/${encodeURIComponent(paperId)}`;
+}
+
 export default function Home() {
   const { user, isAuthenticated, logout } = useAuth();
   const [query, setQuery] = useState("");
@@ -563,37 +567,45 @@ export default function Home() {
                       : "Paid resource"}
                   </Badge>
                   <span>
-                    {isAuthenticated
-                      ? "You are signed in; confirmation returns you to your library."
-                      : "Choose Sign in or Create account to continue from this paper."}
+                    {selectedPaper.accessMode === "free" ||
+                    selectedPaper.price === 0
+                      ? "Read the complete paper instantly. No account is required for Free access."
+                      : isAuthenticated
+                        ? "You are signed in; confirmation returns you to your library."
+                        : "Choose Sign in or Create account to continue from this paper."}
                   </span>
                 </div>
-                {!isAuthenticated && (
-                  <div className="rounded-2xl border border-[#d8e8df] bg-white/70 p-4">
-                    <p className="text-sm font-semibold text-[#1d5146]">
-                      Continue securely
-                    </p>
-                    <p className="mt-1 text-sm leading-6 text-[#668078]">
-                      Your selected paper will stay ready when authentication is
-                      complete.
-                    </p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Link
-                        href={authEntryHref("login", selectedPaper.id)}
-                        className="inline-flex h-10 items-center justify-center rounded-full bg-[#1d5146] px-4 text-sm font-semibold text-white transition hover:bg-[#153c34] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d5146] focus-visible:ring-offset-2"
-                      >
-                        Sign in <ChevronRight className="ml-1" size={15} />
-                      </Link>
-                      <Link
-                        href={authEntryHref("create-account", selectedPaper.id)}
-                        className="inline-flex h-10 items-center justify-center rounded-full border border-[#b8d1c5] bg-white px-4 text-sm font-semibold text-[#1d5146] transition hover:bg-[#e8f1ed] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d5146] focus-visible:ring-offset-2"
-                      >
-                        Create account{" "}
-                        <ChevronRight className="ml-1" size={15} />
-                      </Link>
+                {!isAuthenticated &&
+                  selectedPaper.accessMode !== "free" &&
+                  selectedPaper.price !== 0 && (
+                    <div className="rounded-2xl border border-[#d8e8df] bg-white/70 p-4">
+                      <p className="text-sm font-semibold text-[#1d5146]">
+                        Continue securely
+                      </p>
+                      <p className="mt-1 text-sm leading-6 text-[#668078]">
+                        Your selected paper will stay ready when authentication
+                        is complete.
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Link
+                          href={authEntryHref("login", selectedPaper.id)}
+                          className="inline-flex h-10 items-center justify-center rounded-full bg-[#1d5146] px-4 text-sm font-semibold text-white transition hover:bg-[#153c34] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d5146] focus-visible:ring-offset-2"
+                        >
+                          Sign in <ChevronRight className="ml-1" size={15} />
+                        </Link>
+                        <Link
+                          href={authEntryHref(
+                            "create-account",
+                            selectedPaper.id
+                          )}
+                          className="inline-flex h-10 items-center justify-center rounded-full border border-[#b8d1c5] bg-white px-4 text-sm font-semibold text-[#1d5146] transition hover:bg-[#e8f1ed] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d5146] focus-visible:ring-offset-2"
+                        >
+                          Create account{" "}
+                          <ChevronRight className="ml-1" size={15} />
+                        </Link>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
                 {paymentStatus.state !== "idle" && (
                   <div
                     className={`flex items-start gap-3 rounded-2xl border p-4 text-sm ${paymentStatus.state === "error" ? "border-[#efc8c5] bg-[#fff4f3] text-[#a44e49]" : paymentStatus.state === "success" ? "border-[#b9ddc7] bg-[#eef9f1] text-[#327452]" : "border-[#d8c47d] bg-[#fff9e8] text-[#7a5b16]"}`}
@@ -659,7 +671,33 @@ export default function Home() {
                     >
                       Cancel
                     </Button>
-                    {isAuthenticated ? (
+                    {selectedPaper.accessMode === "free" ||
+                    selectedPaper.price === 0 ? (
+                      <>
+                        <a
+                          href={publicPaperHref(selectedPaper.id)}
+                          className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-[#1d5146] px-4 text-sm font-semibold text-white transition hover:bg-[#153c34] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d5146] focus-visible:ring-offset-2"
+                        >
+                          View full paper <ChevronRight size={15} />
+                        </a>
+                        {isAuthenticated && (
+                          <Button
+                            className="rounded-full bg-[#1d5146] hover:bg-[#153c34]"
+                            onClick={() => buy(selectedPaper.id)}
+                            disabled={
+                              claimFreePaper.isPending ||
+                              paymentStatus.state === "processing" ||
+                              paymentStatus.state === "authorizing"
+                            }
+                          >
+                            {claimFreePaper.isPending
+                              ? "Adding…"
+                              : "Add to library"}
+                            <ChevronRight size={15} />
+                          </Button>
+                        )}
+                      </>
+                    ) : isAuthenticated ? (
                       <Button
                         className="rounded-full bg-[#1d5146] hover:bg-[#153c34]"
                         onClick={() => buy(selectedPaper.id)}
@@ -670,12 +708,9 @@ export default function Home() {
                           paymentStatus.state === "authorizing"
                         }
                       >
-                        {selectedPaper.accessMode === "free" ||
-                        selectedPaper.price === 0
-                          ? "Add to library"
-                          : initializePayment.isPending
-                            ? "Opening Paystack…"
-                            : "Buy securely"}{" "}
+                        {initializePayment.isPending
+                          ? "Opening Paystack…"
+                          : "Buy securely"}{" "}
                         <ChevronRight size={15} />
                       </Button>
                     ) : null}
@@ -724,18 +759,23 @@ export default function Home() {
                         : `KES ${paper.price.toLocaleString()}`}
                     </div>
                   </div>
-                  <Button
-                    onClick={() => setSelectedPaperId(paper.id)}
-                    size="sm"
-                    className="rounded-full bg-[#1d5146] hover:bg-[#153c34]"
-                  >
-                    {paper.accessMode === "free" || paper.price === 0
-                      ? "View free paper"
-                      : isAuthenticated
-                        ? "View & buy"
-                        : "View paper"}{" "}
-                    <ChevronRight size={14} />
-                  </Button>
+                  {paper.accessMode === "free" || paper.price === 0 ? (
+                    <a
+                      href={publicPaperHref(paper.id)}
+                      className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[#1d5146] px-3.5 text-xs font-semibold text-white transition hover:bg-[#153c34] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d5146] focus-visible:ring-offset-2"
+                    >
+                      View free paper <ChevronRight size={14} />
+                    </a>
+                  ) : (
+                    <Button
+                      onClick={() => setSelectedPaperId(paper.id)}
+                      size="sm"
+                      className="rounded-full bg-[#1d5146] hover:bg-[#153c34]"
+                    >
+                      {isAuthenticated ? "View & buy" : "View paper"}{" "}
+                      <ChevronRight size={14} />
+                    </Button>
+                  )}
                 </div>
               </article>
             ))}

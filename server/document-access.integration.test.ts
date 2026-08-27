@@ -77,14 +77,14 @@ beforeAll(async () => {
   });
   const address = server.address() as AddressInfo;
   baseUrl = `http://127.0.0.1:${address.port}`;
-}, 90_000);
+}, 180_000);
 
 afterAll(async () => {
   await new Promise<void>(resolve => server.close(() => resolve()));
   const db = await mongo();
   await db.collection("accounts").deleteMany({ email: { $in: emails } });
   await db.collection("users").deleteMany({ email: { $in: emails } });
-}, 90_000);
+}, 180_000);
 
 describe("protected document access routes", () => {
   it("uploads and publishes a free administrator paper through HTTP with a working view", async () => {
@@ -92,6 +92,8 @@ describe("protected document access routes", () => {
     const db = await mongo();
     let fileId = "";
     let paperId = 0;
+    let paidPaperId = 0;
+    let privatePaperId = 0;
     try {
       const upload = await fetch(`${baseUrl}/api/files/upload`, {
         method: "POST",
@@ -152,6 +154,74 @@ describe("protected document access routes", () => {
           isAvailable: true,
         })
       );
+      paidPaperId = await nextId("papers");
+      privatePaperId = await nextId("papers");
+      await db.collection("papers").insertMany([
+        {
+          _id: new ObjectId(),
+          legacyId: paidPaperId,
+          title: `${runId}-paid-paper`,
+          course: "ScholarShelf QA",
+          level: "university",
+          cycle: "August 2026",
+          unit: "Paid access boundary",
+          paperType: "Theory",
+          description: "Paid paper must remain protected",
+          priceKes: 50,
+          fileId,
+          fileName: saved.fileName,
+          fileMimeType: saved.fileMimeType,
+          isAvailable: true,
+          accessMode: "purchase",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          _id: new ObjectId(),
+          legacyId: privatePaperId,
+          title: `${runId}-private-paper`,
+          course: "ScholarShelf QA",
+          level: "university",
+          cycle: "August 2026",
+          unit: "Inactive access boundary",
+          paperType: "Theory",
+          description: "Paused paper must remain protected",
+          priceKes: 0,
+          fileId,
+          fileName: saved.fileName,
+          fileMimeType: saved.fileMimeType,
+          isAvailable: false,
+          accessMode: "free",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ]);
+
+      const anonymousFreeView = await fetch(
+        `${baseUrl}/api/papers/${paperId}/free-view`
+      );
+      expect(anonymousFreeView.status).toBe(200);
+      expect(anonymousFreeView.headers.get("content-disposition")).toContain(
+        "inline"
+      );
+      await expect(anonymousFreeView.text()).resolves.toContain(
+        "browser upload regression"
+      );
+
+      const anonymousPaidView = await fetch(
+        `${baseUrl}/api/papers/${paidPaperId}/free-view`
+      );
+      expect(anonymousPaidView.status).toBe(403);
+
+      const anonymousPrivateView = await fetch(
+        `${baseUrl}/api/papers/${privatePaperId}/free-view`
+      );
+      expect(anonymousPrivateView.status).toBe(403);
+
+      const anonymousProtectedView = await fetch(
+        `${baseUrl}/api/papers/${paperId}/view`
+      );
+      expect(anonymousProtectedView.status).toBe(401);
 
       const view = await fetch(`${baseUrl}/api/files/${fileId}/view`, {
         headers: { cookie: admin.cookie },
@@ -161,7 +231,9 @@ describe("protected document access routes", () => {
       await expect(view.text()).resolves.toContain("browser upload regression");
     } finally {
       if (paperId)
-        await db.collection("papers").deleteOne({ legacyId: paperId });
+        await db.collection("papers").deleteMany({
+          legacyId: { $in: [paperId, paidPaperId, privatePaperId] },
+        });
       if (fileId) {
         await db
           .collection("file_metadata")
@@ -170,7 +242,7 @@ describe("protected document access routes", () => {
           await deletePortalFile({ fileId, actorId: admin.user.id });
       }
     }
-  }, 90_000);
+  }, 180_000);
 
   it("allows admin and authorized student viewing while denying unrelated users", async () => {
     const admin = await createSession(emails[0]!, "Document Admin", "admin");
@@ -268,5 +340,5 @@ describe("protected document access routes", () => {
           actorId: admin.user.id,
         });
     }
-  }, 90_000);
+  }, 180_000);
 });

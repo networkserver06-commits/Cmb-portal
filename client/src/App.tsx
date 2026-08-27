@@ -10,6 +10,7 @@ const Home = lazy(() => import("./pages/Home"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Library = lazy(() => import("./pages/Library"));
 const PaymentResult = lazy(() => import("./pages/PaymentResult"));
+const PublicPaperViewer = lazy(() => import("./pages/PublicPaperViewer"));
 const Account = lazy(() => import("./pages/Account"));
 const PasswordReset = lazy(() => import("./pages/PasswordReset"));
 const EmailVerification = lazy(() => import("./pages/EmailVerification"));
@@ -73,6 +74,7 @@ function Router() {
           <Route path={"/"} component={Home} />
           <Route path={"/library"} component={Library} />
           <Route path={"/payment-result"} component={PaymentResult} />
+          <Route path={"/paper/:paperId"} component={PublicPaperViewer} />
           <Route path={"/login"} component={LoginRoute} />
           <Route path={"/signup"} component={CreateAccountRoute} />
           <Route path={"/create-account"} component={CreateAccountRoute} />

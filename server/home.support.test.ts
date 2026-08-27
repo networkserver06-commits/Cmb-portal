@@ -56,6 +56,15 @@ describe("homepage support and credit surfaces", () => {
     expect(homeSource).toContain("Create account");
   });
 
+  it("offers visitors direct full-paper access for Free resources", () => {
+    expect(homeSource).toContain("publicPaperHref");
+    expect(homeSource).toContain("View free paper");
+    expect(homeSource).toContain("View full paper");
+    expect(homeSource).toContain(
+      "No account is required for Free access."
+    );
+  });
+
   it("keeps free posts out of paid checkout and adds them to the student library", () => {
     expect(homeSource).toContain("claimFreePaper");
     expect(homeSource).toContain('paper.accessMode === "free"');

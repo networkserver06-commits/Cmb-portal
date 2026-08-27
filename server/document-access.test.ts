@@ -41,6 +41,18 @@ const publishSource = readFileSync(
   new URL("../client/src/pages/PublishPaper.tsx", import.meta.url),
   "utf8"
 );
+const homeSource = readFileSync(
+  new URL("../client/src/pages/Home.tsx", import.meta.url),
+  "utf8"
+);
+const appSource = readFileSync(
+  new URL("../client/src/App.tsx", import.meta.url),
+  "utf8"
+);
+const publicViewerSource = readFileSync(
+  new URL("../client/src/pages/PublicPaperViewer.tsx", import.meta.url),
+  "utf8"
+);
 
 describe("protected document viewing and rejection cleanup", () => {
   it("registers inline and attachment routes with authenticated access checks", () => {
@@ -58,6 +70,21 @@ describe("protected document viewing and rejection cleanup", () => {
     expect(fileStoreSource).toContain('options.disposition ?? "attachment"');
     expect(fileStoreSource).toContain('"Content-Disposition"');
     expect(fileStoreSource).toContain('"Cache-Control", "private, no-store"');
+  });
+
+  it("exposes a public reader only for active zero-priced Free papers", () => {
+    expect(serverSource).toContain(
+      'app.get("/api/papers/:paperId/free-view", handlePublicFreePaper)'
+    );
+    expect(serverSource).toContain('paper.accessMode !== "free"');
+    expect(serverSource).toContain('Number(paper.priceKes) !== 0');
+    expect(serverSource).toContain('!paper?.isAvailable');
+    expect(homeSource).toContain("publicPaperHref");
+    expect(homeSource).toContain("View free paper");
+    expect(homeSource).toContain("View full paper");
+    expect(appSource).toContain('path={"/paper/:paperId"}');
+    expect(publicViewerSource).toContain("No account required to read this resource.");
+    expect(publicViewerSource).toContain("/api/papers/${publicPaper.legacyId}/free-view");
   });
 
   it("keeps file access scoped to administrators, owners, active submissions, and entitlements", () => {
