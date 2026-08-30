@@ -965,7 +965,7 @@ export default function Home() {
             </div>
             <div className="overflow-hidden rounded-[2rem] border border-[#cfe0d7] bg-[#0b3029] shadow-[0_20px_60px_rgba(21,60,52,0.18)]">
               <img
-                src="/scholarshelf-home-share-preview.png"
+                src="/scholarshelf-home-share-preview.jpg"
                 alt="ScholarShelf home page preview showing the learning resource library"
                 className="block h-auto w-full"
                 loading="lazy"
