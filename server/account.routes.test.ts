@@ -75,6 +75,15 @@ const vercelConfig = JSON.parse(
 };
 
 describe("account route regression coverage", () => {
+  it("brands verification and password-reset emails as automated no-reply messages", () => {
+    expect(mongoAuthSource).toContain(
+      "This is an automated message from ScholarShelf. Please do not reply to this email."
+    );
+    expect(mongoAuthSource).toContain("Powered by Lee Tech");
+    expect(mongoAuthSource).toContain("Verify your ScholarShelf email");
+    expect(mongoAuthSource).toContain("Reset your ScholarShelf password");
+  });
+
   it("registers the default and explicit login/create-account routes", () => {
     expect(appSource).toContain('path={"/account"} component={AccountRoute}');
     expect(appSource).toContain('path={"/login"} component={LoginRoute}');

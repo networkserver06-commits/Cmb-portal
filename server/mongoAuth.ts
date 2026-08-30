@@ -13,6 +13,10 @@ export const ACCOUNT_COOKIE = "examvault_account";
 const PASSWORD_RESET_TTL_MS = 1000 * 60 * 30;
 const EMAIL_VERIFICATION_TTL_MS = 1000 * 60 * 60 * 24;
 
+const AUTOMATED_EMAIL_NOTICE_TEXT =
+  "This is an automated message from ScholarShelf. Please do not reply to this email.";
+const AUTOMATED_EMAIL_FOOTER_HTML = `<hr style="border:0;border-top:1px solid #dce7e1;margin:28px 0 18px" /><p style="margin:0;color:#718780;font-size:12px">${AUTOMATED_EMAIL_NOTICE_TEXT}</p><p style="margin:10px 0 0;color:#19312c;font-size:12px;font-weight:700">Powered by Lee Tech</p>`;
+
 type AccountRecord = {
   email: string;
   name: string;
@@ -96,8 +100,8 @@ async function deliverEmailVerification(email: string, rawToken: string) {
       from: normalizeEmailSender(ENV.passwordResetFromEmail),
       to: [email],
       subject: "Verify your ScholarShelf email",
-      html: `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#19312c"><h2>Verify your ScholarShelf email</h2><p>Confirm your email within 24 hours to activate your ScholarShelf account.</p><p><a href="${verifyUrl}" style="color:#1d5146;font-weight:700">Verify email address</a></p></div>`,
-      text: `Verify your ScholarShelf email: ${verifyUrl}\n\nThis link expires in 24 hours.`,
+      html: `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#19312c;max-width:560px;margin:0 auto;padding:24px"><p style="margin:0 0 22px;color:#6b8f83;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase">ScholarShelf account security</p><h2 style="margin:0 0 14px;color:#173e35">Verify your ScholarShelf email</h2><p>Confirm your email within 24 hours to activate your ScholarShelf account.</p><p style="margin:24px 0"><a href="${verifyUrl}" style="display:inline-block;background:#1d5146;color:#fff;padding:12px 18px;border-radius:8px;font-weight:700;text-decoration:none">Verify email address</a></p>${AUTOMATED_EMAIL_FOOTER_HTML}</div>`,
+      text: `Verify your ScholarShelf email: ${verifyUrl}\n\nThis link expires in 24 hours.\n\n${AUTOMATED_EMAIL_NOTICE_TEXT}\nPowered by Lee Tech`,
     }),
   });
   if (!response.ok) {
@@ -151,8 +155,8 @@ async function deliverPasswordResetEmail(email: string, rawToken: string) {
       from: normalizeEmailSender(ENV.passwordResetFromEmail),
       to: [email],
       subject: "Reset your ScholarShelf password",
-      html: `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#19312c"><h2>Reset your ScholarShelf password</h2><p>This secure link expires in 30 minutes and can only be used once.</p><p><a href="${resetUrl}" style="color:#1d5146;font-weight:700">Choose a new password</a></p><p>If you did not request this, you can safely ignore this email.</p></div>`,
-      text: `Reset your ScholarShelf password: ${resetUrl}\n\nThis secure link expires in 30 minutes and can only be used once.`,
+      html: `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#19312c;max-width:560px;margin:0 auto;padding:24px"><p style="margin:0 0 22px;color:#6b8f83;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase">ScholarShelf account security</p><h2 style="margin:0 0 14px;color:#173e35">Reset your ScholarShelf password</h2><p>This secure link expires in 30 minutes and can only be used once.</p><p style="margin:24px 0"><a href="${resetUrl}" style="display:inline-block;background:#1d5146;color:#fff;padding:12px 18px;border-radius:8px;font-weight:700;text-decoration:none">Choose a new password</a></p><p>If you did not request this, you can safely ignore this email.</p>${AUTOMATED_EMAIL_FOOTER_HTML}</div>`,
+      text: `Reset your ScholarShelf password: ${resetUrl}\n\nThis secure link expires in 30 minutes and can only be used once.\n\n${AUTOMATED_EMAIL_NOTICE_TEXT}\nPowered by Lee Tech`,
     }),
   });
   if (!response.ok) {
