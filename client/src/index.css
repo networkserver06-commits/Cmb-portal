@@ -686,3 +686,141 @@
     padding: 0.85rem;
   }
 }
+
+@layer components {
+  .dark .account-dashboard {
+    background:
+      radial-gradient(
+        circle at 88% 0%,
+        rgba(53, 128, 104, 0.14),
+        transparent 28rem
+      ),
+      #091a15 !important;
+    color: #e8f3ed !important;
+  }
+
+  .dark .account-dashboard .account-topbar {
+    background: rgba(12, 38, 30, 0.94) !important;
+    border-color: #234d3f !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+  }
+
+  .dark .account-dashboard .account-topbar a,
+  .dark .account-dashboard .account-theme-toggle,
+  .dark .account-dashboard .account-profile-trigger {
+    color: #b8ddd0 !important;
+    border-color: #386b59 !important;
+  }
+
+  .dark .account-dashboard .account-theme-toggle:hover,
+  .dark .account-dashboard .account-profile-trigger:hover {
+    background: #1b493a !important;
+  }
+
+  .dark
+    .account-dashboard
+    .account-profile-trigger
+    > span:nth-child(2)
+    span:first-child {
+    color: #e8f3ed !important;
+  }
+
+  .dark
+    .account-dashboard
+    .account-profile-trigger
+    > span:nth-child(2)
+    span:last-child,
+  .dark .account-dashboard .account-profile-trigger > svg {
+    color: #91b8a9 !important;
+  }
+
+  .dark .account-dashboard .account-workspace-nav,
+  .dark .account-dashboard .account-summary-card {
+    background: #102c23 !important;
+    border-color: #285342 !important;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18) !important;
+  }
+
+  .dark
+    .account-dashboard
+    .account-workspace-nav
+    button[aria-label="Open student dashboard menu"] {
+    background: #16372c !important;
+    border-color: #3b705c !important;
+    color: #e8f3ed !important;
+  }
+
+  .dark
+    .account-dashboard
+    .account-workspace-nav
+    button[aria-label="Open student dashboard menu"]:hover {
+    background: #1b493a !important;
+    border-color: #71b59c !important;
+  }
+
+  .dark .account-dashboard .account-dashboard-heading,
+  .dark .account-dashboard .account-summary-card .font-serif {
+    color: #f0f8f4 !important;
+  }
+
+  .dark .account-dashboard .account-dashboard-description {
+    color: #b1cec1 !important;
+  }
+
+  .dark .account-dashboard .account-summary-card:hover {
+    border-color: #4e9478 !important;
+    box-shadow: 0 20px 44px rgba(0, 0, 0, 0.28) !important;
+  }
+
+  .dark .account-dashboard .account-summary-card > div:first-child {
+    color: #91b8a9 !important;
+  }
+
+  .dark .account-dashboard .account-summary-card > div:last-child {
+    color: #f0f8f4 !important;
+  }
+
+  .dark .account-dashboard .section-eyebrow {
+    color: #7cc4aa !important;
+  }
+
+  .dark .account-dashboard .account-menu-content {
+    background: #102c23 !important;
+    border-color: #2f604e !important;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.38) !important;
+  }
+
+  .dark .account-dashboard .account-menu-item:hover,
+  .dark .account-dashboard .account-menu-item[data-highlighted] {
+    background: #1b493a !important;
+  }
+
+  .dark .account-dashboard :is(input, select, textarea) {
+    background: #102c23 !important;
+    border-color: #356551 !important;
+    color: #e8f3ed !important;
+  }
+
+  .dark .account-dashboard :is(input, select, textarea)::placeholder {
+    color: #789d8e !important;
+  }
+
+  .dark .account-dashboard :is(button, a):focus-visible {
+    outline-color: #8bd0b5 !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dark .account-dashboard .account-summary-card:hover,
+  .dark .account-dashboard .account-theme-toggle:hover,
+  .dark .account-dashboard .account-profile-trigger:hover {
+    transform: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .dark .account-dashboard main {
+    padding-top: 1.5rem;
+    padding-bottom: 2rem;
+  }
+}

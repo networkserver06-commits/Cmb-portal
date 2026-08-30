@@ -1,10 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
-import {
-  filterAndSortLibrary,
-  type LibrarySort,
-} from "@/lib/libraryFilters";
+import { filterAndSortLibrary, type LibrarySort } from "@/lib/libraryFilters";
 import { educationLevelLabel } from "@shared/educationLevels";
 import { resourceTypeLabel } from "@shared/resourceTypes";
 import ShareDocumentButton from "@/components/ShareDocumentButton";
@@ -55,7 +52,11 @@ import {
   X,
 } from "lucide-react";
 
-function resourceSharePath(paper: { legacyId: number; accessMode?: string; priceKes?: number }) {
+function resourceSharePath(paper: {
+  legacyId: number;
+  accessMode?: string;
+  priceKes?: number;
+}) {
   const isFree = paper.accessMode === "free" || Number(paper.priceKes) === 0;
   return isFree
     ? `/paper/${encodeURIComponent(paper.legacyId)}`
@@ -192,7 +193,8 @@ function AccountDashboard({
   const libraryLevels = Array.from(
     new Set(available.map(item => item.paper?.level).filter(Boolean))
   ).sort((left, right) => String(left).localeCompare(String(right)));
-  const hasLibraryFilters = Boolean(libraryQuery.trim()) || libraryLevel !== "all";
+  const hasLibraryFilters =
+    Boolean(libraryQuery.trim()) || libraryLevel !== "all";
   const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
   const [profileName, setProfileName] = useState(user.name ?? "");
   const [profileNotice, setProfileNotice] = useState("");
@@ -365,8 +367,8 @@ function AccountDashboard({
                 </p>
                 <p className="mt-1 text-sm leading-6 text-[#7a5b16]">
                   This account has administrator privileges. Open the management
-                  workspace to manage resources, students, payments, submissions,
-                  announcements, and storage.
+                  workspace to manage resources, students, payments,
+                  submissions, announcements, and storage.
                 </p>
               </div>
             </div>
@@ -465,12 +467,12 @@ function AccountDashboard({
           >
             <div>
               <p className="section-eyebrow">Student dashboard</p>
-              <h1 className="mt-2 font-serif text-4xl font-semibold tracking-tight text-[#173e35]">
+              <h1 className="account-dashboard-heading mt-2 font-serif text-4xl font-semibold tracking-tight text-[#173e35]">
                 Your study library
               </h1>
-              <p className="mt-3 max-w-xl text-[#718780]">
-                Track every payment and download the resources unlocked
-                for your account.
+              <p className="account-dashboard-description mt-3 max-w-xl text-[#718780]">
+                Track every payment and download the resources unlocked for your
+                account.
               </p>
             </div>
             <div className="flex items-center gap-2 rounded-full bg-[#e5f2eb] px-4 py-2 text-xs font-semibold text-[#34745f]">
@@ -481,7 +483,7 @@ function AccountDashboard({
           <section
             className={`mt-10 grid gap-4 sm:grid-cols-3 account-reveal account-reveal-delay-1 ${activeTab !== "overview" ? "hidden" : ""}`}
           >
-            <div className="rounded-2xl border border-[#dfe9e3] bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+            <div className="account-summary-card rounded-2xl border border-[#dfe9e3] bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
               <div className="text-xs font-semibold uppercase tracking-widest text-[#94aaa2]">
                 Available downloads
               </div>
@@ -489,7 +491,7 @@ function AccountDashboard({
                 {library.isLoading ? "—" : available.length}
               </div>
             </div>
-            <div className="rounded-2xl border border-[#dfe9e3] bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+            <div className="account-summary-card rounded-2xl border border-[#dfe9e3] bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
               <div className="text-xs font-semibold uppercase tracking-widest text-[#94aaa2]">
                 Purchase history
               </div>
@@ -497,7 +499,7 @@ function AccountDashboard({
                 {orders.isLoading ? "—" : (orders.data?.length ?? 0)}
               </div>
             </div>
-            <div className="rounded-2xl border border-[#dfe9e3] bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+            <div className="account-summary-card rounded-2xl border border-[#dfe9e3] bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
               <div className="text-xs font-semibold uppercase tracking-widest text-[#94aaa2]">
                 Access status
               </div>
@@ -531,7 +533,8 @@ function AccountDashboard({
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="flex items-center gap-2 text-sm font-semibold text-[#274d43]">
-                        <Search size={16} className="text-[#4b8876]" /> Find a resource
+                        <Search size={16} className="text-[#4b8876]" /> Find a
+                        resource
                       </p>
                       <p className="mt-1 text-xs text-[#82958e]">
                         Search your unlocked resources or narrow them by level.
@@ -562,9 +565,11 @@ function AccountDashboard({
                           aria-hidden="true"
                           className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#82958e]"
                         />
-                          <Input
-                            value={libraryQuery}
-                          onChange={event => setLibraryQuery(event.target.value)}
+                        <Input
+                          value={libraryQuery}
+                          onChange={event =>
+                            setLibraryQuery(event.target.value)
+                          }
                           placeholder="Title, course, unit, or cycle"
                           aria-label="Search unlocked resources"
                           className="h-11 rounded-2xl border-[#c8d9d2] bg-[#fbfdfb] pl-9 text-sm shadow-none focus-visible:ring-[#4b8876]"
@@ -595,7 +600,9 @@ function AccountDashboard({
                       </span>
                       <select
                         value={librarySort}
-                        onChange={event => setLibrarySort(event.target.value as LibrarySort)}
+                        onChange={event =>
+                          setLibrarySort(event.target.value as LibrarySort)
+                        }
                         aria-label="Sort unlocked resources"
                         className="h-11 w-full rounded-2xl border border-[#c8d9d2] bg-[#fbfdfb] px-3 text-sm text-[#274d43] outline-none transition focus:border-[#4b8876] focus:ring-2 focus:ring-[#4b8876]/25"
                       >
@@ -605,7 +612,11 @@ function AccountDashboard({
                       </select>
                     </label>
                   </div>
-                  <p className="mt-3 text-xs text-[#718780]" role="status" aria-live="polite">
+                  <p
+                    className="mt-3 text-xs text-[#718780]"
+                    role="status"
+                    aria-live="polite"
+                  >
                     {hasLibraryFilters
                       ? `${filteredAvailable.length} of ${available.length} resources shown`
                       : `${available.length} ${available.length === 1 ? "resource" : "resources"} in your library`}
@@ -627,7 +638,9 @@ function AccountDashboard({
                               {item.paper!.title}
                             </h3>
                             <p className="mt-1 text-xs text-[#82958e]">
-                              {resourceTypeLabel(item.paper!.documentType)} · {item.paper!.unit} · {educationLevelLabel(item.paper!.level)} ·{" "}
+                              {resourceTypeLabel(item.paper!.documentType)} ·{" "}
+                              {item.paper!.unit} ·{" "}
+                              {educationLevelLabel(item.paper!.level)} ·{" "}
                               {item.paper!.cycle}
                             </p>
                           </div>
@@ -635,7 +648,10 @@ function AccountDashboard({
                         <div className="flex shrink-0 items-center gap-2">
                           <ShareDocumentButton
                             title={item.paper!.title}
-                            url={new URL(resourceSharePath(item.paper!), window.location.origin).toString()}
+                            url={new URL(
+                              resourceSharePath(item.paper!),
+                              window.location.origin
+                            ).toString()}
                             compact
                           />
                           <a
@@ -791,18 +807,23 @@ function AccountDashboard({
                         {submission.title}
                       </div>
                       <div className="mt-1 text-xs text-[#82958e]">
-                        {resourceTypeLabel(submission.documentType)} · {submission.unit} · Submitted{" "}
+                        {resourceTypeLabel(submission.documentType)} ·{" "}
+                        {submission.unit} · Submitted{" "}
                         {new Date(submission.createdAt).toLocaleDateString()}
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
-                      {submission.status === "approved" && submission.paperId && (
-                        <ShareDocumentButton
-                          title={submission.title}
-                          url={new URL(`/paper/${submission.paperId}`, window.location.origin).toString()}
-                          compact
-                        />
-                      )}
+                      {submission.status === "approved" &&
+                        submission.paperId && (
+                          <ShareDocumentButton
+                            title={submission.title}
+                            url={new URL(
+                              `/paper/${submission.paperId}`,
+                              window.location.origin
+                            ).toString()}
+                            compact
+                          />
+                        )}
                       {submission.fileId &&
                         submission.status !== "rejected" &&
                         !submission.storagePurged && (
@@ -833,7 +854,7 @@ function AccountDashboard({
               </div>
             ) : (
               <div className="mb-8 rounded-2xl border border-dashed border-[#cdded7] bg-white p-6 text-sm text-[#718780] account-empty-state">
-                  You have not shared a document yet.
+                You have not shared a document yet.
               </div>
             )}
             <PublishPaper onSubmitted={() => submissions.refetch()} />

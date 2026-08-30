@@ -176,14 +176,14 @@ describe("account route regression coverage", () => {
     expect(homeSource).toContain('"Opening Paystack…"');
     expect(homeSource).toContain("confirmation returns you to your library");
     expect(homeSource).toContain(
-      "Choose Sign in or Create account to continue from this paper."
+      "Choose Sign in or Create account to continue from this resource."
     );
     expect(homeSource).toContain('authEntryHref("login", selectedPaper.id)');
-    expect(homeSource).toContain(
-      'authEntryHref("create-account", selectedPaper.id)'
+    expect(homeSource).toMatch(
+      /authEntryHref\(\s*"create-account",\s*selectedPaper\.id\s*\)/
     );
     expect(homeSource).toContain("checkoutReturnPath");
-    expect(homeSource).toContain("selected paper will stay ready");
+    expect(homeSource).toContain("selected resource will stay ready");
     expect(homeSource).toContain("new URLSearchParams(window.location.search)");
     expect(homeSource).toContain("<Dialog");
     expect(homeSource).toContain("onOpenChange");
