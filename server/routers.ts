@@ -33,6 +33,7 @@ import {
   orderByReference,
   entitlementFor,
   walletForUser,
+  purchasePaperWithWallet,
   walletSummaryForAdmin,
   walletTopUpByReference,
   walletTopUpPaymentMatches,
@@ -146,11 +147,20 @@ async function publishSubmissionAsPaper(
 const postInput = z
   .object({
     title: z.string().min(2, "Add a document title.").max(180),
-    course: z.string().min(2, "Add the subject, course, or collection name.").max(100),
+    course: z
+      .string()
+      .min(2, "Add the subject, course, or collection name.")
+      .max(100),
     level: educationLevelInput,
     cycle: z.string().min(1, "Add a year, term, or cycle label.").max(60),
-    unit: z.string().min(2, "Add the unit, topic, or document section.").max(120),
-    paperType: z.string().min(2, "Add a short format or document label.").max(80),
+    unit: z
+      .string()
+      .min(2, "Add the unit, topic, or document section.")
+      .max(120),
+    paperType: z
+      .string()
+      .min(2, "Add a short format or document label.")
+      .max(80),
     documentType: resourceTypeInput,
     description: z.string().max(2000).optional(),
     fileId: z.string().min(12).max(80),
@@ -303,11 +313,23 @@ export const appRouter = router({
         const matchesLevel =
           !level || normalizeEducationLevel(String(p.level)) === level;
         const matchesDocumentType =
-          !documentType || (p.documentType ?? "examination-paper") === documentType;
+          !documentType ||
+          (p.documentType ?? "examination-paper") === documentType;
         const matchesSearch =
           !search ||
-          [p.title, p.course, p.unit, p.level, p.cycle, p.paperType, p.description, p.documentType].some(v =>
-            String(v ?? "").toLowerCase().includes(search)
+          [
+            p.title,
+            p.course,
+            p.unit,
+            p.level,
+            p.cycle,
+            p.paperType,
+            p.description,
+            p.documentType,
+          ].some(v =>
+            String(v ?? "")
+              .toLowerCase()
+              .includes(search)
           );
         return matchesLevel && matchesDocumentType && matchesSearch;
       });
@@ -412,7 +434,9 @@ export const appRouter = router({
       .input(
         z.object({
           title: z.string().min(2, "Add a document title."),
-          course: z.string().min(2, "Add the subject, course, or collection name."),
+          course: z
+            .string()
+            .min(2, "Add the subject, course, or collection name."),
           level: educationLevelInput,
           cycle: z.string().min(1, "Add a year, term, or cycle label."),
           unit: z.string().min(2, "Add the unit, topic, or document section."),
@@ -609,6 +633,20 @@ export const appRouter = router({
             grantedAt: new Date(),
           });
         return { success: true as const, paperId: input.paperId };
+      }),
+    payWithWallet: protectedProcedure
+      .input(z.object({ paperId: z.number().int().positive() }))
+      .mutation(async ({ ctx, input }) => {
+        const paper = await paperById(input.paperId);
+        if (!paper?.isAvailable || paper.accessMode === "free")
+          throw new Error(
+            "This paper is free or unavailable for wallet payment"
+          );
+        return await purchasePaperWithWallet(
+          ctx.user.id,
+          paper.legacyId,
+          Number(paper.priceKes)
+        );
       }),
     initializePayment: protectedProcedure
       .input(z.object({ paperId: z.number().int().positive() }))
@@ -826,11 +864,11 @@ export const appRouter = router({
           legacyId: await nextId("papers"),
           course: input.course,
           level: input.level,
-    cycle: input.cycle,
-    unit: input.unit,
-    paperType: input.paperType,
-    documentType: input.documentType,
-    title: input.title,
+          cycle: input.cycle,
+          unit: input.unit,
+          paperType: input.paperType,
+          documentType: input.documentType,
+          title: input.title,
           description: input.description ?? "",
           priceKes: input.mode === "free" ? 0 : input.priceKes,
           fileId: file.gridFsId,
@@ -1031,7 +1069,8 @@ export const appRouter = router({
       .input(z.object({ fileId: z.string().min(12).max(80) }))
       .mutation(async ({ ctx, input }) => {
         const file = await portalFileById(input.fileId);
-        if (!file) return { success: true as const, alreadyGone: true as const };
+        if (!file)
+          return { success: true as const, alreadyGone: true as const };
         if (file.references.length)
           return { success: false as const, alreadyGone: false as const };
         await deletePortalFile({ fileId: input.fileId, actorId: ctx.user.id });

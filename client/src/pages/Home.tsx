@@ -62,7 +62,11 @@ function publicPaperHref(paperId: number) {
   return `/paper/${encodeURIComponent(paperId)}`;
 }
 
-function resourceShareHref(paper: { id: number; accessMode?: string; price?: number }) {
+function resourceShareHref(paper: {
+  id: number;
+  accessMode?: string;
+  price?: number;
+}) {
   const isFree = paper.accessMode === "free" || Number(paper.price) === 0;
   return isFree ? publicPaperHref(paper.id) : checkoutReturnPath(paper.id);
 }
@@ -71,7 +75,9 @@ export default function Home() {
   const { user, isAuthenticated, logout } = useAuth();
   const [query, setQuery] = useState("");
   const [levelFilter, setLevelFilter] = useState<EducationLevel | "">("");
-  const [documentTypeFilter, setDocumentTypeFilter] = useState<ResourceType | "">("");
+  const [documentTypeFilter, setDocumentTypeFilter] = useState<
+    ResourceType | ""
+  >("");
   const [mobileOpen, setMobileOpen] = useState(false);
   const checkoutIntent = useRef(0);
   const [paymentStatus, setPaymentStatus] = useState<{
@@ -95,6 +101,7 @@ export default function Home() {
   );
   const catalogue = trpc.catalogue.useQuery(catalogueInput);
   const initializePayment = trpc.student.initializePayment.useMutation();
+  const payWithWallet = trpc.student.payWithWallet.useMutation();
   const claimFreePaper = trpc.student.claimFreePaper.useMutation();
   const paymentCheck = trpc.student.paymentStatus.useQuery(
     { reference: paymentStatus.reference ?? "" },
@@ -136,15 +143,14 @@ export default function Home() {
       code: `${p.course} · ${p.cycle}`,
       title: p.title,
       unit: p.unit,
-              category: p.course,
-              documentType: p.documentType,
-              level: p.level,
+      category: p.course,
+      documentType: p.documentType,
+      level: p.level,
       cycle: p.cycle,
       price: Number(p.priceKes),
       accessMode: p.accessMode,
       accent: "sage",
-              description:
-        p.description ?? "A secure ScholarShelf learning resource.",
+      description: p.description ?? "A secure ScholarShelf learning resource.",
     }));
   }, [catalogue.data]);
   const selectedPaper = filteredPapers.find(
@@ -159,6 +165,33 @@ export default function Home() {
     setSelectedPaperId(null);
     setPaymentStatus({ state: "idle", message: "" });
   };
+  const startPaystackCheckout = (paperId: number, intent: number) => {
+    setPaymentStatus({
+      state: "processing",
+      message: "Preparing secure Paystack checkout…",
+    });
+    initializePayment.mutate(
+      { paperId },
+      {
+        onSuccess: result => {
+          if (intent !== checkoutIntent.current) return;
+          setPaymentStatus({
+            state: "processing",
+            message: "Redirecting you to Paystack’s secure checkout…",
+            reference: result.reference,
+          });
+          window.location.assign(result.authorizationUrl);
+        },
+        onError: error =>
+          setPaymentStatus({
+            state: "error",
+            message:
+              error.message || "We could not start checkout. Please try again.",
+          }),
+      }
+    );
+  };
+
   const buy = (paperId: number) => {
     if (!isAuthenticated) return startLogin();
     const intent = ++checkoutIntent.current;
@@ -198,25 +231,37 @@ export default function Home() {
     }
     setPaymentStatus({
       state: "processing",
-      message: "Preparing secure Paystack checkout…",
+      message: "Checking your ScholarShelf wallet before checkout…",
     });
-    initializePayment.mutate(
+    payWithWallet.mutate(
       { paperId },
       {
         onSuccess: result => {
           if (intent !== checkoutIntent.current) return;
+          if (result.paid) {
+            setSelectedPaperId(null);
+            setPaymentStatus({
+              state: "success",
+              message:
+                "Payment completed from your wallet. The resource is now available in My Library.",
+            });
+            return;
+          }
           setPaymentStatus({
             state: "processing",
-            message: "Redirecting you to Paystack’s secure checkout…",
-            reference: result.reference,
+            message:
+              result.balanceKes > 0
+                ? `Wallet balance: KES ${result.balanceKes.toLocaleString()}. Preparing secure Paystack checkout…`
+                : "Your wallet has no available balance. Preparing secure Paystack checkout…",
           });
-          window.location.assign(result.authorizationUrl);
+          startPaystackCheckout(paperId, intent);
         },
         onError: error =>
           setPaymentStatus({
             state: "error",
             message:
-              error.message || "We could not start checkout. Please try again.",
+              error.message ||
+              "We could not check your wallet. Please try again.",
           }),
       }
     );
@@ -454,7 +499,7 @@ export default function Home() {
         <section id="catalogue" className="container py-16 md:py-20">
           <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
             <div>
-                <p className="section-eyebrow">The library</p>
+              <p className="section-eyebrow">The library</p>
               <h2 className="mt-2 font-serif text-4xl font-semibold tracking-tight text-[#173e35]">
                 Find your resource
               </h2>
@@ -493,7 +538,11 @@ export default function Home() {
                 <select
                   id="catalogue-document-type"
                   value={documentTypeFilter}
-                  onChange={event => setDocumentTypeFilter(event.target.value as ResourceType | "")}
+                  onChange={event =>
+                    setDocumentTypeFilter(
+                      event.target.value as ResourceType | ""
+                    )
+                  }
                   className="h-12 w-full rounded-full border border-[#cdded7] bg-white px-4 text-sm text-[#274d43] outline-none transition focus:border-[#4d8978] focus:ring-4 focus:ring-[#4d8978]/20"
                 >
                   <option value="">All document types</option>
@@ -588,7 +637,8 @@ export default function Home() {
                     id="paper-checkout-description"
                     className="text-sm text-[#648078]"
                   >
-                    {resourceTypeLabel(selectedPaper.documentType)} · {selectedPaper.code} · {selectedPaper.unit} ·{" "}
+                    {resourceTypeLabel(selectedPaper.documentType)} ·{" "}
+                    {selectedPaper.code} · {selectedPaper.unit} ·{" "}
                     {educationLevelLabel(selectedPaper.level)}
                   </DialogDescription>
                 </DialogHeader>
@@ -598,7 +648,10 @@ export default function Home() {
                 <div className="flex flex-wrap items-center gap-2 text-xs text-[#5f786f]">
                   <ShareDocumentButton
                     title={selectedPaper.title}
-                    url={new URL(resourceShareHref(selectedPaper), window.location.origin).toString()}
+                    url={new URL(
+                      resourceShareHref(selectedPaper),
+                      window.location.origin
+                    ).toString()}
                     compact
                   />
                   <Badge className="border-0 bg-white text-[#1d5146]">
@@ -624,8 +677,8 @@ export default function Home() {
                         Continue securely
                       </p>
                       <p className="mt-1 text-sm leading-6 text-[#668078]">
-                        Your selected resource will stay ready when authentication
-                        is complete.
+                        Your selected resource will stay ready when
+                        authentication is complete.
                       </p>
                       <div className="mt-3 flex flex-wrap gap-2">
                         <Link
@@ -790,7 +843,10 @@ export default function Home() {
                 <div className="mt-6 flex items-center justify-between gap-2 border-t border-[#e8efeb] pt-4">
                   <ShareDocumentButton
                     title={paper.title}
-                    url={new URL(resourceShareHref(paper), window.location.origin).toString()}
+                    url={new URL(
+                      resourceShareHref(paper),
+                      window.location.origin
+                    ).toString()}
                     compact
                   />
                   <div className="ml-auto">
@@ -844,7 +900,8 @@ export default function Home() {
           ) : (
             filteredPapers.length === 0 && (
               <div className="rounded-3xl border border-dashed border-[#cdded7] py-16 text-center text-[#6a8179]">
-                No resources match these filters yet. Try another search or choose a different document type.
+                No resources match these filters yet. Try another search or
+                choose a different document type.
               </div>
             )
           )}

@@ -45,7 +45,7 @@ export type EntitlementDoc = {
   userId: number;
   paperId: number;
   orderId?: number;
-  source: "purchase" | "manual" | "free";
+  source: "purchase" | "wallet" | "manual" | "free";
   grantedAt: Date;
 };
 export type PaymentDoc = {
@@ -73,6 +73,17 @@ export type DownloadDoc = {
   userId: number;
   paperId: number;
   entitlementId: number;
+  createdAt: Date;
+};
+export type WalletDebitDoc = {
+  _id: ObjectId;
+  legacyId: number;
+  userId: number;
+  paperId: number;
+  orderId: number;
+  reference: string;
+  amountKes: number;
+  status: "completed";
   createdAt: Date;
 };
 export type WalletTopUpDoc = {
@@ -134,6 +145,12 @@ export async function mongo(): Promise<Db> {
       database
         .collection("wallet_topups")
         .createIndex({ reference: 1 }, { unique: true }),
+      database
+        .collection("wallet_debits")
+        .createIndex({ reference: 1 }, { unique: true }),
+      database
+        .collection("wallet_debits")
+        .createIndex({ userId: 1, createdAt: -1 }),
       database
         .collection("wallet_topups")
         .createIndex({ userId: 1, createdAt: -1 }),
@@ -279,27 +296,137 @@ export async function walletTopUpByReference(
 }
 
 export function calculateWalletSummary(
-  topUps: Pick<WalletTopUpDoc, "status" | "amountKes">[]
+  topUps: Pick<WalletTopUpDoc, "status" | "amountKes">[],
+  debits: Pick<WalletDebitDoc, "status" | "amountKes">[] = []
 ) {
   const paid = topUps.filter(topUp => topUp.status === "paid");
+  const completedDebits = debits.filter(debit => debit.status === "completed");
   return {
-    balanceKes: paid.reduce((sum, topUp) => sum + Number(topUp.amountKes), 0),
+    balanceKes:
+      paid.reduce((sum, topUp) => sum + Number(topUp.amountKes), 0) -
+      completedDebits.reduce((sum, debit) => sum + Number(debit.amountKes), 0),
     totalTopUps: paid.length,
   };
 }
 
 export async function walletForUser(userId: number) {
   const db = await mongo();
-  const allTopUps = await db
-    .collection<WalletTopUpDoc>("wallet_topups")
-    .find({ userId })
-    .sort({ createdAt: -1 })
-    .toArray();
-  const summary = calculateWalletSummary(allTopUps);
+  const [allTopUps, allDebits] = await Promise.all([
+    db
+      .collection<WalletTopUpDoc>("wallet_topups")
+      .find({ userId })
+      .sort({ createdAt: -1 })
+      .toArray(),
+    db
+      .collection<WalletDebitDoc>("wallet_debits")
+      .find({ userId })
+      .sort({ createdAt: -1 })
+      .toArray(),
+  ]);
+  const summary = calculateWalletSummary(allTopUps, allDebits);
   return {
     ...summary,
     transactions: allTopUps.slice(0, 20),
   };
+}
+
+export async function purchasePaperWithWallet(
+  userId: number,
+  paperId: number,
+  amountKes: number
+) {
+  const database = await mongo();
+  if (!client) throw new Error("MongoDB connection is not ready");
+  const session = client.startSession();
+  try {
+    let outcome:
+      | { paid: true; orderId: number; entitlementId: number }
+      | {
+          paid: false;
+          reason: "insufficient_balance";
+          balanceKes: number;
+          amountKes: number;
+        }
+      | { paid: true; alreadyOwned: true };
+    await session.withTransaction(async () => {
+      const existing = await database
+        .collection<EntitlementDoc>("entitlements")
+        .findOne({ userId, paperId }, { session });
+      if (existing) {
+        outcome = { paid: true, alreadyOwned: true };
+        return;
+      }
+      const [topUps, debits] = await Promise.all([
+        database
+          .collection<WalletTopUpDoc>("wallet_topups")
+          .find({ userId, status: "paid" }, { session })
+          .toArray(),
+        database
+          .collection<WalletDebitDoc>("wallet_debits")
+          .find({ userId, status: "completed" }, { session })
+          .toArray(),
+      ]);
+      const balanceKes = calculateWalletSummary(topUps, debits).balanceKes;
+      if (balanceKes < amountKes) {
+        outcome = {
+          paid: false,
+          reason: "insufficient_balance",
+          balanceKes,
+          amountKes,
+        };
+        return;
+      }
+      const now = new Date();
+      const orderId = await nextId("orders");
+      const entitlementId = await nextId("entitlements");
+      const debitId = await nextId("wallet_debits");
+      const reference = `WALLET-${userId}-${paperId}-${new ObjectId().toHexString()}`;
+      await database.collection<OrderDoc>("orders").insertOne(
+        {
+          _id: new ObjectId(),
+          legacyId: orderId,
+          userId,
+          paperId,
+          reference,
+          amountKes,
+          status: "paid",
+          paidAt: now,
+          createdAt: now,
+        },
+        { session }
+      );
+      await database.collection<WalletDebitDoc>("wallet_debits").insertOne(
+        {
+          _id: new ObjectId(),
+          legacyId: debitId,
+          userId,
+          paperId,
+          orderId,
+          reference,
+          amountKes,
+          status: "completed",
+          createdAt: now,
+        },
+        { session }
+      );
+      await database.collection<EntitlementDoc>("entitlements").insertOne(
+        {
+          _id: new ObjectId(),
+          legacyId: entitlementId,
+          userId,
+          paperId,
+          orderId,
+          source: "wallet",
+          grantedAt: now,
+        },
+        { session }
+      );
+      outcome = { paid: true, orderId, entitlementId };
+    });
+    return outcome!;
+  } finally {
+    await session.endSession();
+  }
 }
 
 export function walletTopUpPaymentMatches(
