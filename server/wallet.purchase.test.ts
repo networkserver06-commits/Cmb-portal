@@ -27,8 +27,14 @@ describe("wallet-first checkout", () => {
   it("checks the server wallet before starting the Paystack fallback", () => {
     expect(routerSource).toContain("payWithWallet: protectedProcedure");
     expect(routerSource).toContain("purchasePaperWithWallet");
-    expect(homeSource).toContain("Checking your ScholarShelf wallet before checkout");
+    expect(homeSource).toContain(
+      "Checking your ScholarShelf wallet before checkout"
+    );
     expect(homeSource).toContain("payWithWallet.mutate");
+    expect(homeSource).toContain("Confirm wallet payment");
+    expect(homeSource).toContain("Confirm and buy");
+    expect(homeSource).toContain("/api/papers/${selectedPaper.id}/view");
+    expect(homeSource).toContain("/api/papers/${selectedPaper.id}/download");
     expect(homeSource).toContain("startPaystackCheckout(paperId, intent)");
   });
 });

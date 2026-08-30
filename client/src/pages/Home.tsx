@@ -86,6 +86,11 @@ export default function Home() {
     message: string;
     reference?: string;
   }>({ state: "idle", message: "" });
+  const [walletConfirmation, setWalletConfirmation] = useState<{
+    paperId: number;
+    amountKes: number;
+    balanceKes: number;
+  } | null>(null);
   const [selectedPaperId, setSelectedPaperId] = useState<number | null>(() => {
     const value = Number(
       new URLSearchParams(window.location.search).get("paper")
@@ -104,6 +109,9 @@ export default function Home() {
   const initializePayment = trpc.student.initializePayment.useMutation();
   const payWithWallet = trpc.student.payWithWallet.useMutation();
   const claimFreePaper = trpc.student.claimFreePaper.useMutation();
+  const walletBalance = trpc.student.wallet.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
   const paymentCheck = trpc.student.paymentStatus.useQuery(
     { reference: paymentStatus.reference ?? "" },
     {
@@ -118,7 +126,6 @@ export default function Home() {
       paymentCheck.data?.status === "paid" &&
       paymentStatus.state === "authorizing"
     ) {
-      setSelectedPaperId(null);
       setPaymentStatus(current => ({
         ...current,
         state: "success",
@@ -163,6 +170,7 @@ export default function Home() {
   }, [filteredPapers, selectedPaper, selectedPaperId]);
   const cancelCheckout = () => {
     checkoutIntent.current += 1;
+    setWalletConfirmation(null);
     setSelectedPaperId(null);
     setPaymentStatus({ state: "idle", message: "" });
   };
@@ -188,6 +196,47 @@ export default function Home() {
             state: "error",
             message:
               error.message || "We could not start checkout. Please try again.",
+          }),
+      }
+    );
+  };
+
+  const confirmWalletPurchase = () => {
+    if (!walletConfirmation) return;
+    const { paperId } = walletConfirmation;
+    const intent = checkoutIntent.current;
+    setWalletConfirmation(null);
+    setPaymentStatus({
+      state: "processing",
+      message: "Charging your wallet securely…",
+    });
+    payWithWallet.mutate(
+      { paperId },
+      {
+        onSuccess: result => {
+          if (intent !== checkoutIntent.current) return;
+          if (result.paid) {
+            void walletBalance.refetch();
+            setPaymentStatus({
+              state: "success",
+              message:
+                "Payment completed from your wallet. You can view or download the resource below.",
+            });
+            return;
+          }
+          setPaymentStatus({
+            state: "processing",
+            message:
+              "Your wallet balance changed before confirmation. Preparing secure Paystack checkout instead…",
+          });
+          startPaystackCheckout(paperId, intent);
+        },
+        onError: error =>
+          setPaymentStatus({
+            state: "error",
+            message:
+              error.message ||
+              "We could not charge your wallet. No funds were charged.",
           }),
       }
     );
@@ -234,38 +283,35 @@ export default function Home() {
       state: "processing",
       message: "Checking your ScholarShelf wallet before checkout…",
     });
-    payWithWallet.mutate(
-      { paperId },
-      {
-        onSuccess: result => {
-          if (intent !== checkoutIntent.current) return;
-          if (result.paid) {
-            setSelectedPaperId(null);
-            setPaymentStatus({
-              state: "success",
-              message:
-                "Payment completed from your wallet. The resource is now available in My Library.",
-            });
-            return;
-          }
+    walletBalance
+      .refetch()
+      .then(({ data }) => {
+        if (intent !== checkoutIntent.current) return;
+        const balanceKes = Number(data?.balanceKes ?? 0);
+        const amountKes = Number(paper.priceKes);
+        if (balanceKes < amountKes) {
           setPaymentStatus({
             state: "processing",
             message:
-              result.balanceKes > 0
-                ? `Wallet balance: KES ${result.balanceKes.toLocaleString()}. Preparing secure Paystack checkout…`
+              balanceKes > 0
+                ? `Wallet balance: KES ${balanceKes.toLocaleString()}. Preparing secure Paystack checkout…`
                 : "Your wallet has no available balance. Preparing secure Paystack checkout…",
           });
           startPaystackCheckout(paperId, intent);
-        },
-        onError: error =>
-          setPaymentStatus({
-            state: "error",
-            message:
-              error.message ||
-              "We could not check your wallet. Please try again.",
-          }),
-      }
-    );
+          return;
+        }
+        setPaymentStatus({ state: "idle", message: "" });
+        setWalletConfirmation({ paperId, amountKes, balanceKes });
+      })
+      .catch(error =>
+        setPaymentStatus({
+          state: "error",
+          message:
+            error instanceof Error
+              ? error.message
+              : "We could not check your wallet. Please try again.",
+        })
+      );
   };
 
   return (
@@ -705,6 +751,54 @@ export default function Home() {
                       </div>
                     </div>
                   )}
+                {walletConfirmation && selectedPaper && (
+                  <div className="rounded-2xl border border-[#d8c47d] bg-[#fff9e8] p-4 text-sm text-[#6f5517]">
+                    <div className="flex items-start gap-3">
+                      <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
+                      <div className="min-w-0">
+                        <div className="font-semibold">
+                          Confirm wallet payment
+                        </div>
+                        <p className="mt-1 leading-6">
+                          Confirm a charge of{" "}
+                          <strong>
+                            KES {walletConfirmation.amountKes.toLocaleString()}
+                          </strong>{" "}
+                          from your available wallet balance of{" "}
+                          <strong>
+                            KES {walletConfirmation.balanceKes.toLocaleString()}
+                          </strong>{" "}
+                          for “{selectedPaper.title}”.
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Button
+                            className="rounded-full bg-[#1d5146] text-white hover:bg-[#153c34]"
+                            onClick={confirmWalletPurchase}
+                            disabled={payWithWallet.isPending}
+                          >
+                            {payWithWallet.isPending
+                              ? "Charging…"
+                              : "Confirm and buy"}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="rounded-full border-[#b8a85c] bg-transparent text-[#6f5517] hover:bg-[#fff3c9]"
+                            onClick={() => {
+                              const confirmation = walletConfirmation;
+                              setWalletConfirmation(null);
+                              startPaystackCheckout(
+                                confirmation.paperId,
+                                checkoutIntent.current
+                              );
+                            }}
+                          >
+                            Use Paystack instead
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {paymentStatus.state !== "idle" && (
                   <div
                     className={`flex items-start gap-3 rounded-2xl border p-4 text-sm ${paymentStatus.state === "error" ? "border-[#efc8c5] bg-[#fff4f3] text-[#a44e49]" : paymentStatus.state === "success" ? "border-[#b9ddc7] bg-[#eef9f1] text-[#327452]" : "border-[#d8c47d] bg-[#fff9e8] text-[#7a5b16]"}`}
@@ -743,6 +837,24 @@ export default function Home() {
                         >
                           Open payment result
                         </a>
+                      )}
+                      {paymentStatus.state === "success" && selectedPaper && (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <a
+                            href={`/api/papers/${selectedPaper.id}/view`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex h-9 items-center justify-center rounded-full border border-[#9bc6aa] bg-white/80 px-4 text-xs font-semibold text-[#1d604f] transition hover:bg-white"
+                          >
+                            View now
+                          </a>
+                          <a
+                            href={`/api/papers/${selectedPaper.id}/download`}
+                            className="inline-flex h-9 items-center justify-center rounded-full bg-[#1d5146] px-4 text-xs font-semibold text-white transition hover:bg-[#153c34]"
+                          >
+                            Download now
+                          </a>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -802,14 +914,20 @@ export default function Home() {
                         onClick={() => buy(selectedPaper.id)}
                         disabled={
                           initializePayment.isPending ||
+                          payWithWallet.isPending ||
                           claimFreePaper.isPending ||
+                          Boolean(walletConfirmation) ||
                           paymentStatus.state === "processing" ||
                           paymentStatus.state === "authorizing"
                         }
                       >
-                        {initializePayment.isPending
-                          ? "Opening Paystack…"
-                          : "Buy securely"}{" "}
+                        {walletConfirmation
+                          ? "Awaiting confirmation"
+                          : payWithWallet.isPending
+                            ? "Checking wallet…"
+                            : initializePayment.isPending
+                              ? "Opening Paystack…"
+                              : "Buy securely"}{" "}
                         <ChevronRight size={15} />
                       </Button>
                     ) : null}
