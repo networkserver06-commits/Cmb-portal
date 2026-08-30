@@ -13,7 +13,7 @@ describe("sharing and deployment resilience", () => {
   it("uses the existing ScholarShelf home visual for social previews", () => {
     const html = readProjectFile("client/index.html");
     expect(html).toContain(
-      "https://portal.leetec.online/manus-storage/scholarshelf-home-share-preview_055d7ed7.png"
+      "https://portal.leetec.online/scholarshelf-home-share-preview.png"
     );
     expect(html).toContain('name="twitter:card" content="summary_large_image"');
     expect(html).toContain(

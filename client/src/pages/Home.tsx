@@ -25,6 +25,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import EducationLevelSelect from "@/components/EducationLevelSelect";
 import ShareDocumentButton from "@/components/ShareDocumentButton";
+import ShareAppButton from "@/components/ShareAppButton";
 import { educationLevelLabel } from "@shared/educationLevels";
 import {
   RESOURCE_TYPES,
@@ -290,6 +291,7 @@ export default function Home() {
             </a>
             <a href="#how-it-works">How it works</a>
             <a href="#support">Support</a>
+            <a href="#share-app">Share app</a>
           </nav>
           <div className="hidden items-center gap-3 md:flex">
             {isAuthenticated ? (
@@ -341,6 +343,9 @@ export default function Home() {
               </a>
               <a href="#how-it-works" onClick={() => setMobileOpen(false)}>
                 How it works
+              </a>
+              <a href="#share-app" onClick={() => setMobileOpen(false)}>
+                Share app
               </a>
               {isAuthenticated ? (
                 <div className="flex flex-col gap-3 border-t border-[#e8efeb] pt-4">
@@ -936,6 +941,35 @@ export default function Home() {
                   <p>Your resource unlocks in your authenticated library.</p>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+        <section
+          id="share-app"
+          className="border-y border-[#dce7e1] bg-[#f1f6f3]"
+        >
+          <div className="container grid gap-8 py-14 md:grid-cols-[.85fr_1.15fr] md:items-center md:py-18">
+            <div>
+              <p className="section-eyebrow">Bring a friend</p>
+              <h2 className="mt-2 font-serif text-4xl font-semibold tracking-tight text-[#173e35]">
+                Share the ScholarShelf library.
+              </h2>
+              <p className="mt-4 max-w-xl text-base leading-7 text-[#648078]">
+                Send the home page to a classmate or study group so they can
+                discover trusted resources, read freely available documents, and
+                build their own library.
+              </p>
+              <div className="mt-6">
+                <ShareAppButton />
+              </div>
+            </div>
+            <div className="overflow-hidden rounded-[2rem] border border-[#cfe0d7] bg-[#0b3029] shadow-[0_20px_60px_rgba(21,60,52,0.18)]">
+              <img
+                src="/scholarshelf-home-share-preview.png"
+                alt="ScholarShelf home page preview showing the learning resource library"
+                className="block h-auto w-full"
+                loading="lazy"
+              />
             </div>
           </div>
         </section>
