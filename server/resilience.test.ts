@@ -16,7 +16,9 @@ describe("sharing and deployment resilience", () => {
       "https://portal.leetec.online/manus-storage/scholarshelf-home-share-preview_055d7ed7.png"
     );
     expect(html).toContain('name="twitter:card" content="summary_large_image"');
-    expect(html).toContain("ScholarShelf is a trusted learning resource library");
+    expect(html).toContain(
+      "ScholarShelf is a trusted learning resource library"
+    );
   });
 
   it("shows a user-facing offline and reconnecting state", () => {
@@ -35,12 +37,33 @@ describe("sharing and deployment resilience", () => {
         )
       )
     ).toBe(true);
-    expect(isStaleAssetError(new Error("The page could not be loaded"))).toBe(false);
+    expect(isStaleAssetError(new Error("The page could not be loaded"))).toBe(
+      false
+    );
+  });
+
+  it("omits unresolved analytics placeholders from the SPA shell", () => {
+    const html = readProjectFile("client/index.html");
+    const mainSource = readProjectFile("client/src/main.tsx");
+    expect(html).not.toContain("%VITE_ANALYTICS_ENDPOINT%");
+    expect(html).not.toContain("%VITE_ANALYTICS_WEBSITE_ID%");
+    expect(mainSource).toContain("installOptionalAnalytics();");
+    expect(mainSource).toContain("VITE_ANALYTICS_ENDPOINT");
+    expect(mainSource).toContain("VITE_ANALYTICS_WEBSITE_ID");
+  });
+
+  it("sandboxes HTML document responses", () => {
+    const fileStoreSource = readProjectFile("server/fileStore.ts");
+    expect(fileStoreSource).toContain('"text/html", "application/xhtml+xml"');
+    expect(fileStoreSource).toContain("Content-Security-Policy");
+    expect(fileStoreSource).toContain("sandbox; default-src 'none'");
   });
 
   it("installs guarded recovery and keeps the SPA shell fresh", () => {
     const appSource = readProjectFile("client/src/main.tsx");
-    const boundarySource = readProjectFile("client/src/components/ErrorBoundary.tsx");
+    const boundarySource = readProjectFile(
+      "client/src/components/ErrorBoundary.tsx"
+    );
     const vercel = readProjectFile("vercel.json");
     expect(appSource).toContain("installStaleAssetRecovery();");
     expect(boundarySource).toContain("markAssetRecoveryAttempt");

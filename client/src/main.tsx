@@ -13,6 +13,37 @@ import "./index.css";
 const queryClient = new QueryClient();
 installStaleAssetRecovery();
 
+function installOptionalAnalytics() {
+  const endpoint = import.meta.env.VITE_ANALYTICS_ENDPOINT?.trim();
+  const websiteId = import.meta.env.VITE_ANALYTICS_WEBSITE_ID?.trim();
+  if (!endpoint || !websiteId || typeof document === "undefined") return;
+
+  let analyticsUrl: URL;
+  try {
+    analyticsUrl = new URL(endpoint);
+  } catch {
+    return;
+  }
+  if (analyticsUrl.protocol !== "https:" && analyticsUrl.protocol !== "http:")
+    return;
+
+  analyticsUrl.pathname = `${analyticsUrl.pathname.replace(/\/+$/, "")}/umami`;
+  if (
+    Array.from(document.scripts).some(
+      script => script.dataset.websiteId === websiteId
+    )
+  )
+    return;
+
+  const script = document.createElement("script");
+  script.defer = true;
+  script.src = analyticsUrl.toString();
+  script.dataset.websiteId = websiteId;
+  document.head.appendChild(script);
+}
+
+installOptionalAnalytics();
+
 const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!(error instanceof TRPCClientError)) return;
   if (typeof window === "undefined") return;

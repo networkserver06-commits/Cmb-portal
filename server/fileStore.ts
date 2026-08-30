@@ -393,6 +393,16 @@ export async function streamPortalFile(
   if (!metadata) throw new Error("The requested file is unavailable.");
   const stream = (await portalFiles()).openDownloadStream(new ObjectId(fileId));
   response.setHeader("Content-Type", metadata.mimeType);
+  if (
+    ["text/html", "application/xhtml+xml"].includes(
+      metadata.mimeType.split(";", 1)[0].trim().toLowerCase()
+    )
+  ) {
+    response.setHeader(
+      "Content-Security-Policy",
+      "sandbox; default-src 'none'; base-uri 'none'; form-action 'none'; img-src data:; style-src 'unsafe-inline'"
+    );
+  }
   response.setHeader("Content-Length", String(metadata.byteLength));
   response.setHeader(
     "Content-Disposition",
