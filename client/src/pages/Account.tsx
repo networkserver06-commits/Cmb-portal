@@ -6,6 +6,8 @@ import {
   type LibrarySort,
 } from "@/lib/libraryFilters";
 import { educationLevelLabel } from "@shared/educationLevels";
+import { resourceTypeLabel } from "@shared/resourceTypes";
+import ShareDocumentButton from "@/components/ShareDocumentButton";
 import PublishPaper from "./PublishPaper";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -52,6 +54,13 @@ import {
   Search,
   X,
 } from "lucide-react";
+
+function resourceSharePath(paper: { legacyId: number; accessMode?: string; priceKes?: number }) {
+  const isFree = paper.accessMode === "free" || Number(paper.priceKes) === 0;
+  return isFree
+    ? `/paper/${encodeURIComponent(paper.legacyId)}`
+    : `/?paper=${encodeURIComponent(paper.legacyId)}#catalogue`;
+}
 
 function LoadingLine({ className = "" }: { className?: string }) {
   return (
@@ -356,7 +365,7 @@ function AccountDashboard({
                 </p>
                 <p className="mt-1 text-sm leading-6 text-[#7a5b16]">
                   This account has administrator privileges. Open the management
-                  workspace to manage papers, students, payments, submissions,
+                  workspace to manage resources, students, payments, submissions,
                   announcements, and storage.
                 </p>
               </div>
@@ -460,7 +469,7 @@ function AccountDashboard({
                 Your study library
               </h1>
               <p className="mt-3 max-w-xl text-[#718780]">
-                Track every payment and download the examination papers unlocked
+                Track every payment and download the resources unlocked
                 for your account.
               </p>
             </div>
@@ -510,8 +519,8 @@ function AccountDashboard({
               </div>
               <Badge className="shrink-0 border-0 bg-[#e5f2eb] text-[#34745f]">
                 {library.isLoading
-                  ? "— papers"
-                  : `${filteredAvailable.length} ${filteredAvailable.length === 1 ? "paper" : "papers"}`}
+                  ? "— resources"
+                  : `${filteredAvailable.length} ${filteredAvailable.length === 1 ? "resource" : "resources"}`}
               </Badge>
             </div>
             {library.isLoading ? (
@@ -522,7 +531,7 @@ function AccountDashboard({
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="flex items-center gap-2 text-sm font-semibold text-[#274d43]">
-                        <Search size={16} className="text-[#4b8876]" /> Find a paper
+                        <Search size={16} className="text-[#4b8876]" /> Find a resource
                       </p>
                       <p className="mt-1 text-xs text-[#82958e]">
                         Search your unlocked resources or narrow them by level.
@@ -553,11 +562,11 @@ function AccountDashboard({
                           aria-hidden="true"
                           className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#82958e]"
                         />
-                        <Input
-                          value={libraryQuery}
+                          <Input
+                            value={libraryQuery}
                           onChange={event => setLibraryQuery(event.target.value)}
                           placeholder="Title, course, unit, or cycle"
-                          aria-label="Search unlocked papers"
+                          aria-label="Search unlocked resources"
                           className="h-11 rounded-2xl border-[#c8d9d2] bg-[#fbfdfb] pl-9 text-sm shadow-none focus-visible:ring-[#4b8876]"
                         />
                       </span>
@@ -587,7 +596,7 @@ function AccountDashboard({
                       <select
                         value={librarySort}
                         onChange={event => setLibrarySort(event.target.value as LibrarySort)}
-                        aria-label="Sort unlocked papers"
+                        aria-label="Sort unlocked resources"
                         className="h-11 w-full rounded-2xl border border-[#c8d9d2] bg-[#fbfdfb] px-3 text-sm text-[#274d43] outline-none transition focus:border-[#4b8876] focus:ring-2 focus:ring-[#4b8876]/25"
                       >
                         <option value="recent">Recently added</option>
@@ -598,8 +607,8 @@ function AccountDashboard({
                   </div>
                   <p className="mt-3 text-xs text-[#718780]" role="status" aria-live="polite">
                     {hasLibraryFilters
-                      ? `${filteredAvailable.length} of ${available.length} papers shown`
-                      : `${available.length} ${available.length === 1 ? "paper" : "papers"} in your library`}
+                      ? `${filteredAvailable.length} of ${available.length} resources shown`
+                      : `${available.length} ${available.length === 1 ? "resource" : "resources"} in your library`}
                   </p>
                 </div>
                 {filteredAvailable.length ? (
@@ -618,12 +627,17 @@ function AccountDashboard({
                               {item.paper!.title}
                             </h3>
                             <p className="mt-1 text-xs text-[#82958e]">
-                              {item.paper!.unit} · {educationLevelLabel(item.paper!.level)} ·{" "}
+                              {resourceTypeLabel(item.paper!.documentType)} · {item.paper!.unit} · {educationLevelLabel(item.paper!.level)} ·{" "}
                               {item.paper!.cycle}
                             </p>
                           </div>
                         </div>
                         <div className="flex shrink-0 items-center gap-2">
+                          <ShareDocumentButton
+                            title={item.paper!.title}
+                            url={new URL(resourceSharePath(item.paper!), window.location.origin).toString()}
+                            compact
+                          />
                           <a
                             href={`/api/papers/${item.paper!.legacyId}/view`}
                             target="_blank"
@@ -646,7 +660,7 @@ function AccountDashboard({
                   <div className="rounded-2xl border border-dashed border-[#cdded7] bg-white p-10 text-center account-empty-state">
                     <Search className="mx-auto h-9 w-9 text-[#9bb9ab]" />
                     <p className="mt-4 text-sm text-[#718780]">
-                      No unlocked papers match these filters.
+                      No unlocked resources match these filters.
                     </p>
                     <button
                       type="button"
@@ -656,7 +670,7 @@ function AccountDashboard({
                       }}
                       className="mt-5 inline-flex rounded-full bg-[#1d5146] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#153c34] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4b8876]"
                     >
-                      Show all papers
+                      Show all resources
                     </button>
                   </div>
                 )}
@@ -665,7 +679,7 @@ function AccountDashboard({
               <div className="rounded-2xl border border-dashed border-[#cdded7] bg-white p-10 text-center account-empty-state">
                 <FileText className="mx-auto h-9 w-9 text-[#9bb9ab]" />
                 <p className="mt-4 text-sm text-[#718780]">
-                  Your purchased papers will appear here after payment is
+                  Your purchased resources will appear here after payment is
                   confirmed.
                 </p>
                 <Link
@@ -711,7 +725,7 @@ function AccountDashboard({
                           {item.order.reference}
                         </td>
                         <td className="px-5 py-4">
-                          {item.paper?.title ?? "Paper unavailable"}
+                          {item.paper?.title ?? "Resource unavailable"}
                         </td>
                         <td className="px-5 py-4">
                           KES {Number(item.order.amountKes).toLocaleString()}
@@ -760,7 +774,7 @@ function AccountDashboard({
             <div className="mb-4">
               <p className="section-eyebrow">Your contributions</p>
               <h2 className="mt-1 font-serif text-2xl font-semibold text-[#173e35]">
-                Published papers
+                Shared documents
               </h2>
             </div>
             {submissions.isLoading ? (
@@ -777,11 +791,18 @@ function AccountDashboard({
                         {submission.title}
                       </div>
                       <div className="mt-1 text-xs text-[#82958e]">
-                        {submission.unit} · Submitted{" "}
+                        {resourceTypeLabel(submission.documentType)} · {submission.unit} · Submitted{" "}
                         {new Date(submission.createdAt).toLocaleDateString()}
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
+                      {submission.status === "approved" && submission.paperId && (
+                        <ShareDocumentButton
+                          title={submission.title}
+                          url={new URL(`/paper/${submission.paperId}`, window.location.origin).toString()}
+                          compact
+                        />
+                      )}
                       {submission.fileId &&
                         submission.status !== "rejected" &&
                         !submission.storagePurged && (
@@ -812,7 +833,7 @@ function AccountDashboard({
               </div>
             ) : (
               <div className="mb-8 rounded-2xl border border-dashed border-[#cdded7] bg-white p-6 text-sm text-[#718780] account-empty-state">
-                You have not shared a paper yet.
+                  You have not shared a document yet.
               </div>
             )}
             <PublishPaper onSubmitted={() => submissions.refetch()} />
@@ -1305,7 +1326,7 @@ const dashboardTabs: Array<{
   {
     id: "downloads",
     label: "Downloads",
-    description: "Unlocked papers",
+    description: "Unlocked resources",
     icon: Download,
   },
   {
@@ -1317,7 +1338,7 @@ const dashboardTabs: Array<{
   {
     id: "submissions",
     label: "Submissions",
-    description: "Your shared papers",
+    description: "Your shared documents",
     icon: FileText,
   },
   {
@@ -1590,11 +1611,11 @@ export default function Account({
         <section className="hidden md:block account-reveal">
           <p className="section-eyebrow">ScholarShelf account</p>
           <h1 className="mt-3 max-w-md font-serif text-5xl font-semibold leading-tight text-[#173e35]">
-            Keep every paper in one trusted library.
+            Keep every resource in one trusted library.
           </h1>
           <p className="mt-5 max-w-md text-lg leading-8 text-[#648078]">
             Create your student account to track Paystack purchases and access
-            unlocked examination papers securely.
+            unlocked resources securely.
           </p>
           <div className="mt-8 flex items-center gap-3 text-sm text-[#4b8876]">
             <CheckCircle2 size={17} /> Account records are stored securely.
@@ -1632,7 +1653,7 @@ export default function Account({
               </h2>
               <p className="mt-2 text-sm text-[#718780]">
                 {mode === "login"
-                  ? "Sign in to continue to your personal paper library."
+                  ? "Sign in to continue to your personal resource library."
                   : "Use your email to create a secure student account."}
               </p>
             </div>

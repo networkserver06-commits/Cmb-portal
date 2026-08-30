@@ -53,6 +53,14 @@ const publicViewerSource = readFileSync(
   new URL("../client/src/pages/PublicPaperViewer.tsx", import.meta.url),
   "utf8"
 );
+const shareButtonSource = readFileSync(
+  new URL("../client/src/components/ShareDocumentButton.tsx", import.meta.url),
+  "utf8"
+);
+const resourceTypesSource = readFileSync(
+  new URL("../shared/resourceTypes.ts", import.meta.url),
+  "utf8"
+);
 
 describe("protected document viewing and rejection cleanup", () => {
   it("registers inline and attachment routes with authenticated access checks", () => {
@@ -85,8 +93,16 @@ describe("protected document viewing and rejection cleanup", () => {
     expect(serverSource).toContain("Number(paper.priceKes) !== 0");
     expect(serverSource).toContain("!paper?.isAvailable");
     expect(homeSource).toContain("publicPaperHref");
-    expect(homeSource).toContain("View free paper");
-    expect(homeSource).toContain("View full paper");
+    expect(homeSource).toContain("View free resource");
+    expect(homeSource).toContain("View full resource");
+    expect(homeSource).toContain("ShareDocumentButton");
+    expect(homeSource).toContain("catalogue-document-type");
+    expect(homeSource).toContain("All document types");
+    expect(publicViewerSource).toContain("ShareDocumentButton");
+    expect(shareButtonSource).toContain("navigator.share");
+    expect(shareButtonSource).toContain("Share link copied");
+    expect(resourceTypesSource).toContain('"study-notes"');
+    expect(resourceTypesSource).toContain('"other-document"');
     expect(appSource).toContain('path={"/paper/:paperId"}');
     expect(publicViewerSource).toContain(
       "No account required to read this resource."
@@ -157,15 +173,21 @@ describe("protected document viewing and rejection cleanup", () => {
     expect(adminControlsSource).toContain(
       "trpc.admin.setAvailability.useMutation"
     );
+    expect(adminControlsSource).toContain("friendlyAdminResourceError");
+    expect(adminControlsSource).toContain("discardUploadedFile");
+    expect(adminControlsSource).toContain("Document category");
+    expect(publishSource).toContain("Document type");
     expect(adminControlsSource).toContain("isAvailable: !item.isAvailable");
     expect(adminControlsSource).toContain(
       'item.isAvailable ? "Live" : "Paused"'
     );
     expect(accountSource).toContain("/api/papers/${item.paper!.legacyId}/view");
+    expect(accountSource).toContain("ShareDocumentButton");
     expect(accountSource).toContain(
       "/api/files/${encodeURIComponent(submission.fileId)}/view"
     );
     expect(librarySource).toContain("/api/papers/${item.paper!.legacyId}/view");
+    expect(librarySource).toContain("ShareDocumentButton");
   });
 
   it("keeps the upload station compact and actionable on mobile", () => {
@@ -187,12 +209,13 @@ describe("protected document viewing and rejection cleanup", () => {
     expect(publishSource).toContain(
       'result.publication.status === "published"'
     );
-    expect(publishSource).toContain("published in the free catalogue");
+    expect(publishSource).toContain("published in the free library");
     expect(publishSource).toContain("held for administrator review");
     expect(routerSource).toContain("detectSubmissionSafety(file)");
-    expect(routerSource).toContain(
-      'safetyStatus: automaticallyPublished ? "passed" : "held"'
-    );
+    expect(routerSource).toContain('safetyStatus: automaticallyPublished ? "passed" : "held"');
+    expect(routerSource).toContain("documentType: input.documentType");
+    expect(routerSource).toContain("documentType: submission.documentType");
+    expect(routerSource).toContain("documentType: z.enum(RESOURCE_TYPES).optional()");
     expect(routerSource).toContain("status: automaticallyPublished ?");
     expect(routerSource).toContain('"approved" as const');
     expect(routerSource).toContain('"pending" as const');

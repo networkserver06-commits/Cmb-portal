@@ -143,7 +143,7 @@ function AdminWorkspace() {
 
   const stats = [
     {
-      label: "Catalogue papers",
+      label: "Catalogue resources",
       value: summary.data?.papers ?? "—",
       Icon: BookOpen,
       detail: isLoading ? "Syncing MongoDB…" : "Live catalogue total",
@@ -182,9 +182,8 @@ function AdminWorkspace() {
               Your control centre.
             </h1>
             <p className="mt-2 max-w-2xl text-[#718780]">
-              Manage the live examination-paper catalogue, students, payments,
-              free submissions, announcements, and storage from one protected
-              workspace.
+              Manage the live document library, students, payments, free submissions,
+              announcements, and storage from one protected workspace.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3 md:ml-auto">
@@ -204,7 +203,7 @@ function AdminWorkspace() {
               className="w-fit rounded-full bg-[#1d5146] hover:bg-[#153c34]"
               onClick={() => jumpTo("admin-controls", "catalogue")}
             >
-              <Plus size={16} /> Add examination paper
+              <Plus size={16} /> Add resource
             </Button>
           </div>
         </div>
@@ -235,7 +234,7 @@ function AdminWorkspace() {
           className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5"
         >
           {[
-            ["Upload catalogue paper", "admin-controls", "catalogue", Plus],
+            ["Upload catalogue resource", "admin-controls", "catalogue", Plus],
             [
               "Review student submissions",
               "admin-operations",

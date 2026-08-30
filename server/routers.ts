@@ -5,6 +5,7 @@ import {
   EDUCATION_LEVELS,
   normalizeEducationLevel,
 } from "../shared/educationLevels";
+import { RESOURCE_TYPES } from "../shared/resourceTypes";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import {
@@ -65,15 +66,17 @@ import {
 } from "./paystack";
 
 const educationLevelInput = z.enum(EDUCATION_LEVELS);
+const resourceTypeInput = z.enum(RESOURCE_TYPES).default("examination-paper");
 
 const paperInput = z
   .object({
-    course: z.string().min(2),
+    course: z.string().min(2, "Add the subject, course, or collection name."),
     level: educationLevelInput,
-    cycle: z.string().min(1),
-    unit: z.string().min(2),
-    paperType: z.string().min(2),
-    title: z.string().min(2),
+    cycle: z.string().min(1, "Add a year, term, or cycle label."),
+    unit: z.string().min(2, "Add the unit, topic, or document section."),
+    paperType: z.string().min(2, "Add a short format or document label."),
+    documentType: resourceTypeInput,
+    title: z.string().min(2, "Add a document title."),
     description: z.string().optional(),
     priceKes: z.number().min(0),
     fileId: z.string().optional(),
@@ -84,13 +87,13 @@ const paperInput = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["priceKes"],
-        message: "Paid papers must have a price greater than zero.",
+        message: "Paid resources must have a price greater than zero.",
       });
     if (input.mode === "free" && input.priceKes !== 0)
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["priceKes"],
-        message: "Free papers must have a zero price.",
+        message: "Free resources must have a zero price.",
       });
   });
 async function publishSubmissionAsPaper(
@@ -114,6 +117,7 @@ async function publishSubmissionAsPaper(
     cycle: submission.cycle,
     unit: submission.unit,
     paperType: submission.paperType,
+    documentType: submission.documentType ?? "examination-paper",
     title: submission.title,
     description: submission.description ?? "",
     priceKes: 0,
@@ -141,12 +145,13 @@ async function publishSubmissionAsPaper(
 
 const postInput = z
   .object({
-    title: z.string().min(2).max(180),
-    course: z.string().min(2).max(100),
+    title: z.string().min(2, "Add a document title.").max(180),
+    course: z.string().min(2, "Add the subject, course, or collection name.").max(100),
     level: educationLevelInput,
-    cycle: z.string().min(1).max(60),
-    unit: z.string().min(2).max(120),
-    paperType: z.string().min(2).max(80),
+    cycle: z.string().min(1, "Add a year, term, or cycle label.").max(60),
+    unit: z.string().min(2, "Add the unit, topic, or document section.").max(120),
+    paperType: z.string().min(2, "Add a short format or document label.").max(80),
+    documentType: resourceTypeInput,
     description: z.string().max(2000).optional(),
     fileId: z.string().min(12).max(80),
     mode: z.enum(["free", "paid"]),
@@ -281,6 +286,7 @@ export const appRouter = router({
         .object({
           search: z.string().optional(),
           level: educationLevelInput.optional(),
+          documentType: z.enum(RESOURCE_TYPES).optional(),
         })
         .optional()
     )
@@ -292,15 +298,18 @@ export const appRouter = router({
         .toArray();
       const search = input?.search?.trim().toLowerCase();
       const level = input?.level;
+      const documentType = input?.documentType;
       return rows.filter((p: any) => {
         const matchesLevel =
           !level || normalizeEducationLevel(String(p.level)) === level;
+        const matchesDocumentType =
+          !documentType || (p.documentType ?? "examination-paper") === documentType;
         const matchesSearch =
           !search ||
-          [p.title, p.course, p.unit, p.level, p.cycle].some(v =>
-            v?.toLowerCase().includes(search)
+          [p.title, p.course, p.unit, p.level, p.cycle, p.paperType, p.description, p.documentType].some(v =>
+            String(v ?? "").toLowerCase().includes(search)
           );
-        return matchesLevel && matchesSearch;
+        return matchesLevel && matchesDocumentType && matchesSearch;
       });
     }),
   announcements: publicProcedure.query(
@@ -402,12 +411,13 @@ export const appRouter = router({
     submitPaper: protectedProcedure
       .input(
         z.object({
-          title: z.string().min(2),
-          course: z.string().min(2),
+          title: z.string().min(2, "Add a document title."),
+          course: z.string().min(2, "Add the subject, course, or collection name."),
           level: educationLevelInput,
-          cycle: z.string().min(1),
-          unit: z.string().min(2),
-          paperType: z.string().min(2),
+          cycle: z.string().min(1, "Add a year, term, or cycle label."),
+          unit: z.string().min(2, "Add the unit, topic, or document section."),
+          paperType: z.string().min(2, "Add a short format or document label."),
+          documentType: resourceTypeInput,
           description: z.string().max(1000).optional(),
           fileId: z.string().min(12).max(80),
           authorized: z.literal(true),
@@ -433,6 +443,7 @@ export const appRouter = router({
           cycle: input.cycle,
           unit: input.unit,
           paperType: input.paperType,
+          documentType: input.documentType,
           description: input.description,
           fileId: file.gridFsId,
           fileName: file.fileName,
@@ -815,10 +826,11 @@ export const appRouter = router({
           legacyId: await nextId("papers"),
           course: input.course,
           level: input.level,
-          cycle: input.cycle,
-          unit: input.unit,
-          paperType: input.paperType,
-          title: input.title,
+    cycle: input.cycle,
+    unit: input.unit,
+    paperType: input.paperType,
+    documentType: input.documentType,
+    title: input.title,
           description: input.description ?? "",
           priceKes: input.mode === "free" ? 0 : input.priceKes,
           fileId: file.gridFsId,
@@ -1014,6 +1026,16 @@ export const appRouter = router({
             grantedAt: new Date(),
           });
         return { success: true };
+      }),
+    discardUploadedFile: adminProcedure
+      .input(z.object({ fileId: z.string().min(12).max(80) }))
+      .mutation(async ({ ctx, input }) => {
+        const file = await portalFileById(input.fileId);
+        if (!file) return { success: true as const, alreadyGone: true as const };
+        if (file.references.length)
+          return { success: false as const, alreadyGone: false as const };
+        await deletePortalFile({ fileId: input.fileId, actorId: ctx.user.id });
+        return { success: true as const, alreadyGone: false as const };
       }),
     uploadPaper: adminProcedure
       .input(

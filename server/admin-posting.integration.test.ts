@@ -105,6 +105,7 @@ describe("administrator posting persistence", () => {
             title: `${runId}-paper`,
             level: "university",
             accessMode: "purchase",
+            documentType: "examination-paper",
             priceKes: 150,
             isAvailable: true,
           }),
@@ -112,6 +113,7 @@ describe("administrator posting persistence", () => {
             title: `${runId}-post`,
             level: "tvet",
             accessMode: "free",
+            documentType: "examination-paper",
             postMode: "free",
             priceKes: 0,
             isAvailable: true,
@@ -120,6 +122,7 @@ describe("administrator posting persistence", () => {
             title: `${runId}-free-paper`,
             level: "college",
             accessMode: "free",
+            documentType: "examination-paper",
             postMode: "free",
             priceKes: 0,
             isAvailable: true,
@@ -148,5 +151,5 @@ describe("administrator posting persistence", () => {
         },
       });
     }
-  }, 45_000);
+  }, 150_000);
 });

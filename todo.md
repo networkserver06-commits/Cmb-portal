@@ -168,3 +168,9 @@
 - [x] Add byte-accurate tracked storage usage to the administrator storage audit and overview.
 - [x] Add protected/reclaimable capacity breakdown and conservative storage-health suggestions without inventing a provider quota.
 - [x] Add storage usage regression tests and verify desktop/mobile administrator storage layouts.
+
+- [x] Add a general document category/type so ScholarShelf supports resources beyond examination papers while preserving legacy paper records.
+- [x] Add accessible share actions for document cards and public document viewers with clipboard and Web Share fallbacks.
+- [x] Simplify contributor submission fields and explain exactly what document details are needed before upload.
+- [x] Improve administrator posting validation with field-specific, actionable error responses and safe upload cleanup on failed saves.
+- [x] Add regression tests and responsive verification for general documents, sharing, contributor submissions, and admin posting errors.

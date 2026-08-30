@@ -15,6 +15,8 @@ import * as pdfjsLib from "pdfjs-dist";
 import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { trpc } from "@/lib/trpc";
 import { educationLevelLabel } from "@shared/educationLevels";
+import { resourceTypeLabel } from "@shared/resourceTypes";
+import ShareDocumentButton from "@/components/ShareDocumentButton";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
@@ -73,7 +75,7 @@ function ViewerShell({ children }: { children: React.ReactNode }) {
                 Scholar<span className="text-[#bb8a2e]">Shelf</span>
               </div>
               <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#78938a]">
-                EXAMINATION PAPER LIBRARY
+                LEARNING RESOURCE LIBRARY
               </div>
             </div>
           </a>
@@ -155,7 +157,7 @@ function TextDocumentPreview({ href, title }: { href: string; title: string }) {
         role="status"
       >
         <span className="flex items-center gap-3">
-          <Loader2 className="animate-spin" size={18} /> Opening the full paper…
+          <Loader2 className="animate-spin" size={18} /> Opening the full resource…
         </span>
       </div>
     );
@@ -169,7 +171,7 @@ function TextDocumentPreview({ href, title }: { href: string; title: string }) {
 
   return (
     <pre
-      aria-label={`Full paper text: ${title}`}
+      aria-label={`Full resource text: ${title}`}
       className="min-h-[420px] overflow-x-auto whitespace-pre-wrap break-words bg-white p-5 text-left font-mono text-[13px] leading-6 text-[#243f37] md:p-8"
     >
       {content}
@@ -447,7 +449,7 @@ function PdfDocumentPreview({ href, title }: { href: string; title: string }) {
   return (
     <div
       className="space-y-4 bg-[#edf2ef] p-3 md:p-5"
-      aria-label={`Full paper: ${title}`}
+      aria-label={`Full resource: ${title}`}
     >
       <div className="sticky top-0 z-10 rounded-2xl border border-[#cfe0d9] bg-[#f7fbf8]/95 p-3 shadow-sm backdrop-blur md:p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -507,7 +509,7 @@ function PdfDocumentPreview({ href, title }: { href: string; title: string }) {
         </div>
         <p className="mt-3 text-xs leading-5 text-[#6f887f]">
           Choose a page to render only what you need. Use Show all pages when
-          you want to scan the complete paper.
+          you want to scan the complete resource.
         </p>
       </div>
 
@@ -596,7 +598,7 @@ export default function PublicPaperViewer() {
             role="status"
           >
             <Loader2 className="animate-spin" size={18} />
-            Loading the free paper…
+            Loading the free resource…
           </div>
         </main>
       </ViewerShell>
@@ -612,10 +614,10 @@ export default function PublicPaperViewer() {
               <FileText size={25} />
             </div>
             <p className="mt-5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#94aaa2]">
-              Paper unavailable
+              Resource unavailable
             </p>
             <h1 className="mt-2 font-serif text-3xl font-semibold text-[#173e35]">
-              This free paper cannot be viewed right now.
+              This free resource cannot be viewed right now.
             </h1>
             <p className="mt-3 text-sm leading-6 text-[#718780]">
               It may have been paused, removed, or reserved for authenticated
@@ -641,7 +643,7 @@ export default function PublicPaperViewer() {
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#6b8f83]">
-                <span>Public free resource</span>
+                <span>{resourceTypeLabel(publicPaper.documentType)}</span>
                 <span className="text-[#bdcfc6]">·</span>
                 <span>{publicPaper.course}</span>
               </div>
@@ -662,6 +664,11 @@ export default function PublicPaperViewer() {
               <span className="inline-flex items-center gap-2 rounded-full bg-[#e5f2eb] px-3 py-2 text-xs font-semibold text-[#34745f]">
                 <Eye size={14} /> Free access
               </span>
+              <ShareDocumentButton
+                title={publicPaper.title}
+                url={new URL(`/paper/${publicPaper.legacyId}`, window.location.origin).toString()}
+                compact
+              />
               <a
                 href={documentHref}
                 target="_blank"
@@ -677,7 +684,7 @@ export default function PublicPaperViewer() {
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e4eee9] bg-[#edf6f1] px-4 py-3 text-xs text-[#648078] md:px-6">
               <div className="flex items-center gap-2 font-semibold text-[#1d5146]">
                 <FileText size={15} />
-                Full paper preview
+                Full resource preview
               </div>
               <span>No account required to read this resource.</span>
             </div>
@@ -696,14 +703,14 @@ export default function PublicPaperViewer() {
           <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-[#dce7e1] bg-white p-4 text-sm text-[#718780] sm:flex-row sm:items-center sm:justify-between">
             <p>
               This document is publicly readable because it is an active
-              Free-access resource. Paid papers continue to require secure
+              Free-access resource. Paid resources continue to require secure
               checkout and an account.
             </p>
             <Link
               href="/#catalogue"
               className="inline-flex shrink-0 items-center gap-2 font-semibold text-[#1d5146] underline underline-offset-4"
             >
-              View more papers <ArrowLeft className="rotate-180" size={14} />
+              View more resources <ArrowLeft className="rotate-180" size={14} />
             </Link>
           </div>
         </div>

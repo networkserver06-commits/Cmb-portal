@@ -2,6 +2,8 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { educationLevelLabel } from "@shared/educationLevels";
+import { resourceTypeLabel } from "@shared/resourceTypes";
+import ShareDocumentButton from "@/components/ShareDocumentButton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import RouteProgress from "@/components/RouteProgress";
@@ -62,7 +64,7 @@ export default function Library() {
             Your library is private
           </h1>
           <p className="mt-2 text-sm text-[#718780]">
-            Sign in to view purchased papers and secure downloads.
+            Sign in to view purchased resources and secure downloads.
           </p>
           <Button
             className="mt-6 rounded-full bg-[#1d5146]"
@@ -105,16 +107,16 @@ export default function Library() {
             My library
           </h1>
           <p className="mt-3 text-[#718780]">
-            Your purchased papers, available only to this authenticated account.
+            Your purchased resources, available only to this authenticated account.
           </p>
         </div>
         <section className="mt-10 account-reveal account-reveal-delay-1">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="font-serif text-2xl font-semibold text-[#173e35]">
-              Unlocked papers
+              Unlocked resources
             </h2>
             <Badge className="border-0 bg-[#e5f2eb] text-[#34745f]">
-              {library.data?.length ?? 0} papers
+              {library.data?.length ?? 0} resources
             </Badge>
           </div>
           {library.isLoading ? (
@@ -143,13 +145,18 @@ export default function Library() {
                         <h3 className="truncate font-medium text-[#274d43]">
                           {item.paper!.title}
                         </h3>
-                        <p className="mt-1 text-xs text-[#82958e]">
-                          {item.paper!.unit} ·{" "}
-                          {educationLevelLabel(item.paper!.level)}
-                        </p>
+                          <p className="mt-1 text-xs text-[#82958e]">
+                            {resourceTypeLabel(item.paper!.documentType)} · {item.paper!.unit} ·{" "}
+                            {educationLevelLabel(item.paper!.level)}
+                          </p>
                       </div>
                     </div>
                     <div className="ml-3 flex shrink-0 items-center gap-2">
+                      <ShareDocumentButton
+                        title={item.paper!.title}
+                        url={new URL(`/?paper=${item.paper!.legacyId}#catalogue`, window.location.origin).toString()}
+                        compact
+                      />
                       <a
                         href={`/api/papers/${item.paper!.legacyId}/view`}
                         target="_blank"
@@ -172,7 +179,7 @@ export default function Library() {
             <div className="account-empty-state rounded-2xl border border-dashed border-[#cdded7] bg-white p-10 text-center">
               <BookOpen className="mx-auto h-9 w-9 text-[#9bb9ab]" />
               <p className="mt-4 text-sm text-[#718780]">
-                No papers unlocked yet. Explore the catalogue to get started.
+                No resources unlocked yet. Explore the library to get started.
               </p>
               <a href="/#catalogue">
                 <Button className="mt-5 rounded-full bg-[#1d5146]">
@@ -199,7 +206,7 @@ export default function Library() {
                 <thead className="border-b border-[#edf2ef] text-[10px] font-bold uppercase tracking-[0.15em] text-[#9aaca6]">
                   <tr>
                     <th className="px-5 py-4">Reference</th>
-                    <th className="px-5 py-4">Paper</th>
+                    <th className="px-5 py-4">Resource</th>
                     <th className="px-5 py-4">Amount</th>
                     <th className="px-5 py-4">Status</th>
                   </tr>

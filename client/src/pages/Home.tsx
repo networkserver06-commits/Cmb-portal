@@ -24,7 +24,14 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import EducationLevelSelect from "@/components/EducationLevelSelect";
+import ShareDocumentButton from "@/components/ShareDocumentButton";
 import { educationLevelLabel } from "@shared/educationLevels";
+import {
+  RESOURCE_TYPES,
+  RESOURCE_TYPE_LABELS,
+  resourceTypeLabel,
+  type ResourceType,
+} from "@shared/resourceTypes";
 import type { EducationLevel } from "@shared/educationLevels";
 import {
   Dialog,
@@ -55,10 +62,16 @@ function publicPaperHref(paperId: number) {
   return `/paper/${encodeURIComponent(paperId)}`;
 }
 
+function resourceShareHref(paper: { id: number; accessMode?: string; price?: number }) {
+  const isFree = paper.accessMode === "free" || Number(paper.price) === 0;
+  return isFree ? publicPaperHref(paper.id) : checkoutReturnPath(paper.id);
+}
+
 export default function Home() {
   const { user, isAuthenticated, logout } = useAuth();
   const [query, setQuery] = useState("");
   const [levelFilter, setLevelFilter] = useState<EducationLevel | "">("");
+  const [documentTypeFilter, setDocumentTypeFilter] = useState<ResourceType | "">("");
   const [mobileOpen, setMobileOpen] = useState(false);
   const checkoutIntent = useRef(0);
   const [paymentStatus, setPaymentStatus] = useState<{
@@ -73,8 +86,12 @@ export default function Home() {
     return Number.isInteger(value) && value > 0 ? value : null;
   });
   const catalogueInput = useMemo(
-    () => ({ search: query, level: levelFilter || undefined }),
-    [levelFilter, query]
+    () => ({
+      search: query,
+      level: levelFilter || undefined,
+      documentType: documentTypeFilter || undefined,
+    }),
+    [documentTypeFilter, levelFilter, query]
   );
   const catalogue = trpc.catalogue.useQuery(catalogueInput);
   const initializePayment = trpc.student.initializePayment.useMutation();
@@ -119,14 +136,15 @@ export default function Home() {
       code: `${p.course} · ${p.cycle}`,
       title: p.title,
       unit: p.unit,
-      category: p.course,
-      level: p.level,
+              category: p.course,
+              documentType: p.documentType,
+              level: p.level,
       cycle: p.cycle,
       price: Number(p.priceKes),
       accessMode: p.accessMode,
       accent: "sage",
-      description:
-        p.description ?? "Secure examination paper for focused revision.",
+              description:
+        p.description ?? "A secure ScholarShelf learning resource.",
     }));
   }, [catalogue.data]);
   const selectedPaper = filteredPapers.find(
@@ -165,7 +183,7 @@ export default function Home() {
             setPaymentStatus({
               state: "success",
               message:
-                "Free paper added to your library. Open your account to download it.",
+                "Free resource added to your library. Open your account to download it.",
             });
           },
           onError: error =>
@@ -173,7 +191,7 @@ export default function Home() {
               state: "error",
               message:
                 error.message ||
-                "We could not add this free paper. Please try again.",
+                "We could not add this free resource. Please try again.",
             }),
         }
       );
@@ -217,7 +235,7 @@ export default function Home() {
                 Scholar<span className="text-[#bb8a2e]">Shelf</span>
               </div>
               <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#78938a]">
-                EXAMINATION PAPER LIBRARY
+                LEARNING RESOURCE LIBRARY
               </div>
             </div>
           </a>
@@ -324,7 +342,7 @@ export default function Home() {
           <div className="container relative grid gap-12 py-16 md:grid-cols-[1.1fr_.9fr] md:items-center md:py-24">
             <div>
               <Badge className="mb-6 border-0 bg-[#dcebe4] px-3 py-1.5 text-[#1d604f]">
-                <Sparkles size={14} className="mr-1.5" /> Curated revision
+                <Sparkles size={14} className="mr-1.5" /> Curated learning
                 resources
               </Badge>
               <h1 className="max-w-3xl font-serif text-5xl font-semibold leading-[1.03] tracking-[-0.045em] text-[#153c34] md:text-7xl">
@@ -333,9 +351,9 @@ export default function Home() {
                 <span className="text-[#b88327]">Arrive prepared.</span>
               </h1>
               <p className="mt-6 max-w-xl text-lg leading-8 text-[#5c766e]">
-                Find trusted examination papers for your course, unlock them
-                securely, and keep every purchased resource in one personal
-                library.
+                Find trusted documents for your course or collection, open free
+                resources instantly, and keep every purchased resource in one
+                personal library.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <a href="#catalogue">
@@ -343,7 +361,7 @@ export default function Home() {
                     size="lg"
                     className="rounded-full bg-[#1d5146] px-6 hover:bg-[#153c34]"
                   >
-                    Explore papers <ChevronRight size={17} />
+                    Explore resources <ChevronRight size={17} />
                   </Button>
                 </a>
                 <a href="#how-it-works">
@@ -419,7 +437,7 @@ export default function Home() {
                     </div>
                     <div className="min-w-0">
                       <div className="truncate text-sm font-semibold">
-                        Purchased paper
+                        Saved resource
                       </div>
                       <div className="mt-1 text-xs text-[#b2cec2]">
                         Unlocked · PDF resource
@@ -436,9 +454,9 @@ export default function Home() {
         <section id="catalogue" className="container py-16 md:py-20">
           <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
             <div>
-              <p className="section-eyebrow">The catalogue</p>
+                <p className="section-eyebrow">The library</p>
               <h2 className="mt-2 font-serif text-4xl font-semibold tracking-tight text-[#173e35]">
-                Find your paper
+                Find your resource
               </h2>
               <p className="mt-3 max-w-lg text-[#6a8179]">
                 Search by subject, unit, education level, or category.
@@ -454,8 +472,8 @@ export default function Home() {
                 <input
                   value={query}
                   onChange={e => setQuery(e.target.value)}
-                  placeholder="Search papers"
-                  aria-label="Search papers"
+                  placeholder="Search resources"
+                  aria-label="Search resources"
                   className="h-12 w-full rounded-full border border-[#cdded7] bg-white pl-11 pr-4 text-sm outline-none transition focus:border-[#4d8978] focus:ring-4 focus:ring-[#4d8978]/10"
                 />
               </div>
@@ -467,6 +485,24 @@ export default function Home() {
                   includeAll
                   className="h-12 w-full rounded-full border-[#cdded7] bg-white"
                 />
+              </div>
+              <div className="w-full md:w-56">
+                <label className="sr-only" htmlFor="catalogue-document-type">
+                  Filter by document type
+                </label>
+                <select
+                  id="catalogue-document-type"
+                  value={documentTypeFilter}
+                  onChange={event => setDocumentTypeFilter(event.target.value as ResourceType | "")}
+                  className="h-12 w-full rounded-full border border-[#cdded7] bg-white px-4 text-sm text-[#274d43] outline-none transition focus:border-[#4d8978] focus:ring-4 focus:ring-[#4d8978]/20"
+                >
+                  <option value="">All document types</option>
+                  {RESOURCE_TYPES.map(type => (
+                    <option key={type} value={type}>
+                      {RESOURCE_TYPE_LABELS[type]}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>
@@ -552,7 +588,7 @@ export default function Home() {
                     id="paper-checkout-description"
                     className="text-sm text-[#648078]"
                   >
-                    {selectedPaper.code} · {selectedPaper.unit} ·{" "}
+                    {resourceTypeLabel(selectedPaper.documentType)} · {selectedPaper.code} · {selectedPaper.unit} ·{" "}
                     {educationLevelLabel(selectedPaper.level)}
                   </DialogDescription>
                 </DialogHeader>
@@ -560,6 +596,11 @@ export default function Home() {
                   {selectedPaper.description}
                 </p>
                 <div className="flex flex-wrap items-center gap-2 text-xs text-[#5f786f]">
+                  <ShareDocumentButton
+                    title={selectedPaper.title}
+                    url={new URL(resourceShareHref(selectedPaper), window.location.origin).toString()}
+                    compact
+                  />
                   <Badge className="border-0 bg-white text-[#1d5146]">
                     {selectedPaper.accessMode === "free" ||
                     selectedPaper.price === 0
@@ -569,10 +610,10 @@ export default function Home() {
                   <span>
                     {selectedPaper.accessMode === "free" ||
                     selectedPaper.price === 0
-                      ? "Read the complete paper instantly. No account is required for Free access."
+                      ? "Read the complete resource instantly. No account is required for Free access."
                       : isAuthenticated
                         ? "You are signed in; confirmation returns you to your library."
-                        : "Choose Sign in or Create account to continue from this paper."}
+                        : "Choose Sign in or Create account to continue from this resource."}
                   </span>
                 </div>
                 {!isAuthenticated &&
@@ -583,7 +624,7 @@ export default function Home() {
                         Continue securely
                       </p>
                       <p className="mt-1 text-sm leading-6 text-[#668078]">
-                        Your selected paper will stay ready when authentication
+                        Your selected resource will stay ready when authentication
                         is complete.
                       </p>
                       <div className="mt-3 flex flex-wrap gap-2">
@@ -678,7 +719,7 @@ export default function Home() {
                           href={publicPaperHref(selectedPaper.id)}
                           className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-[#1d5146] px-4 text-sm font-semibold text-white transition hover:bg-[#153c34] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d5146] focus-visible:ring-offset-2"
                         >
-                          View full paper <ChevronRight size={15} />
+                          View full resource <ChevronRight size={15} />
                         </a>
                         {isAuthenticated && (
                           <Button
@@ -734,7 +775,7 @@ export default function Home() {
                 </div>
                 <div className="mt-7 flex-1">
                   <div className="text-[10px] font-bold uppercase tracking-[0.17em] text-[#94aaa2]">
-                    {paper.code}
+                    {resourceTypeLabel(paper.documentType)} · {paper.code}
                   </div>
                   <h3 className="mt-2 font-serif text-xl font-semibold leading-tight text-[#173e35]">
                     {paper.title}
@@ -746,8 +787,13 @@ export default function Home() {
                     {paper.description}
                   </p>
                 </div>
-                <div className="mt-6 flex items-center justify-between border-t border-[#e8efeb] pt-4">
-                  <div>
+                <div className="mt-6 flex items-center justify-between gap-2 border-t border-[#e8efeb] pt-4">
+                  <ShareDocumentButton
+                    title={paper.title}
+                    url={new URL(resourceShareHref(paper), window.location.origin).toString()}
+                    compact
+                  />
+                  <div className="ml-auto">
                     <div className="text-[10px] font-bold uppercase tracking-widest text-[#9aaca6]">
                       {paper.accessMode === "free" || paper.price === 0
                         ? "Access"
@@ -764,7 +810,7 @@ export default function Home() {
                       href={publicPaperHref(paper.id)}
                       className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[#1d5146] px-3.5 text-xs font-semibold text-white transition hover:bg-[#153c34] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d5146] focus-visible:ring-offset-2"
                     >
-                      View free paper <ChevronRight size={14} />
+                      View free resource <ChevronRight size={14} />
                     </a>
                   ) : (
                     <Button
@@ -772,7 +818,7 @@ export default function Home() {
                       size="sm"
                       className="rounded-full bg-[#1d5146] hover:bg-[#153c34]"
                     >
-                      {isAuthenticated ? "View & buy" : "View paper"}{" "}
+                      {isAuthenticated ? "View & buy" : "View resource"}{" "}
                       <ChevronRight size={14} />
                     </Button>
                   )}
@@ -785,7 +831,7 @@ export default function Home() {
               role="status"
               className="rounded-3xl border border-dashed border-[#cdded7] py-16 text-center text-[#6a8179]"
             >
-              Loading published papers…
+              Loading published resources…
             </div>
           ) : catalogue.error ? (
             <div
@@ -798,7 +844,7 @@ export default function Home() {
           ) : (
             filteredPapers.length === 0 && (
               <div className="rounded-3xl border border-dashed border-[#cdded7] py-16 text-center text-[#6a8179]">
-                No papers are published yet. Check back soon.
+                No resources match these filters yet. Try another search or choose a different document type.
               </div>
             )
           )}
@@ -830,7 +876,7 @@ export default function Home() {
                 <div className="step-card">
                   <span>03</span>
                   <h3>Access</h3>
-                  <p>Your paper unlocks in your authenticated library.</p>
+                  <p>Your resource unlocks in your authenticated library.</p>
                 </div>
               </div>
             </div>
@@ -865,11 +911,10 @@ export default function Home() {
       <footer className="border-t border-[#dce7e1] bg-[#153c34] text-[#c2d9cf]">
         <div className="container flex flex-col gap-4 py-8 text-sm md:flex-row md:items-center md:justify-between">
           <div className="font-serif text-lg text-white">
-            Exam<span className="text-[#e6c46f]">Vault</span>
+            Scholar<span className="text-[#e6c46f]">Shelf</span>
           </div>
           <div className="text-xs text-[#91b0a4]">
-            Only authorized examination materials may be uploaded and
-            distributed.
+            Only authorized learning documents may be uploaded and distributed.
           </div>
           <div className="text-xs text-[#91b0a4]">© 2026 ScholarShelf</div>
           <div className="text-xs text-[#91b0a4]">

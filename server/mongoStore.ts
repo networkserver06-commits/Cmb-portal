@@ -15,6 +15,7 @@ export type PaperDoc = {
   cycle: string;
   unit: string;
   paperType: string;
+  documentType?: string;
   title: string;
   description?: string;
   priceKes: number;

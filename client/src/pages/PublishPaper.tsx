@@ -2,6 +2,7 @@ import { trpc } from "@/lib/trpc";
 import { uploadPortalDocument, validatePortalDocument } from "@/lib/fileUpload";
 import EducationLevelSelect from "@/components/EducationLevelSelect";
 import type { EducationLevel } from "@shared/educationLevels";
+import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "@shared/resourceTypes";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,9 +17,7 @@ export default function PublishPaper({
     title: "",
     course: "",
     level: "" as EducationLevel | "",
-    cycle: "Not specified",
-    unit: "General revision",
-    paperType: "Revision paper",
+    documentType: "other-document" as (typeof RESOURCE_TYPES)[number],
     description: "",
   });
   const [file, setFile] = useState<File | null>(null);
@@ -33,9 +32,7 @@ export default function PublishPaper({
         title: "",
         course: "",
         level: "" as EducationLevel | "",
-        cycle: "Not specified",
-        unit: "General revision",
-        paperType: "Revision paper",
+        documentType: "other-document" as (typeof RESOURCE_TYPES)[number],
         description: "",
       });
       setFile(null);
@@ -44,8 +41,8 @@ export default function PublishPaper({
       setProgress(0);
       setSubmissionNotice(
         result.publication.status === "published"
-          ? "Safety check passed. Your paper is now published in the free catalogue."
-          : "Your paper was held for administrator review because the safety detector needs a closer look."
+          ? "Safety check passed. Your document is now published in the free library."
+          : "Your document was held for administrator review because the safety detector needs a closer look."
       );
       onSubmitted?.();
     },
@@ -56,14 +53,16 @@ export default function PublishPaper({
     event.preventDefault();
     setError("");
     setSubmissionNotice("");
-    if (!file) return setError("Choose a supported examination document.");
+    if (!file) return setError("Choose the document you want to share.");
     const validationError = validatePortalDocument(file, "submission");
     if (validationError) return setError(validationError);
     if (!authorized)
       return setError(
-        "Confirm that you own or are authorized to share this paper."
+        "Confirm that you own or are authorized to share this document."
       );
-    if (!form.level) return setError("Choose an education level.");
+    if (!form.title.trim()) return setError("Add a clear document title.");
+    if (!form.course.trim()) return setError("Add the subject, course, or collection name.");
+    if (!form.level) return setError("Choose the closest education level.");
     const level = form.level as EducationLevel;
     setUploading(true);
     try {
@@ -74,6 +73,12 @@ export default function PublishPaper({
       });
       await submit.mutateAsync({
         ...form,
+        title: form.title.trim(),
+        course: form.course.trim(),
+        documentType: form.documentType,
+        cycle: "Not specified",
+        unit: "General resource",
+        paperType: "Document",
         level,
         fileId: uploaded.fileId,
         authorized: true,
@@ -82,7 +87,7 @@ export default function PublishPaper({
       setError(
         uploadError instanceof Error
           ? uploadError.message
-          : "Unable to upload this paper."
+          : "Unable to upload this document."
       );
       setProgress(0);
     } finally {
@@ -97,12 +102,12 @@ export default function PublishPaper({
     >
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="section-eyebrow">Share for free</p>
+          <p className="section-eyebrow">            Share for free</p>
           <h2 className="mt-1 font-serif text-2xl font-semibold text-[#173e35]">
-            Submit a paper
+            Submit a document
           </h2>
           <p className="mt-2 max-w-xl text-sm leading-6 text-[#718780]">
-            Share an authorized examination document. Safe PDFs, text, CSV, and
+            Share an authorized learning document. Safe PDFs, text, CSV, and
             supported office files can publish immediately; formats or content
             that need a closer look are held securely for administrator review.
           </p>
@@ -113,24 +118,41 @@ export default function PublishPaper({
       </div>
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <label className="text-sm font-medium text-[#3c5d53]">
-          Paper title
+          Document title
           <Input
             required
             value={form.title}
             onChange={event => update("title", event.target.value)}
             className="mt-2 rounded-xl border-[#d9e6df]"
-            placeholder="e.g. Communication Skills June 2025"
+            placeholder="e.g. Biology study notes — cell division"
           />
         </label>
         <label className="text-sm font-medium text-[#3c5d53]">
-          Course
+          Subject, course, or collection
           <Input
             required
             value={form.course}
             onChange={event => update("course", event.target.value)}
             className="mt-2 rounded-xl border-[#d9e6df]"
-            placeholder="CDACC"
+            placeholder="e.g. Biology, Business, or Personal finance"
           />
+        </label>
+        <label className="text-sm font-medium text-[#3c5d53]">
+          Document type
+          <select
+            value={form.documentType}
+            onChange={event => update("documentType", event.target.value)}
+            className="mt-2 h-10 w-full rounded-xl border border-[#d9e6df] bg-white px-3 text-sm outline-none focus:border-[#4d8978] focus:ring-4 focus:ring-[#4d8978]/10"
+          >
+            {RESOURCE_TYPES.map(type => (
+              <option key={type} value={type}>
+                {RESOURCE_TYPE_LABELS[type]}
+              </option>
+            ))}
+          </select>
+          <span className="mt-1 block text-xs font-normal text-[#82958e]">
+            Choose the closest description; it helps learners find your document.
+          </span>
         </label>
         <label className="text-sm font-medium text-[#3c5d53]">
           Education level
@@ -140,7 +162,7 @@ export default function PublishPaper({
             className="mt-2 h-10 rounded-xl border-[#d9e6df]"
           />
           <span className="mt-1 block text-xs font-normal text-[#82958e]">
-            Choose the learner pathway for this paper.
+            Choose the closest learner pathway for this document.
           </span>
         </label>
       </div>

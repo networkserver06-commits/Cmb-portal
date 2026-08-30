@@ -15,6 +15,11 @@ import { uploadPortalDocument, validatePortalDocument } from "@/lib/fileUpload";
 import EducationLevelSelect from "@/components/EducationLevelSelect";
 import type { EducationLevel } from "@shared/educationLevels";
 import {
+  RESOURCE_TYPES,
+  RESOURCE_TYPE_LABELS,
+  resourceTypeLabel,
+} from "@shared/resourceTypes";
+import {
   CheckCircle2,
   FileText,
   Megaphone,
@@ -30,6 +35,7 @@ import { toast } from "sonner";
 const emptyPaper = {
   course: "",
   level: "" as EducationLevel | "",
+  documentType: "other-document" as (typeof RESOURCE_TYPES)[number],
   cycle: "",
   unit: "",
   paperType: "",
@@ -39,12 +45,26 @@ const emptyPaper = {
 };
 const acceptedDocuments =
   ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.odt,.odp,.ods,.rtf,.epub,.md,.html,.txt,.csv";
+
+function friendlyAdminResourceError(message: string) {
+  const normalized = message.toLowerCase();
+  if (normalized.includes("price"))
+    return "Check the access choice and enter a positive KES price for paid resources, or choose Free access for a zero price.";
+  if (normalized.includes("file") || normalized.includes("document"))
+    return "Choose a supported document under 4 MiB, then try again. Your selected file was not published.";
+  if (normalized.includes("title")) return "Add a clear title with at least two characters.";
+  if (normalized.includes("course"))
+    return "Add the subject, course, or collection name so learners can find this resource.";
+  if (normalized.includes("level"))
+    return "Choose the closest education level before publishing.";
+  return `Review the resource details and try again. ${message}`;
+}
 const resourceFieldLabels = {
   title: "Title",
-  course: "Course",
-  cycle: "Cycle",
-  unit: "Unit",
-  paperType: "Paper type",
+  course: "Subject, course, or collection",
+  cycle: "Year, term, or cycle",
+  unit: "Unit, topic, or section",
+  paperType: "Format or document label",
 } as const;
 
 export default function AdminControls() {
@@ -54,6 +74,7 @@ export default function AdminControls() {
   const toggle = trpc.admin.setAvailability.useMutation({
     onSuccess: () => utils.admin.listPapers.invalidate(),
   });
+  const discardUploadedFile = trpc.admin.discardUploadedFile.useMutation();
   const createPaper = trpc.admin.createPaper.useMutation({
     onSuccess: async () => {
       await utils.admin.listPapers.invalidate();
@@ -62,14 +83,17 @@ export default function AdminControls() {
       setPaperProgress(0);
       setPaperFeedback({
         tone: "success",
-        text: "Paper saved to the catalogue.",
+        text: "Resource saved to the library.",
       });
-      toast.success("Paper saved", {
+      toast.success("Resource saved", {
         description: "The catalogue has been refreshed.",
       });
     },
-    onError: error =>
-      toast.error("Paper could not be saved", { description: error.message }),
+    onError: error => {
+      const message = friendlyAdminResourceError(error.message);
+      setPaperFeedback({ tone: "error", text: message });
+      toast.error("Resource could not be saved", { description: message });
+    },
   });
   const publishPost = trpc.admin.publishPost.useMutation({
     onSuccess: async () => {
@@ -79,16 +103,19 @@ export default function AdminControls() {
       setPaperProgress(0);
       setPaperFeedback({
         tone: "success",
-        text: "Post published to the catalogue.",
+        text: "Resource published to the library.",
       });
-      toast.success("Post published", {
+      toast.success("Resource published", {
         description: "The catalogue has been refreshed.",
       });
     },
-    onError: error =>
-      toast.error("Post could not be published", {
-        description: error.message,
-      }),
+    onError: error => {
+      const message = friendlyAdminResourceError(error.message);
+      setPaperFeedback({ tone: "error", text: message });
+      toast.error("Resource could not be published", {
+        description: message,
+      });
+    },
   });
   const createAnnouncement = trpc.admin.createAnnouncement.useMutation({
     onSuccess: async () => {
@@ -134,6 +161,24 @@ export default function AdminControls() {
         text: "Choose an education level before saving this resource.",
       });
     const level = paper.level as EducationLevel;
+    const normalizedPaper = {
+      ...paper,
+      title: paper.title.trim(),
+      course: paper.course.trim(),
+      cycle: paper.cycle.trim() || "Not specified",
+      unit: paper.unit.trim() || "General resource",
+      paperType: paper.paperType.trim() || "Document",
+    };
+    if (!normalizedPaper.title || normalizedPaper.title.length < 2)
+      return setPaperFeedback({
+        tone: "error",
+        text: "Add a clear title with at least two characters.",
+      });
+    if (!normalizedPaper.course || normalizedPaper.course.length < 2)
+      return setPaperFeedback({
+        tone: "error",
+        text: "Add the subject, course, or collection name.",
+      });
     const priceKes = resourceMode === "free" ? 0 : Number(paper.priceKes);
     if (
       resourceMode === "paid" &&
@@ -145,15 +190,17 @@ export default function AdminControls() {
       });
     setPaperFeedback(null);
     setPreparingPaper(true);
+    let uploadedFileId: string | undefined;
     try {
       const uploaded = await uploadPortalDocument({
         file: paperFile,
         purpose: "paper",
         onProgress: setPaperProgress,
       });
+      uploadedFileId = uploaded.fileId;
       if (resourceType === "post") {
         await publishPost.mutateAsync({
-          ...paper,
+          ...normalizedPaper,
           level,
           priceKes,
           mode: resourceMode,
@@ -161,7 +208,7 @@ export default function AdminControls() {
         });
       } else {
         await createPaper.mutateAsync({
-          ...paper,
+          ...normalizedPaper,
           level,
           priceKes,
           mode: resourceMode,
@@ -169,13 +216,13 @@ export default function AdminControls() {
         });
       }
     } catch (error) {
-      setPaperFeedback({
-        tone: "error",
-        text:
-          error instanceof Error
-            ? error.message
-            : "The document could not be uploaded.",
-      });
+      if (uploadedFileId) {
+        await discardUploadedFile.mutateAsync({ fileId: uploadedFileId }).catch(() => undefined);
+      }
+      const message = friendlyAdminResourceError(
+        error instanceof Error ? error.message : "The document could not be uploaded."
+      );
+      setPaperFeedback({ tone: "error", text: message });
       setPaperProgress(0);
     } finally {
       setPreparingPaper(false);
@@ -208,7 +255,7 @@ export default function AdminControls() {
         </div>
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
-            <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-[#789087]">
+            <label className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-[#789087]">
               Resource type
             </label>
             <Select
@@ -232,6 +279,25 @@ export default function AdminControls() {
                 </SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-[#789087]">
+              Document category
+            </label>
+            <select
+              value={paper.documentType}
+              onChange={event => setPaperField("documentType", event.target.value)}
+              className="h-10 w-full rounded-xl border border-[#d9e6df] bg-white px-3 text-sm outline-none focus:border-[#4d8978] focus:ring-4 focus:ring-[#4d8978]/10"
+            >
+              {RESOURCE_TYPES.map(type => (
+                <option key={type} value={type}>
+                  {RESOURCE_TYPE_LABELS[type]}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-[#82958e]">
+              This label helps learners understand and find the document.
+            </p>
           </div>
           <div className="sm:col-span-2">
             <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-[#789087]">
@@ -281,9 +347,12 @@ export default function AdminControls() {
             <div key={key}>
               <label className="mb-2 block text-xs font-semibold text-[#58766b]">
                 {resourceFieldLabels[key]}
+                {key !== "title" && key !== "course" && (
+                  <span className="ml-1 font-normal text-[#9aaca5]">(optional)</span>
+                )}
               </label>
               <Input
-                required
+                required={key === "title" || key === "course"}
                 value={paper[key]}
                 onChange={e => setPaperField(key, e.target.value)}
                 placeholder={`Enter ${resourceFieldLabels[key].toLowerCase()}`}
@@ -405,7 +474,7 @@ export default function AdminControls() {
               ? "Saving…"
               : resourceType === "post"
                 ? "Publish catalogue post"
-                : "Upload catalogue paper"}
+                : "Upload catalogue resource"}
         </Button>
         {paperFeedback && (
           <p
@@ -445,7 +514,7 @@ export default function AdminControls() {
                       {item.title}
                     </div>
                     <div className="mt-0.5 text-xs text-[#82958e]">
-                      {item.accessMode === "free"
+                      {resourceTypeLabel(item.documentType)} · {item.accessMode === "free"
                         ? "Free access"
                         : "Paystack checkout"}{" "}
                       · KES {Number(item.priceKes).toLocaleString()}

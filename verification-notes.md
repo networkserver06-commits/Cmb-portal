@@ -55,3 +55,17 @@ The refreshed administrator Papers workspace showed a protected `View document` 
 - Focused reading mode browser verification on `/paper/67`: the live reader exposes Previous page, a Page 1/Page 2/Page 3 selector, Next page, and Show all pages controls. The initial view renders only Page 1 and displays its PDF content visibly inside the portal, preserving Open separately as a fallback.
 - Page-selection verification: selecting Page 3 in the live reader updates the toolbar to “Page 3 of 3”, changes the page heading to “Page 3 of 3”, and visibly renders the selected page content. The focused mode therefore avoids rendering every page until the visitor explicitly chooses Show all pages.
 - Responsive verification: the live browser confirmed the focused reader toolbar and Page 3 selection. The screenshot runner’s 375px captures remained on the public catalogue loading shell, consistent with its intermittent slow anonymous query capture; no mobile overflow was observed in the prior loaded reader capture.
+
+
+## General document-library verification
+
+- Desktop public catalogue capture confirmed the new `Learning Resource Library` branding, `Find your resource` heading, resource search, education-level filter, and `All document types` selector render together.
+- Mobile public catalogue capture confirmed the three catalogue controls stack without clipping and each resource card shows a compact `Share` action.
+- The captures also revealed remaining user-visible legacy footer copy: `ExamVault` and `Only authorized examination materials may be uploaded and distributed.` These should be generalized before final verification.
+- Resource cards currently display a legacy-style code line with the default `Examination paper` category for existing records, which is expected compatibility behavior; newly categorized resources will use their stored document type.
+
+
+## Final general-library catalogue captures
+
+- The refreshed desktop capture shows `ScholarShelf` / `LEARNING RESOURCE LIBRARY` branding, the general resource hero, `All document types` filter, and the broadened footer disclaimer. The catalogue remained in its loading state because the anonymous Mongo-backed query is latency-sensitive in this sandbox.
+- The refreshed mobile capture confirms the three catalogue controls stack cleanly at 390px and the general resource wording remains readable. The footer now reads `ScholarShelf` and `Only authorized learning documents may be uploaded and distributed.`
