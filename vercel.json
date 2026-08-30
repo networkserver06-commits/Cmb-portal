@@ -4,6 +4,17 @@
   "installCommand": "pnpm install --frozen-lockfile",
   "framework": null,
   "outputDirectory": "dist/public",
+  "headers": [
+    {
+      "source": "/((?!api/|assets/).*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, no-cache, must-revalidate, proxy-revalidate"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api" },
     { "source": "/account", "destination": "/index.html" },

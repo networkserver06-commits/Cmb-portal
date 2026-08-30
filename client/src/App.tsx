@@ -5,6 +5,7 @@ import { trpc } from "@/lib/trpc";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
+import NetworkStatus from "./components/NetworkStatus";
 import { ThemeProvider } from "./contexts/ThemeContext";
 const Home = lazy(() => import("./pages/Home"));
 const Admin = lazy(() => import("./pages/Admin"));
@@ -105,6 +106,7 @@ function App() {
       <ThemeProvider defaultTheme="light" switchable>
         <TooltipProvider>
           <Toaster />
+          <NetworkStatus />
           <AnalyticsTracker />
           <Router />
         </TooltipProvider>

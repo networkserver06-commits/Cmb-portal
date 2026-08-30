@@ -174,3 +174,10 @@
 - [x] Simplify contributor submission fields and explain exactly what document details are needed before upload.
 - [x] Improve administrator posting validation with field-specific, actionable error responses and safe upload cleanup on failed saves.
 - [x] Add regression tests and responsive verification for general documents, sharing, contributor submissions, and admin posting errors.
+
+- [x] Create and expose a branded ScholarShelf share-preview image through document share metadata; implementation uses the existing home-page visual per the later user decision.
+- [x] Add a visible offline/reconnecting indication that responds to browser connectivity changes.
+- [x] Recover gracefully from stale dynamically imported chunks instead of leaving users on a `Failed to fetch dynamically imported module` error.
+- [x] Add regression coverage and responsive verification for share metadata, offline UI, and stale-asset recovery.
+
+- [x] Replace the generated share-preview asset reference with the existing ScholarShelf home-page visual in share metadata.

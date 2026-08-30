@@ -7,9 +7,11 @@ import superjson from "superjson";
 import App from "./App";
 import { Toaster } from "@/components/ui/sonner";
 import { startLogin } from "./const";
+import { installStaleAssetRecovery } from "./lib/staleAssetRecovery";
 import "./index.css";
 
 const queryClient = new QueryClient();
+installStaleAssetRecovery();
 
 const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!(error instanceof TRPCClientError)) return;

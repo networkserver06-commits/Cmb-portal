@@ -69,3 +69,10 @@ The refreshed administrator Papers workspace showed a protected `View document` 
 
 - The refreshed desktop capture shows `ScholarShelf` / `LEARNING RESOURCE LIBRARY` branding, the general resource hero, `All document types` filter, and the broadened footer disclaimer. The catalogue remained in its loading state because the anonymous Mongo-backed query is latency-sensitive in this sandbox.
 - The refreshed mobile capture confirms the three catalogue controls stack cleanly at 390px and the general resource wording remains readable. The footer now reads `ScholarShelf` and `Only authorized learning documents may be uploaded and distributed.`
+
+
+## Share-preview and resilience verification
+
+The desktop and mobile home-page captures remain visually stable after adding share metadata, offline status handling, and stale-module recovery. The existing ScholarShelf hero visual is intact at both breakpoints, with the mobile navigation and primary actions remaining readable. The direct home-page capture is now the social preview asset used by Open Graph and Twitter metadata; no separate generated share visual is referenced.
+
+The built HTML contains the persistent home-page preview URL, `vercel.json` parses successfully, and the SPA shell uses a no-store cache policy for non-API/non-asset routes while hashed assets remain cacheable. The resilience regression, TypeScript check, focused tests, and production build passed.
