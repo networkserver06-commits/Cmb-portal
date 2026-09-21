@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, BookOpen, Loader2, Send, Sparkles } from "lucide-react";
+import { AlertCircle, BookOpen, Check, Clipboard, Loader2, Send, Sparkles } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
@@ -16,6 +16,8 @@ export default function GrokStudyAssistant({
   const [mode, setMode] = useState<"ask" | "summarize">("ask");
   const [paperId, setPaperId] = useState("");
   const [prompt, setPrompt] = useState("");
+  const [focus, setFocus] = useState("");
+  const [copied, setCopied] = useState(false);
   const [answer, setAnswer] = useState("");
   const [answerProvider, setAnswerProvider] = useState<"xai" | "groq" | "">("");
   const [error, setError] = useState("");
@@ -67,11 +69,30 @@ export default function GrokStudyAssistant({
     if (!isAuthenticated) return;
     setError("");
     setAnswer("");
+    const focusedPrompt = focus.trim()
+      ? `Focus on page or section ${focus.trim()} of the document. ${prompt.trim()}`
+      : prompt.trim();
     ask.mutate({
       mode,
       paperId: paperId ? Number(paperId) : undefined,
-      prompt,
+      prompt: focusedPrompt,
     });
+  };
+
+  const askQuickly = (question: string) => {
+    setMode("ask");
+    setPrompt(question);
+  };
+
+  const copyAnswer = async () => {
+    if (!answer) return;
+    try {
+      await navigator.clipboard.writeText(answer);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      setError("Copy is unavailable in this browser. Select the answer text manually.");
+    }
   };
 
   return (
@@ -160,6 +181,39 @@ export default function GrokStudyAssistant({
           )}
         </label>
 
+        {documentContext && (
+          <div className="grid gap-2 text-sm font-semibold text-[#274d43]">
+            <label htmlFor="assistant-focus">Page or section (optional)</label>
+            <input
+              id="assistant-focus"
+              value={focus}
+              onChange={event => setFocus(event.target.value)}
+              placeholder="e.g. Page 4, Kiswahili ni nini, or Introduction"
+              className="h-11 rounded-xl border border-[#c8d9d2] bg-white px-3 font-normal outline-none focus:border-[#4b8876] focus:ring-2 focus:ring-[#4b8876]/25"
+            />
+          </div>
+        )}
+
+        {mode === "ask" && documentContext && (
+          <div className="flex flex-wrap gap-2" aria-label="Quick document questions">
+            {[
+              ["Explain simply", "Explain the selected document in simple student-friendly terms."],
+              ["Key points", "List the most important points from the selected document for revision."],
+              ["Definitions", "Extract and explain the important definitions and terms from the selected document."],
+              ["Exam questions", "Create five likely exam questions with short answers from the selected document."],
+            ].map(([label, question]) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => askQuickly(question)}
+                className="rounded-full border border-[#c8d9d2] bg-white px-3 py-1.5 text-xs font-semibold text-[#34745f] transition hover:border-[#4b8876] hover:bg-[#eaf5ef]"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
         <label className="grid gap-2 text-sm font-semibold text-[#274d43]">
           {mode === "summarize" ? "Summary instructions (optional)" : "Your question"}
           <textarea
@@ -199,8 +253,11 @@ export default function GrokStudyAssistant({
       )}
       {answer && (
         <article className="mt-5 whitespace-pre-wrap rounded-2xl border border-[#c8ddd3] bg-white p-5 text-sm leading-7 text-[#294d42]">
-          <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.15em] text-[#2d7965]">
-            <Sparkles size={14} /> ScholarShelf Assistant · {answerProvider === "groq" ? "Groq" : "xAI"}
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs font-bold uppercase tracking-[0.15em] text-[#2d7965]">
+            <span className="inline-flex items-center gap-2"><Sparkles size={14} /> ScholarShelf Assistant · {answerProvider === "groq" ? "Groq" : "xAI"}</span>
+            <button type="button" onClick={copyAnswer} className="inline-flex items-center gap-1 rounded-full border border-[#c8d9d2] px-2.5 py-1 text-[10px] tracking-normal normal-case text-[#34745f] hover:bg-[#eaf5ef]">
+              {copied ? <Check size={13} /> : <Clipboard size={13} />} {copied ? "Copied" : "Copy answer"}
+            </button>
           </div>
           {answer}
         </article>

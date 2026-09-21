@@ -258,9 +258,9 @@ async function extractLocalDocumentText(bytes: Buffer, fileName: string, mimeTyp
         const page = await pdf.getPage(pageNumber);
         const content = await page.getTextContent();
         pages.push(
-          content.items
+          `[Page ${pageNumber}] ${content.items
             .map(item => ("str" in item ? String(item.str) : ""))
-            .join(" ")
+            .join(" ")}`
         );
       }
       return pages.join(" ").replace(/\s+/g, " ").trim();
