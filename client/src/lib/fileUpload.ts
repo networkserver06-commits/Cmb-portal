@@ -1,4 +1,5 @@
-export const MAX_PORTAL_UPLOAD_BYTES = 4 * 1024 * 1024;
+export const MAX_PORTAL_UPLOAD_BYTES = 250 * 1024 * 1024;
+export const PORTAL_UPLOAD_CHUNK_BYTES = 3.5 * 1024 * 1024;
 
 const extensions = new Set([
   "pdf",
@@ -32,15 +33,58 @@ function messageFromResponse(responseText: string) {
   }
 }
 
+async function jsonRequest<T>(url: string, init: RequestInit) {
+  const response = await fetch(url, {
+    ...init,
+    credentials: "include",
+    headers: { "Content-Type": "application/json", ...init.headers },
+  });
+  const text = await response.text();
+  if (!response.ok) throw new Error(messageFromResponse(text));
+  return JSON.parse(text) as T;
+}
+
+async function sendChunkWithRetry(
+  uploadId: string,
+  index: number,
+  chunk: Blob,
+  onProgress: (loaded: number) => void
+) {
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      const response = await fetch("/api/files/upload/chunk", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/octet-stream",
+          "x-upload-id": uploadId,
+          "x-chunk-index": String(index),
+        },
+        body: chunk,
+      });
+      const text = await response.text();
+      if (!response.ok) throw new Error(messageFromResponse(text));
+      onProgress(chunk.size);
+      return;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error("Chunk upload failed.");
+      if (attempt < 3)
+        await new Promise(resolve => setTimeout(resolve, 500 * 2 ** attempt));
+    }
+  }
+  throw lastError ?? new Error("Chunk upload failed.");
+}
+
 export function validatePortalDocument(
   file: File,
-  purpose: "submission" | "paper"
+  _purpose: "submission" | "paper"
 ) {
   if (!extensions.has(extensionOf(file.name)))
     return "Use a PDF, Word, Excel, PowerPoint, OpenDocument, RTF, EPUB, Markdown, HTML, TXT, or CSV document.";
   if (file.size < 1) return "Select a non-empty document.";
   if (file.size > MAX_PORTAL_UPLOAD_BYTES)
-    return "Files must be 4 MiB or smaller for reliable uploads.";
+    return "Files must be 250 MiB or smaller.";
   return null;
 }
 
@@ -51,68 +95,51 @@ export async function uploadPortalDocument(input: {
 }) {
   const validationError = validatePortalDocument(input.file, input.purpose);
   if (validationError) throw new Error(validationError);
-  return await new Promise<{
-    fileId: string;
-    fileName: string;
-    mimeType: string;
-    byteLength: number;
-  }>((resolve, reject) => {
-    const request = new XMLHttpRequest();
-    request.open("POST", "/api/files/upload");
-    request.withCredentials = true;
-    request.setRequestHeader("Content-Type", "application/octet-stream");
-    request.setRequestHeader(
-      "x-file-name",
-      encodeURIComponent(input.file.name)
-    );
-    request.setRequestHeader(
-      "x-file-type",
-      input.file.type || "application/octet-stream"
-    );
-    request.setRequestHeader("x-file-purpose", input.purpose);
-    request.upload.onprogress = event => {
-      if (event.lengthComputable)
-        input.onProgress?.(
-          Math.min(
-            99,
-            Math.max(1, Math.round((event.loaded / event.total) * 100))
-          )
-        );
-    };
-    request.onerror = () =>
-      reject(new Error("Network error while uploading the document."));
-    request.onload = () => {
-      if (request.status < 200 || request.status >= 300)
-        return reject(new Error(messageFromResponse(request.responseText)));
-      try {
-        const response = JSON.parse(request.responseText) as {
-          fileId?: string;
-          fileName?: string;
-          mimeType?: string;
-          byteLength?: number;
-        };
-        if (
-          !response.fileId ||
-          !response.fileName ||
-          !response.mimeType ||
-          !Number.isFinite(response.byteLength)
-        )
-          throw new Error("The server did not return valid file metadata.");
-        input.onProgress?.(100);
-        resolve({
-          fileId: response.fileId,
-          fileName: response.fileName,
-          mimeType: response.mimeType,
-          byteLength: Number(response.byteLength),
-        });
-      } catch (error) {
-        reject(
-          error instanceof Error
-            ? error
-            : new Error("The server returned an invalid upload response.")
-        );
-      }
-    };
-    request.send(input.file);
+  const totalChunks = Math.ceil(input.file.size / PORTAL_UPLOAD_CHUNK_BYTES);
+  const initialized = await jsonRequest<{
+    uploadId: string;
+    chunkSize: number;
+  }>("/api/files/upload/init", {
+    method: "POST",
+    body: JSON.stringify({
+      purpose: input.purpose,
+      fileName: input.file.name,
+      mimeType: input.file.type || "application/octet-stream",
+      totalBytes: input.file.size,
+      totalChunks,
+    }),
   });
+  let uploadedBytes = 0;
+  const chunkSize = initialized.chunkSize || PORTAL_UPLOAD_CHUNK_BYTES;
+  for (let index = 0; index < totalChunks; index += 1) {
+    const start = index * chunkSize;
+    const chunk = input.file.slice(start, Math.min(input.file.size, start + chunkSize));
+    await sendChunkWithRetry(initialized.uploadId, index, chunk, loaded => {
+      uploadedBytes += loaded;
+      input.onProgress?.(Math.min(99, Math.round((uploadedBytes / input.file.size) * 100)));
+    });
+  }
+  const response = await jsonRequest<{
+    fileId?: string;
+    fileName?: string;
+    mimeType?: string;
+    byteLength?: number;
+  }>("/api/files/upload/complete", {
+    method: "POST",
+    body: JSON.stringify({ uploadId: initialized.uploadId }),
+  });
+  if (
+    !response.fileId ||
+    !response.fileName ||
+    !response.mimeType ||
+    !Number.isFinite(response.byteLength)
+  )
+    throw new Error("The server did not return valid file metadata.");
+  input.onProgress?.(100);
+  return {
+    fileId: response.fileId,
+    fileName: response.fileName,
+    mimeType: response.mimeType,
+    byteLength: Number(response.byteLength),
+  };
 }

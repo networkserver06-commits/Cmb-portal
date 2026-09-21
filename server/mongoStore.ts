@@ -190,6 +190,15 @@ export async function mongo(): Promise<Db> {
       database
         .collection("grok_usage")
         .createIndex({ userId: 1, dayKey: 1 }, { unique: true }),
+      database
+        .collection("upload_sessions")
+        .createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
+      database
+        .collection("upload_chunks")
+        .createIndex({ uploadId: 1, index: 1 }, { unique: true }),
+      database
+        .collection("upload_chunks")
+        .createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
     ]);
   });
   try {

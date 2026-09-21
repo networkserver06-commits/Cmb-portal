@@ -16,9 +16,13 @@ import { parse } from "cookie";
 import { ACCOUNT_COOKIE, authenticateAccount } from "../mongoAuth";
 import { storageGetSignedUrl } from "../storage";
 import {
+  CHUNK_UPLOAD_BYTES,
   MAX_UPLOAD_BYTES,
+  beginChunkedPortalUpload,
+  completeChunkedPortalUpload,
   portalFileById,
   readPortalFileBytes,
+  storePortalUploadChunk,
   streamPortalFile,
   uploadPortalFile,
 } from "../fileStore";
@@ -48,6 +52,7 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 
 export async function createApp() {
   const app = express();
+  app.use(express.json({ limit: "1mb" }));
   const requestUser = async (req: express.Request, res: express.Response) =>
     (await createContext({ req, res } as any)).user;
   app.get("/api/health", (_req, res) =>
@@ -78,7 +83,7 @@ export async function createApp() {
   });
   app.post(
     "/api/files/upload",
-    express.raw({ type: "application/octet-stream", limit: MAX_UPLOAD_BYTES }),
+    express.raw({ type: "application/octet-stream", limit: CHUNK_UPLOAD_BYTES }),
     async (req, res) => {
       try {
         const user = await requestUser(req, res);
@@ -127,6 +132,68 @@ export async function createApp() {
       }
     }
   );
+  app.post("/api/files/upload/init", async (req, res) => {
+    try {
+      const user = await requestUser(req, res);
+      if (!user) return res.status(401).json({ error: "Authentication required" });
+      const purpose = req.body?.purpose;
+      if (purpose !== "submission" && purpose !== "paper")
+        return res.status(400).json({ error: "Use a supported upload purpose." });
+      if (purpose === "paper" && user.role !== "admin")
+        return res.status(403).json({ error: "Administrator access is required for publication files." });
+      const result = await beginChunkedPortalUpload({
+        ownerId: user.id,
+        purpose,
+        fileName: String(req.body?.fileName ?? ""),
+        mimeType: String(req.body?.mimeType ?? "application/octet-stream"),
+        totalBytes: Number(req.body?.totalBytes),
+        totalChunks: Number(req.body?.totalChunks),
+      });
+      return res.status(201).json(result);
+    } catch (error) {
+      return res.status(400).json({ error: error instanceof Error ? error.message : "Unable to start upload." });
+    }
+  });
+  app.post(
+    "/api/files/upload/chunk",
+    express.raw({ type: "application/octet-stream", limit: CHUNK_UPLOAD_BYTES }),
+    async (req, res) => {
+      try {
+        const user = await requestUser(req, res);
+        if (!user) return res.status(401).json({ error: "Authentication required" });
+        if (!Buffer.isBuffer(req.body))
+          return res.status(400).json({ error: "Send the upload chunk as binary data." });
+        const result = await storePortalUploadChunk({
+          uploadId: String(req.header("x-upload-id") ?? ""),
+          ownerId: user.id,
+          index: Number(req.header("x-chunk-index")),
+          bytes: req.body,
+        });
+        return res.status(200).json(result);
+      } catch (error) {
+        return res.status(400).json({ error: error instanceof Error ? error.message : "Unable to store upload chunk." });
+      }
+    }
+  );
+  app.post("/api/files/upload/complete", async (req, res) => {
+    try {
+      const user = await requestUser(req, res);
+      if (!user) return res.status(401).json({ error: "Authentication required" });
+      const file = await completeChunkedPortalUpload({
+        uploadId: String(req.body?.uploadId ?? ""),
+        ownerId: user.id,
+      });
+      return res.status(201).json({
+        fileId: file.gridFsId,
+        fileName: file.fileName,
+        mimeType: file.mimeType,
+        byteLength: file.byteLength,
+        status: "uploaded",
+      });
+    } catch (error) {
+      return res.status(400).json({ error: error instanceof Error ? error.message : "Unable to complete upload." });
+    }
+  });
   const handleProtectedFile = async (
     req: express.Request,
     res: express.Response,
@@ -182,7 +249,6 @@ export async function createApp() {
   app.get("/api/files/:fileId/view", (req, res) =>
     handleProtectedFile(req, res, "inline")
   );
-  app.use(express.json({ limit: "1mb" }));
   app.use(express.urlencoded({ limit: "1mb", extended: true }));
   registerOAuthRoutes(app);
   const handleProtectedPaper = async (

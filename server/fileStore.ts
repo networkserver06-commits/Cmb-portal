@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { Response } from "express";
 import { ObjectId } from "mongodb";
 import {
@@ -8,7 +8,9 @@ import {
   recordWorkflow,
 } from "./mongoStore";
 
-export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
+export const MAX_UPLOAD_BYTES = 250 * 1024 * 1024;
+export const MAX_SCAN_BYTES = 4 * 1024 * 1024;
+export const CHUNK_UPLOAD_BYTES = 3.5 * 1024 * 1024;
 export const PORTAL_FILE_BUCKET = "portal_files";
 
 const fileTypes = {
@@ -97,7 +99,7 @@ export function validateUpload(input: {
     throw new Error("Select a non-empty document to upload.");
   if (input.byteLength > MAX_UPLOAD_BYTES)
     throw new Error(
-      "Files must be 4 MiB or smaller for reliable Vercel uploads."
+      "Files must be 250 MiB or smaller."
     );
   const supplied =
     input.mimeType.trim().toLowerCase() || "application/octet-stream";
@@ -368,7 +370,7 @@ export async function purgeRejectedPortalFile(input: {
 export async function readPortalFileBytes(fileId: string) {
   const metadata = await portalFileById(fileId);
   if (!metadata) throw new Error("The requested file is unavailable.");
-  if (metadata.byteLength > MAX_UPLOAD_BYTES)
+  if (metadata.byteLength > MAX_SCAN_BYTES)
     throw new Error("The selected file exceeds the safety scan limit.");
 
   const stream = (await portalFiles()).openDownloadStream(new ObjectId(fileId));
@@ -377,7 +379,7 @@ export async function readPortalFileBytes(fileId: string) {
   for await (const chunk of stream) {
     const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
     total += buffer.byteLength;
-    if (total > MAX_UPLOAD_BYTES)
+    if (total > MAX_SCAN_BYTES)
       throw new Error("The selected file exceeds the safety scan limit.");
     chunks.push(buffer);
   }
@@ -415,4 +417,193 @@ export async function streamPortalFile(
     stream.pipe(response);
   });
   return metadata;
+}
+
+
+type ChunkUploadSession = {
+  _id: string;
+  ownerId: number;
+  purpose: FilePurpose;
+  fileName: string;
+  mimeType: string;
+  totalBytes: number;
+  totalChunks: number;
+  createdAt: Date;
+  expiresAt: Date;
+};
+
+export async function beginChunkedPortalUpload(input: {
+  ownerId: number;
+  purpose: FilePurpose;
+  fileName: string;
+  mimeType: string;
+  totalBytes: number;
+  totalChunks: number;
+}) {
+  validateUpload({
+    fileName: input.fileName,
+    mimeType: input.mimeType,
+    byteLength: input.totalBytes,
+  });
+  if (
+    !Number.isInteger(input.totalChunks) ||
+    input.totalChunks < 1 ||
+    input.totalChunks > Math.ceil(MAX_UPLOAD_BYTES / CHUNK_UPLOAD_BYTES)
+  )
+    throw new Error("The upload contains an invalid number of chunks.");
+  const uploadId = randomUUID();
+  await (await mongo()).collection<ChunkUploadSession>("upload_sessions").insertOne({
+    _id: uploadId,
+    ownerId: input.ownerId,
+    purpose: input.purpose,
+    fileName: input.fileName,
+    mimeType: input.mimeType,
+    totalBytes: input.totalBytes,
+    totalChunks: input.totalChunks,
+    createdAt: new Date(),
+    expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000),
+  });
+  return { uploadId, chunkSize: CHUNK_UPLOAD_BYTES };
+}
+
+export async function storePortalUploadChunk(input: {
+  uploadId: string;
+  ownerId: number;
+  index: number;
+  bytes: Buffer;
+}) {
+  const database = await mongo();
+  const session = await database
+    .collection<ChunkUploadSession>("upload_sessions")
+    .findOne({ _id: input.uploadId, ownerId: input.ownerId });
+  if (!session || session.expiresAt.getTime() < Date.now())
+    throw new Error("This upload session has expired. Start the upload again.");
+  if (
+    !Number.isInteger(input.index) ||
+    input.index < 0 ||
+    input.index >= session.totalChunks
+  )
+    throw new Error("The upload chunk number is invalid.");
+  if (input.bytes.byteLength > CHUNK_UPLOAD_BYTES)
+    throw new Error("The upload chunk is too large.");
+  await database.collection("upload_chunks").updateOne(
+    { uploadId: input.uploadId, index: input.index },
+    {
+      $set: {
+        uploadId: input.uploadId,
+        index: input.index,
+        bytes: input.bytes,
+        byteLength: input.bytes.byteLength,
+        expiresAt: session.expiresAt,
+        updatedAt: new Date(),
+      },
+    },
+    { upsert: true }
+  );
+  const received = await database
+    .collection("upload_chunks")
+    .countDocuments({ uploadId: input.uploadId });
+  return { received, totalChunks: session.totalChunks };
+}
+
+export async function completeChunkedPortalUpload(input: {
+  uploadId: string;
+  ownerId: number;
+}) {
+  const database = await mongo();
+  const sessions = database.collection<ChunkUploadSession>("upload_sessions");
+  const session = await sessions.findOne({
+    _id: input.uploadId,
+    ownerId: input.ownerId,
+  });
+  if (!session || session.expiresAt.getTime() < Date.now())
+    throw new Error("This upload session has expired. Start the upload again.");
+  const chunks = await database
+    .collection<{ index: number; bytes: Buffer }>("upload_chunks")
+    .find({ uploadId: input.uploadId })
+    .sort({ index: 1 })
+    .toArray();
+  if (
+    chunks.length !== session.totalChunks ||
+    chunks.some((chunk, index) => chunk.index !== index)
+  )
+    throw new Error("Some upload chunks are missing. Please retry the upload.");
+  const totalBytes = chunks.reduce(
+    (sum, chunk) => sum + chunk.bytes.byteLength,
+    0
+  );
+  if (totalBytes !== session.totalBytes)
+    throw new Error("The uploaded file size does not match its upload manifest.");
+  const firstChunk = chunks[0]?.bytes ?? Buffer.alloc(0);
+  const validated = validateUpload({
+    fileName: session.fileName,
+    mimeType: session.mimeType,
+    byteLength: totalBytes,
+    bytes: firstChunk,
+  });
+  const bucket = await portalFiles();
+  const hash = createHash("sha256");
+  const upload = bucket.openUploadStream(validated.fileName, {
+    metadata: {
+      ownerId: session.ownerId,
+      purpose: session.purpose,
+      uploadedAt: new Date(),
+      originalName: validated.fileName,
+      mimeType: validated.mimeType,
+    },
+  });
+  try {
+    for (const chunk of chunks) {
+      hash.update(chunk.bytes);
+      upload.write(chunk.bytes);
+    }
+    upload.end();
+    await new Promise<void>((resolve, reject) => {
+      upload.once("error", reject);
+      upload.once("finish", resolve);
+    });
+    const now = new Date();
+    const metadata: PortalFileMetadata = {
+      _id: new ObjectId(),
+      gridFsId: upload.id.toString(),
+      ownerId: session.ownerId,
+      purpose: session.purpose,
+      lifecycle: "pending",
+      fileName: validated.fileName,
+      mimeType: validated.mimeType,
+      byteLength: totalBytes,
+      sha256: hash.digest("hex"),
+      references: [],
+      createdAt: now,
+      updatedAt: now,
+    };
+    await database
+      .collection<PortalFileMetadata>("file_metadata")
+      .insertOne(metadata);
+    await recordWorkflow({
+      entityType: "file",
+      entityId: metadata.gridFsId,
+      status: "uploaded",
+      actorId: session.ownerId,
+      detail: `${session.purpose}:chunked`,
+    });
+    await recordOperationalEvent({
+      eventType: "file.uploaded",
+      actorId: session.ownerId,
+      subjectType: "file",
+      subjectId: metadata.gridFsId,
+      detail: {
+        purpose: session.purpose,
+        byteLength: metadata.byteLength,
+        mimeType: metadata.mimeType,
+        chunked: true,
+      },
+    });
+    await database.collection("upload_chunks").deleteMany({ uploadId: input.uploadId });
+    await sessions.deleteOne({ _id: input.uploadId });
+    return metadata;
+  } catch (error) {
+    await bucket.delete(upload.id).catch(() => undefined);
+    throw error;
+  }
 }
