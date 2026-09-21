@@ -26,6 +26,7 @@ import { trpc } from "@/lib/trpc";
 import EducationLevelSelect from "@/components/EducationLevelSelect";
 import ShareDocumentButton from "@/components/ShareDocumentButton";
 import ShareAppButton from "@/components/ShareAppButton";
+import AndroidAppPrompt from "@/components/AndroidAppPrompt";
 import GrokStudyAssistant from "@/components/GrokStudyAssistant";
 import { educationLevelLabel } from "@shared/educationLevels";
 import {
@@ -579,6 +580,10 @@ export default function Home() {
               </div>
             </div>
           </div>
+        </section>
+
+        <section className="container py-8 md:py-10" aria-label="Android app">
+          <AndroidAppPrompt />
         </section>
 
         <section className="container py-10 md:py-14" aria-label="AI study desk">

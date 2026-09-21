@@ -5,6 +5,7 @@ import { filterAndSortLibrary, type LibrarySort } from "@/lib/libraryFilters";
 import { educationLevelLabel } from "@shared/educationLevels";
 import { resourceTypeLabel } from "@shared/resourceTypes";
 import ShareDocumentButton from "@/components/ShareDocumentButton";
+import AndroidAppPrompt from "@/components/AndroidAppPrompt";
 import GrokStudyAssistant from "@/components/GrokStudyAssistant";
 import PublishPaper from "./PublishPaper";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -472,6 +473,9 @@ function AccountDashboard({
               </DropdownMenu>
             </div>
           </div>
+        </div>
+        <div className="mb-8">
+          <AndroidAppPrompt compact />
         </div>
         <section className="mb-8" aria-label="ScholarShelf Assistant">
           <GrokStudyAssistant />

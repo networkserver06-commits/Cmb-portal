@@ -40,6 +40,7 @@ The Home page and signed-in student dashboard include ScholarShelf Assistant. St
 | `GROQ_FALLBACK_MODEL`       | Server-only | Optional additional Groq model tried before the built-in fallbacks.                                                   |
 | `RESEND_API_KEY`            | Server-only | Account verification and password-reset emails.                                                                        |
 | `PASSWORD_RESET_FROM_EMAIL` | Server-only | Verified Resend sender identity.                                                                                       |
+| `VITE_ANDROID_APP_DOWNLOAD_URL` | Client-safe | Optional public URL for the signed ScholarShelf Android APK. When configured, the homepage and student dashboard show a working Download APK button. |
 
 Never commit `.env` files, payment secrets, database credentials, or user-uploaded documents.
 
