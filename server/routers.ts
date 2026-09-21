@@ -66,6 +66,7 @@ import {
   normalizeKenyanPhone,
   MIN_LEETEC_AMOUNT_KES,
 } from "./leetec";
+import { askGrok, grokUsageForUser } from "./grok";
 
 const educationLevelInput = z.enum(EDUCATION_LEVELS);
 const resourceTypeInput = z.enum(RESOURCE_TYPES).default("examination-paper");
@@ -363,6 +364,25 @@ export const appRouter = router({
       }),
   }),
   student: router({
+    grokUsage: protectedProcedure.query(({ ctx }) =>
+      grokUsageForUser(ctx.user.id)
+    ),
+    grokAsk: protectedProcedure
+      .input(
+        z.object({
+          mode: z.enum(["ask", "summarize"]),
+          prompt: z.string().max(6000).default(""),
+          paperId: z.number().int().positive().optional(),
+        })
+      )
+      .mutation(({ ctx, input }) =>
+        askGrok({
+          userId: ctx.user.id,
+          mode: input.mode,
+          prompt: input.prompt,
+          paperId: input.paperId,
+        })
+      ),
     library: protectedProcedure.query(async ({ ctx }) => {
       const ents = await (await mongo())
         .collection<any>("entitlements")

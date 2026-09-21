@@ -13,6 +13,10 @@ const homeSource = readFileSync(
   new URL("../client/src/pages/Home.tsx", import.meta.url),
   "utf8"
 );
+const grokSource = readFileSync(
+  new URL("../client/src/components/GrokStudyAssistant.tsx", import.meta.url),
+  "utf8"
+);
 const stylesSource = readFileSync(
   new URL("../client/src/index.css", import.meta.url),
   "utf8"
@@ -186,6 +190,10 @@ describe("account route regression coverage", () => {
     expect(homeSource).toContain("selected resource will stay ready");
     expect(homeSource).toContain("new URLSearchParams(window.location.search)");
     expect(homeSource).toContain("<Dialog");
+    expect(homeSource).toContain("GrokStudyAssistant");
+    expect(grokSource).toContain("100 requests each day");
+    expect(grokSource).toContain("Summarise a document");
+    expect(grokSource).toContain("Ask Grok");
     expect(homeSource).toContain("walletBalance.refetch()");
     expect(homeSource).toContain("Checking your ScholarShelf wallet before checkout…");
     expect(homeSource).toContain('walletCheckState === "insufficient"');

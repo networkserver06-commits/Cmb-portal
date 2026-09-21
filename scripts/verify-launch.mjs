@@ -5,6 +5,7 @@ const required = [
   "MONGODB_URI",
   "JWT_SECRET",
   "LEETEC_API_KEY",
+  "XAI_API_KEY",
   "RESEND_API_KEY",
   "PASSWORD_RESET_FROM_EMAIL",
 ];

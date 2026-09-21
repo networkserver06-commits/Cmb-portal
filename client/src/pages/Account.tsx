@@ -5,6 +5,7 @@ import { filterAndSortLibrary, type LibrarySort } from "@/lib/libraryFilters";
 import { educationLevelLabel } from "@shared/educationLevels";
 import { resourceTypeLabel } from "@shared/resourceTypes";
 import ShareDocumentButton from "@/components/ShareDocumentButton";
+import GrokStudyAssistant from "@/components/GrokStudyAssistant";
 import PublishPaper from "./PublishPaper";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -463,6 +464,9 @@ function AccountDashboard({
             </div>
           </div>
         </div>
+        <section className="mb-8" aria-label="Grok study assistant">
+          <GrokStudyAssistant />
+        </section>
         <div className="min-w-0">
           <section
             className={`account-reveal flex flex-col justify-between gap-6 md:flex-row md:items-end ${activeTab !== "overview" ? "hidden" : ""}`}

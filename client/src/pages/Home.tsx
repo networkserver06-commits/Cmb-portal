@@ -26,6 +26,7 @@ import { trpc } from "@/lib/trpc";
 import EducationLevelSelect from "@/components/EducationLevelSelect";
 import ShareDocumentButton from "@/components/ShareDocumentButton";
 import ShareAppButton from "@/components/ShareAppButton";
+import GrokStudyAssistant from "@/components/GrokStudyAssistant";
 import { educationLevelLabel } from "@shared/educationLevels";
 import {
   RESOURCE_TYPES,
@@ -565,6 +566,10 @@ export default function Home() {
               </div>
             </div>
           </div>
+        </section>
+
+        <section className="container py-10 md:py-14" aria-label="Grok study assistant">
+          <GrokStudyAssistant isAuthenticated={isAuthenticated} />
         </section>
 
         <section id="catalogue" className="container py-16 md:py-20">

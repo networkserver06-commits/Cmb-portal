@@ -29,15 +29,20 @@ Enter each secret in **Vercel → Project Settings → Environment Variables** f
 | `JWT_SECRET`                               | Server only            | Account-session signing.                                                               |
 | `LEETEC_BASE_URL`                          | Server only            | LeeTec API origin; use `https://leetec.online` unless deliberately overridden.         |
 | `LEETEC_API_KEY`                            | Server only            | LeeTec STK Push and transaction-history authentication.                                 |
+| `XAI_API_KEY`                               | Server only            | Grok 4.6 student questions and document summaries through the xAI Responses and Files APIs. |
 | `RESEND_API_KEY`                           | Server only            | Email verification and password-reset delivery.                                        |
 | `PASSWORD_RESET_FROM_EMAIL`                | Server only            | A sender identity verified with Resend.                                                |
 | OAuth variables already used by the portal | Server/client as named | Existing Manus/OAuth session compatibility, where applicable.                          |
 
-Never prefix a secret with `VITE_`. LeeTec credentials must remain server-only.
+Never prefix a secret with `VITE_`. LeeTec and xAI credentials must remain server-only.
 
 ## LeeTec STK Push and Reconciliation
 
 The server creates a pending order or wallet top-up, collects a Kenyan phone number, and sends a LeeTec STK Push through `POST /api/v1/stkpush`. It then polls authenticated `GET /api/v1/transactions` and independently verifies the account reference, KES currency, and exact amount before granting a paper entitlement or wallet credit. LeeTec’s public documentation describes optional webhooks but does not publish a signed payload contract; the portal therefore does not invent webhook verification logic.
+
+## Grok Student Assistant
+
+The Home page displays Grok to everyone, but only authenticated students can use it. The dashboard provides the same assistant with unlocked library documents available for document-aware questions and summaries. The server uses `grok-4.6` through `https://api.x.ai/v1/responses`, temporarily uploads entitled documents to the xAI Files API, and deletes those temporary files after each response. MongoDB tracks one credit per request for each user and enforces a 100-request daily limit that resets at 00:00 UTC. Add `XAI_API_KEY` to Vercel before testing this feature; students are not charged directly for Grok usage.
 
 ## MongoDB Atlas Setup
 
