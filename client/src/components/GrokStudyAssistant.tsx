@@ -6,8 +6,10 @@ import { Link } from "wouter";
 
 export default function GrokStudyAssistant({
   isAuthenticated = true,
+  compact = false,
 }: {
   isAuthenticated?: boolean;
+  compact?: boolean;
 }) {
   const [mode, setMode] = useState<"ask" | "summarize">("ask");
   const [paperId, setPaperId] = useState("");
@@ -54,20 +56,20 @@ export default function GrokStudyAssistant({
   };
 
   return (
-    <section className="rounded-3xl border border-[#c8ddd3] bg-[#f5fbf7] p-5 shadow-sm sm:p-7">
+    <section className={`study-assistant rounded-3xl border border-[#c8ddd3] bg-[#f5fbf7] shadow-sm ${compact ? "p-4" : "p-5 sm:p-7"}`}>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#6b8f83]">
             <Sparkles size={14} /> ScholarShelf Assistant
           </div>
-          <h2 className="mt-2 font-serif text-2xl font-semibold text-[#173e35]">
+          <h2 className={`${compact ? "text-xl" : "text-2xl"} mt-2 font-serif font-semibold text-[#173e35]`}>
             Ask, learn, and revise with ScholarShelf Assistant.
           </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-[#648078]">
+          <p className={`${compact ? "hidden" : ""} mt-2 max-w-2xl text-sm leading-6 text-[#648078]`}>
             Get explanations, ask questions about an unlocked document, or create a structured revision summary. This is free for students with 100 requests each day.
           </p>
         </div>
-        <div className="rounded-2xl border border-[#c8ddd3] bg-white px-4 py-3 text-right text-xs text-[#5f786f]">
+        <div className={`${compact ? "hidden" : ""} rounded-2xl border border-[#c8ddd3] bg-white px-4 py-3 text-right text-xs text-[#5f786f]`}>
           <div className="font-semibold text-[#1d5146]">
             {usage.data?.remainingCredits ?? "—"} / {usage.data?.dailyLimit ?? 100} requests left
           </div>
@@ -88,7 +90,7 @@ export default function GrokStudyAssistant({
           </Link>
         </div>
       ) : (
-      <form className="mt-6 grid gap-4" onSubmit={submit}>
+      <form className="mt-5 grid gap-3" onSubmit={submit}>
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
@@ -136,7 +138,7 @@ export default function GrokStudyAssistant({
             onChange={event => setPrompt(event.target.value)}
             required={mode === "ask"}
             maxLength={6000}
-            rows={4}
+            rows={compact ? 3 : 4}
             placeholder={
               mode === "summarize"
                 ? "Focus on exam points, definitions, or revision questions…"

@@ -5,23 +5,23 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) throw new Error("User openId is required for upsert");
   const users = (await mongo()).collection("users");
   const now = new Date();
+  const set: Record<string, unknown> = {
+    name: user.name ?? null,
+    email: user.email ?? null,
+    loginMethod: user.loginMethod ?? null,
+    updatedAt: now,
+    lastSignedIn: user.lastSignedIn ?? now,
+  };
+  if (user.role) set.role = user.role;
   await users.updateOne(
     { openId: user.openId },
     {
-      $set: {
-        name: user.name ?? null,
-        email: user.email ?? null,
-        loginMethod: user.loginMethod ?? null,
-        role:
-          user.role ??
-          (user.openId === process.env.OWNER_OPEN_ID ? "admin" : "user"),
-        updatedAt: now,
-        lastSignedIn: user.lastSignedIn ?? now,
-      },
+      $set: set,
       $setOnInsert: {
         legacyId: await nextId("users"),
         openId: user.openId,
         createdAt: user.createdAt ?? now,
+        role: user.openId === process.env.OWNER_OPEN_ID ? "admin" : "user",
       },
     },
     { upsert: true }

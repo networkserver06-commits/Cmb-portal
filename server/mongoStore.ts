@@ -1,4 +1,10 @@
-import { GridFSBucket, MongoClient, ObjectId, type Db } from "mongodb";
+import {
+  GridFSBucket,
+  MongoClient,
+  ObjectId,
+  type ClientSession,
+  type Db,
+} from "mongodb";
 import type { User } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -196,6 +202,19 @@ export async function mongo(): Promise<Db> {
     indexesReady = undefined;
     gridFsBucket = undefined;
     throw error;
+  }
+}
+
+export async function withMongoTransaction<T>(
+  operation: (database: Db, session: ClientSession) => Promise<T>
+): Promise<T> {
+  const database = await mongo();
+  if (!client) throw new Error("MongoDB client is not initialized");
+  const session = client.startSession();
+  try {
+    return await session.withTransaction(() => operation(database, session));
+  } finally {
+    await session.endSession();
   }
 }
 
@@ -582,28 +601,29 @@ export async function fulfillPayment(
   },
   rawEvent: string
 ) {
-  const database = await mongo();
-  const orders = database.collection<OrderDoc>("orders");
-  const order = await orders.findOne({ reference });
-  const providerReference = provider.reference;
-  if (!order) throw new Error("Order not found");
-  if (
-    provider.reference !== reference ||
-    provider.currency !== "KES" ||
-    provider.amount !== Math.round(order.amountKes * 100)
-  )
-    throw new Error("Payment does not match order");
-  const existing = await database
-    .collection<EntitlementDoc>("entitlements")
-    .findOne({ orderId: order.legacyId });
-  if (!shouldCreateEntitlement(existing))
-    return { fulfilled: false, entitlementId: existing.legacyId };
-  const entitlementId = await nextId("entitlements");
-  await orders.updateOne(
-    { _id: order._id },
-    { $set: { status: "paid", paidAt: new Date() } }
-  );
-  await database.collection<PaymentDoc>("payments").updateOne(
+  return withMongoTransaction(async (database, session) => {
+    const orders = database.collection<OrderDoc>("orders");
+    const order = await orders.findOne({ reference }, { session });
+    const providerReference = provider.reference;
+    if (!order) throw new Error("Order not found");
+    if (
+      provider.reference !== reference ||
+      provider.currency !== "KES" ||
+      provider.amount !== Math.round(order.amountKes * 100)
+    )
+      throw new Error("Payment does not match order");
+    const existing = await database
+      .collection<EntitlementDoc>("entitlements")
+      .findOne({ orderId: order.legacyId }, { session });
+    if (!shouldCreateEntitlement(existing))
+      return { fulfilled: false, entitlementId: existing.legacyId };
+    const entitlementId = await nextId("entitlements");
+    await orders.updateOne(
+      { _id: order._id },
+      { $set: { status: "paid", paidAt: new Date() } },
+      { session }
+    );
+    await database.collection<PaymentDoc>("payments").updateOne(
     { providerReference },
     {
       $setOnInsert: {
@@ -611,17 +631,17 @@ export async function fulfillPayment(
         orderId: order.legacyId,
         userId: order.userId,
         providerReference,
-      channel: provider.channel ?? "leetec-stkpush",
+        channel: provider.channel ?? "leetec-stkpush",
         amountKes: order.amountKes,
         status: "success",
         rawEvent,
         createdAt: new Date(),
       },
     },
-    { upsert: true }
-  );
-  try {
-    const result = await database
+    { upsert: true, session }
+    );
+    try {
+      const result = await database
       .collection<EntitlementDoc>("entitlements")
       .updateOne(
         { orderId: order.legacyId },
@@ -636,28 +656,29 @@ export async function fulfillPayment(
             grantedAt: new Date(),
           },
         },
-        { upsert: true }
+        { upsert: true, session }
       );
-    if (!result.upsertedCount) {
-      const winner = await database
+      if (!result.upsertedCount) {
+        const winner = await database
         .collection<EntitlementDoc>("entitlements")
-        .findOne({ orderId: order.legacyId });
-      return {
-        fulfilled: false,
-        entitlementId: winner?.legacyId ?? entitlementId,
-      };
-    }
-    return { fulfilled: true, entitlementId };
-  } catch (error: any) {
-    if (error?.code === 11000) {
-      const winner = await database
+        .findOne({ orderId: order.legacyId }, { session });
+        return {
+          fulfilled: false,
+          entitlementId: winner?.legacyId ?? entitlementId,
+        };
+      }
+      return { fulfilled: true, entitlementId };
+    } catch (error: any) {
+      if (error?.code === 11000) {
+        const winner = await database
         .collection<EntitlementDoc>("entitlements")
-        .findOne({ orderId: order.legacyId });
-      return {
-        fulfilled: false,
-        entitlementId: winner?.legacyId ?? entitlementId,
-      };
+        .findOne({ orderId: order.legacyId }, { session });
+        return {
+          fulfilled: false,
+          entitlementId: winner?.legacyId ?? entitlementId,
+        };
+      }
+      throw error;
     }
-    throw error;
-  }
+  });
 }

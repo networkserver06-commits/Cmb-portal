@@ -824,3 +824,47 @@
     padding-bottom: 2rem;
   }
 }
+
+@layer components {
+  .study-assistant {
+    color: #274d43;
+  }
+
+  .study-assistant textarea,
+  .study-assistant select {
+    color: #274d43;
+  }
+
+  .dark .study-assistant {
+    background-color: #142d26 !important;
+    border-color: #396354 !important;
+    color: #e7f3ed !important;
+  }
+
+  .dark .study-assistant [class~="bg-white"] {
+    background-color: #10251f !important;
+  }
+
+  .dark .study-assistant [class~="text-[#173e35]"],
+  .dark .study-assistant [class~="text-[#274d43]"],
+  .dark .study-assistant [class~="text-[#294d42]"] {
+    color: #e7f3ed !important;
+  }
+
+  .dark .study-assistant [class~="text-[#648078]"],
+  .dark .study-assistant [class~="text-[#718780]"],
+  .dark .study-assistant [class~="text-[#5f786f]"] {
+    color: #a8c2b7 !important;
+  }
+
+  .dark .study-assistant textarea,
+  .dark .study-assistant select {
+    background-color: #10251f !important;
+    color: #f2faf6 !important;
+    border-color: #396354 !important;
+  }
+
+  .account-ai-dock {
+    filter: drop-shadow(0 18px 35px rgba(29, 81, 70, 0.18));
+  }
+}

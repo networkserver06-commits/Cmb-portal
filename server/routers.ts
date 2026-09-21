@@ -295,7 +295,19 @@ export const appRouter = router({
     .query(async ({ input }) => {
       const rows = await (await mongo())
         .collection("papers")
-        .find({ isAvailable: true })
+        .find(
+          { isAvailable: true },
+          {
+            projection: {
+              _id: 0,
+              fileKey: 0,
+              fileId: 0,
+              submissionId: 0,
+              publishedBy: 0,
+              submittedBy: 0,
+            },
+          }
+        )
         .sort({ createdAt: -1 })
         .toArray();
       const search = input?.search?.trim().toLowerCase();
@@ -465,7 +477,6 @@ export const appRouter = router({
           purpose: "submission",
         });
         const safety = await detectSubmissionSafety(file);
-        const automaticallyPublished = safety.decision === "auto_publish";
         const now = new Date();
         const db = await mongo();
         const submission = {
@@ -483,15 +494,12 @@ export const appRouter = router({
           fileId: file.gridFsId,
           fileName: file.fileName,
           mimeType: file.mimeType,
-          status: automaticallyPublished
-            ? ("approved" as const)
-            : ("pending" as const),
-          safetyStatus: automaticallyPublished ? "passed" : "held",
+          status: "pending" as const,
+          safetyStatus: "held",
           safetyReasons: safety.reasons,
-          approvalMode: automaticallyPublished ? "automatic" : "admin_review",
-          reviewNote: automaticallyPublished
-            ? "Automatically approved by the ScholarShelf safety detector."
-            : "Held for administrator review by the ScholarShelf safety detector.",
+          approvalMode: "admin_review",
+          reviewNote:
+            "Held for administrator review. Automated scanning is advisory only.",
           createdAt: now,
           updatedAt: now,
         };
@@ -503,48 +511,22 @@ export const appRouter = router({
           entityId: submission.legacyId,
         });
 
-        let paperId: number | undefined;
-        if (automaticallyPublished) {
-          const paper = await publishSubmissionAsPaper(
-            db,
-            submission,
-            ctx.user.id,
-            "automatic"
-          );
-          paperId = paper.legacyId;
-          await db.collection("submissions").updateOne(
-            { _id: submission._id },
-            {
-              $set: {
-                paperId,
-                reviewedBy: ctx.user.id,
-                reviewedAt: now,
-                updatedAt: new Date(),
-              },
-            }
-          );
-          await recordOperationalEvent({
-            eventType: "submission.auto_published",
-            actorId: ctx.user.id,
-            subjectType: "submission",
-            subjectId: String(submission.legacyId),
-            detail: { paperId, detector: "passed" },
-          });
-        } else {
-          await recordOperationalEvent({
-            eventType: "submission.held_for_review",
-            actorId: ctx.user.id,
-            subjectType: "submission",
-            subjectId: String(submission.legacyId),
-            detail: { reasons: safety.reasons },
-          });
-        }
+        await recordOperationalEvent({
+          eventType: "submission.held_for_review",
+          actorId: ctx.user.id,
+          subjectType: "submission",
+          subjectId: String(submission.legacyId),
+          detail: {
+            reasons: safety.reasons,
+            automatedPublicationDisabled: true,
+          },
+        });
 
         return {
           success: true,
-          submission: { ...submission, paperId },
+          submission,
           publication: {
-            status: automaticallyPublished ? "published" : "held_for_review",
+            status: "held_for_review",
             reasons: safety.reasons,
           },
         };

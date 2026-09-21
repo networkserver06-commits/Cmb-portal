@@ -368,6 +368,14 @@ function AccountDashboard({
       </header>
 
       <main className="container py-8 md:py-12">
+        {activeTab !== "assistant" && (
+          <aside
+            className="account-ai-dock fixed bottom-4 left-4 z-30 hidden w-[min(22rem,calc(100vw-2rem))] lg:block"
+            aria-label="Quick AI study assistant"
+          >
+            <GrokStudyAssistant compact />
+          </aside>
+        )}
         {user.role === "admin" && (
           <section
             className="mb-8 flex flex-col gap-4 rounded-3xl border border-[#e6d49c] bg-[#fff9e8] p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6"
