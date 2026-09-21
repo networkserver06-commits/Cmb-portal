@@ -13,6 +13,7 @@ export default function GrokStudyAssistant({
   const [paperId, setPaperId] = useState("");
   const [prompt, setPrompt] = useState("");
   const [answer, setAnswer] = useState("");
+  const [answerProvider, setAnswerProvider] = useState<"xai" | "groq" | "">("");
   const [error, setError] = useState("");
   const usage = trpc.student.grokUsage.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -23,11 +24,13 @@ export default function GrokStudyAssistant({
   const ask = trpc.student.grokAsk.useMutation({
     onSuccess: result => {
       setAnswer(result.answer);
+      setAnswerProvider(result.provider);
       setError("");
       void usage.refetch();
     },
     onError: mutationError => {
       setAnswer("");
+      setAnswerProvider("");
       setError(mutationError.message);
       void usage.refetch();
     },
@@ -55,10 +58,10 @@ export default function GrokStudyAssistant({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#6b8f83]">
-            <Sparkles size={14} /> Grok study assistant
+            <Sparkles size={14} /> ScholarShelf Assistant
           </div>
           <h2 className="mt-2 font-serif text-2xl font-semibold text-[#173e35]">
-            Ask, learn, and revise with help from Grok.
+            Ask, learn, and revise with ScholarShelf Assistant.
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[#648078]">
             Get explanations, ask questions about an unlocked document, or create a structured revision summary. This is free for students with 100 requests each day.
@@ -69,19 +72,19 @@ export default function GrokStudyAssistant({
             {usage.data?.remainingCredits ?? "—"} / {usage.data?.dailyLimit ?? 100} requests left
           </div>
           <div className="mt-1">
-            {usage.data?.provider === "groq" ? "Groq" : "xAI Grok"} · resets daily at 00:00 UTC
+            {usage.data?.provider === "groq" ? "Groq" : "xAI"} · resets daily at 00:00 UTC
           </div>
         </div>
       </div>
 
       {!isAuthenticated ? (
         <div className="mt-6 flex flex-wrap items-center gap-3 rounded-2xl border border-[#d8e8df] bg-white/80 p-4 text-sm text-[#5f786f]">
-          <span>Sign in to use Grok for questions, explanations, and document summaries.</span>
+          <span>Sign in to use ScholarShelf Assistant for questions, explanations, and document summaries.</span>
           <Link
             href="/login"
             className="inline-flex h-9 items-center rounded-full bg-[#1d5146] px-4 font-semibold text-white transition hover:bg-[#153c34]"
           >
-            Sign in to use Grok
+            Sign in to use ScholarShelf Assistant
           </Link>
         </div>
       ) : (
@@ -93,7 +96,7 @@ export default function GrokStudyAssistant({
             className="rounded-full"
             onClick={() => setMode("ask")}
           >
-            <Send size={15} /> Ask Grok
+            <Send size={15} /> Ask Assistant
           </Button>
           <Button
             type="button"
@@ -150,7 +153,7 @@ export default function GrokStudyAssistant({
             className="rounded-full bg-[#1d5146] hover:bg-[#153c34]"
           >
             {ask.isPending ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-            {ask.isPending ? "Grok is thinking…" : mode === "summarize" ? "Create summary" : "Ask Grok"}
+            {ask.isPending ? "ScholarShelf Assistant is thinking…" : mode === "summarize" ? "Create summary" : "Ask Assistant"}
           </Button>
           <span className="text-xs text-[#718780]">One request uses one daily credit.</span>
         </div>
@@ -166,7 +169,7 @@ export default function GrokStudyAssistant({
       {answer && (
         <article className="mt-5 whitespace-pre-wrap rounded-2xl border border-[#c8ddd3] bg-white p-5 text-sm leading-7 text-[#294d42]">
           <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.15em] text-[#2d7965]">
-            <Sparkles size={14} /> Grok answer
+            <Sparkles size={14} /> ScholarShelf Assistant · {answerProvider === "groq" ? "Groq" : "xAI"}
           </div>
           {answer}
         </article>

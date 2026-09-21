@@ -50,6 +50,7 @@ import {
   WalletCards,
   Smartphone,
   Search,
+  Sparkles,
   X,
 } from "lucide-react";
 
@@ -262,12 +263,20 @@ function AccountDashboard({
     <div className="account-dashboard min-h-screen bg-[#f7f8f6] text-[#19312c] account-route-shell">
       <header className="account-topbar border-b border-[#dce6e1] bg-white">
         <div className="container flex min-h-20 items-center justify-between gap-4">
-          <Link
-            href="/"
-            className="flex items-center gap-2 text-sm font-semibold text-[#1d5146]"
-          >
-            <ArrowLeft size={16} /> Back to catalogue
-          </Link>
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Link
+              href="/"
+              className="flex items-center gap-2 text-sm font-semibold text-[#1d5146]"
+            >
+              <ArrowLeft size={16} /> Back to catalogue
+            </Link>
+            <Link
+              href="/ai"
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#c8d9d2] px-3 py-2 text-sm font-semibold text-[#1d604f] transition hover:bg-[#e8f1ed]"
+            >
+              <Sparkles size={15} /> <span className="hidden sm:inline">AI Assistant</span><span className="sm:hidden">AI</span>
+            </Link>
+          </div>
           <div className="flex items-center gap-2 sm:gap-3">
             <button
               type="button"
@@ -464,7 +473,7 @@ function AccountDashboard({
             </div>
           </div>
         </div>
-        <section className="mb-8" aria-label="Grok study assistant">
+        <section className="mb-8" aria-label="ScholarShelf Assistant">
           <GrokStudyAssistant />
         </section>
         <div className="min-w-0">

@@ -36,12 +36,24 @@ type PaperContext = {
   localText?: string;
 };
 
+function cleanSecret(value: string | undefined) {
+  const trimmed = value?.trim() ?? "";
+  if (trimmed.length >= 2) {
+    const first = trimmed[0];
+    const last = trimmed[trimmed.length - 1];
+    if ((first === "\"" && last === "\"") || (first === "'" && last === "'"))
+      return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+}
 function xaiKey() {
-  return process.env.XAI_API_KEY?.trim() ?? "";
+  return cleanSecret(process.env.XAI_API_KEY);
 }
 function groqKey() {
   return (
-    process.env.GROQ_API_KEY?.trim() || process.env.GROK_API_KEY?.trim() || ""
+    cleanSecret(process.env.GROQ_API_KEY) ||
+    cleanSecret(process.env.GROK_API_KEY) ||
+    ""
   );
 }
 function providerPreference() {
@@ -313,7 +325,7 @@ async function askWithXai(input: { model: string; prompt: string; context?: Pape
         {
           role: "system",
           content:
-            "You are ScholarShelf Grok, a patient university study assistant. Explain clearly, distinguish document facts from general guidance, encourage academic integrity, and never claim to have read a document unless it was attached.",
+            "You are ScholarShelf Assistant, a patient university study assistant. Explain clearly, distinguish document facts from general guidance, encourage academic integrity, and never claim to have read a document unless it was attached.",
         },
         { role: "user", content },
       ],
@@ -323,23 +335,36 @@ async function askWithXai(input: { model: string; prompt: string; context?: Pape
   return { answer: extractXaiText(await parseXaiResponse(response, "response")), responseId: null as string | null };
 }
 async function askWithGroq(input: { model: string; prompt: string; context?: PaperContext }) {
-  const client = new Groq({ apiKey: groqKey() });
-  const result = await client.chat.completions.create({
-    model: input.model,
-    temperature: 0.2,
-    max_completion_tokens: 2048,
-    messages: [
-      {
-        role: "system",
-        content:
-          "You are ScholarShelf Groq, a patient university study assistant. Explain clearly, distinguish document facts from general guidance, encourage academic integrity, and never claim to have read a document unless it was provided.",
-      },
-      { role: "user", content: input.prompt },
-    ],
-  });
-  const answer = result.choices[0]?.message?.content?.trim();
-  if (!answer) throw new Error("Groq returned no answer. Please try again.");
-  return { answer, responseId: null as string | null };
+  try {
+    const client = new Groq({ apiKey: groqKey() });
+    const result = await client.chat.completions.create({
+      model: input.model,
+      temperature: 0.2,
+      max_completion_tokens: 2048,
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are ScholarShelf Assistant, a patient university study assistant. Explain clearly, distinguish document facts from general guidance, encourage academic integrity, and never claim to have read a document unless it was provided.",
+        },
+        { role: "user", content: input.prompt },
+      ],
+    });
+    const answer = result.choices[0]?.message?.content?.trim();
+    if (!answer) throw new Error("Groq returned no answer. Please try again.");
+    return { answer, responseId: null as string | null };
+  } catch (error) {
+    const status = (error as { status?: number })?.status;
+    const message = errorMessage(error).toLowerCase();
+    if (
+      status === 401 ||
+      status === 403 ||
+      message.includes("invalid_api_key") ||
+      message.includes("invalid api key")
+    )
+      throw new Error("Groq is not configured correctly. Check GROQ_API_KEY in Vercel Production.");
+    throw error;
+  }
 }
 async function askProvider(provider: GrokProvider, prompt: string, context?: PaperContext) {
   let lastError: unknown;
@@ -389,11 +414,11 @@ export async function askGrok(input: {
     );
   const prompt = input.prompt.trim();
   if (input.mode === "ask" && prompt.length < 2)
-    throw new Error("Ask Grok a question with at least 2 characters.");
+    throw new Error("Ask ScholarShelf Assistant a question with at least 2 characters.");
   if (prompt.length > MAX_PROMPT_CHARS)
-    throw new Error(`Keep your Grok request under ${MAX_PROMPT_CHARS} characters.`);
+    throw new Error(`Keep your ScholarShelf Assistant request under ${MAX_PROMPT_CHARS} characters.`);
   if (input.mode === "summarize" && !input.paperId)
-    throw new Error("Choose a document before asking Grok for a summary.");
+    throw new Error("Choose a document before asking ScholarShelf Assistant for a summary.");
 
   const credit = await consumeGrokCredit(input.userId);
   let lastError: unknown;
