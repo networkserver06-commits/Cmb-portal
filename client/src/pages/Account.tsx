@@ -958,11 +958,11 @@ function AccountDashboard({
                   const amount = Number(topupAmount);
                   if (
                     !Number.isInteger(amount) ||
-                    amount < 100 ||
+                    amount < 10 ||
                     amount > 150000
                   )
                     return setTopupInputError(
-                      "Enter an amount between KES 100 and KES 150,000."
+                      "Enter an amount between KES 10 and KES 150,000."
                     );
                   setTopupInputError("");
                   initializeWalletTopUp.mutate({ amountKes: amount, phoneNumber });
@@ -987,7 +987,7 @@ function AccountDashboard({
                   Amount (KES)
                   <Input
                     type="number"
-                    min={100}
+                    min={10}
                     max={150000}
                     step={1}
                     value={topupAmount}

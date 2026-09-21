@@ -24,9 +24,9 @@ describe("LeeTec payment safeguards", () => {
   });
 
   it("creates compact alphanumeric provider references", () => {
-    expect(createPaymentReference(12, 7)).toMatch(/^CBM[A-Za-z0-9]+$/);
+    expect(createPaymentReference(12, 7)).toMatch(/^1CBM[A-Za-z0-9]+$/);
     expect(createPaymentReference(12, 7)).not.toContain("-");
-    expect(createWalletTopUpReference(7)).toMatch(/^WAL[A-Za-z0-9]+$/);
+    expect(createWalletTopUpReference(7)).toMatch(/^1WAL[A-Za-z0-9]+$/);
     expect(createWalletTopUpReference(7)).not.toContain("-");
   });
 

@@ -16,7 +16,7 @@ describe("wallet security safeguards", () => {
   it("creates compact provider references with a random suffix", () => {
     const first = createWalletTopUpReference(42);
     const second = createWalletTopUpReference(42);
-    expect(first).toMatch(/^WAL[A-Za-z0-9]+$/);
+    expect(first).toMatch(/^1WAL[A-Za-z0-9]+$/);
     expect(first).not.toBe(second);
   });
 
@@ -58,8 +58,8 @@ describe("wallet security safeguards", () => {
   it("does not prefill an automatic wallet amount and collects a phone", () => {
     expect(accountSource).toContain('useState<number | "">("")');
     expect(accountSource).not.toContain("useState(100)");
-    expect(accountSource).toContain("amount < 100");
-    expect(accountSource).toContain("KES 100 and KES 150,000");
+    expect(accountSource).toContain("amount < 10");
+    expect(accountSource).toContain("KES 10 and KES 150,000");
     expect(accountSource).toContain("Pending or failed payments are not included");
     expect(accountSource).toContain("Kenyan phone number");
     expect(accountSource).toContain('"Confirmed"');

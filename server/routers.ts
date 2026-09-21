@@ -712,7 +712,9 @@ export const appRouter = router({
     walletTopUpStatus: protectedProcedure
       .input(
         z.object({
-          reference: z.string().regex(/^(?:WAL[A-Za-z0-9]+|WALLET-\d+-\d+-[A-Za-z0-9]+)$/),
+          reference: z
+            .string()
+            .regex(/^(?:1?WAL[A-Za-z0-9]+|WALLET-\d+-\d+-[A-Za-z0-9]+)$/),
         })
       )
       .query(({ ctx, input }) =>

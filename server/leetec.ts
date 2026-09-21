@@ -1,5 +1,5 @@
 const DEFAULT_LEETEC_BASE_URL = "https://leetec.online";
-export const MIN_LEETEC_AMOUNT_KES = 100;
+export const MIN_LEETEC_AMOUNT_KES = 10;
 
 export type LeetecTransaction = {
   status?: string;
@@ -96,7 +96,7 @@ async function readResponse(response: Response, action: string) {
     const actionableMessage =
       message ===
       "The STK request was not accepted and no payment record was created. Correct the error and retry."
-        ? "LeeTec rejected the STK Push with HTTP 400 but gave no specific reason. Check that this API key belongs to the LeeTec workspace with an active M-Pesa destination, use an eligible Kenyan M-Pesa number, and retry with an amount of at least KES 100."
+        ? "LeeTec rejected the STK Push with HTTP 400 but gave no specific reason. Check that this API key belongs to the correct LeeTec workspace with an active M-Pesa destination, use an eligible Kenyan M-Pesa number, and retry with a fresh numeric-leading account reference."
         : message;
     throw new Error(
       actionableMessage
@@ -128,12 +128,11 @@ export function normalizeKenyanPhone(value: string) {
 export function createPaymentReference(paperId: number, userId: number) {
   void paperId;
   void userId;
-  return `CBM${Date.now().toString(36)}${cryptoRandomSuffix().slice(0, 8)}`;
+  return `1CBM${Date.now().toString(36)}${cryptoRandomSuffix().slice(0, 8)}`;
 }
-
 export function createWalletTopUpReference(userId: number) {
   void userId;
-  return `WAL${Date.now().toString(36)}${cryptoRandomSuffix().slice(0, 8)}`;
+  return `1WAL${Date.now().toString(36)}${cryptoRandomSuffix().slice(0, 8)}`;
 }
 
 function cryptoRandomSuffix() {
