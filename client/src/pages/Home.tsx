@@ -91,6 +91,9 @@ export default function Home() {
     amountKes: number;
     balanceKes: number;
   } | null>(null);
+  const [walletCheckState, setWalletCheckState] = useState<
+    "idle" | "checking" | "sufficient" | "insufficient"
+  >("idle");
   const [phoneNumber, setPhoneNumber] = useState(user?.phone ?? "");
   const [selectedPaperId, setSelectedPaperId] = useState<number | null>(() => {
     const value = Number(
@@ -172,6 +175,7 @@ export default function Home() {
   const cancelCheckout = () => {
     checkoutIntent.current += 1;
     setWalletConfirmation(null);
+    setWalletCheckState("idle");
     setSelectedPaperId(null);
     setPaymentStatus({ state: "idle", message: "" });
   };
@@ -297,6 +301,7 @@ export default function Home() {
       state: "processing",
       message: "Checking your ScholarShelf wallet before checkout…",
     });
+    setWalletCheckState("checking");
     walletBalance
       .refetch()
       .then(({ data }) => {
@@ -304,16 +309,17 @@ export default function Home() {
         const balanceKes = Number(data?.balanceKes ?? 0);
         const amountKes = Number(paper.priceKes);
         if (balanceKes < amountKes) {
+          setWalletCheckState("insufficient");
           setPaymentStatus({
-            state: "processing",
+            state: "idle",
             message:
               balanceKes > 0
-                ? `Wallet balance: KES ${balanceKes.toLocaleString()}. Sending a secure LeeTec payment prompt…`
-                : "Your wallet has no available balance. Sending a secure LeeTec payment prompt…",
+                ? `Wallet balance: KES ${balanceKes.toLocaleString()}. Enter a phone number to continue with LeeTec.`
+                : "Your wallet has no available balance. Enter a phone number to continue with LeeTec.",
           });
-          startLeetecPayment(paperId, intent);
           return;
         }
+        setWalletCheckState("sufficient");
         setPaymentStatus({ state: "idle", message: "" });
         setWalletConfirmation({ paperId, amountKes, balanceKes });
       })
@@ -765,7 +771,9 @@ export default function Home() {
                       </div>
                     </div>
                   )}
-                {selectedPaper && isAuthenticated && (
+                {selectedPaper &&
+                  isAuthenticated &&
+                  walletCheckState === "insufficient" && (
                   <label className="block rounded-2xl border border-[#d8e8df] bg-white/75 p-4 text-sm font-semibold text-[#274d43]">
                     Kenyan phone number for LeeTec STK Push
                     <input
@@ -816,12 +824,13 @@ export default function Home() {
                             variant="outline"
                             className="rounded-full border-[#b8a85c] bg-transparent text-[#6f5517] hover:bg-[#fff3c9]"
                             onClick={() => {
-                              const confirmation = walletConfirmation;
                               setWalletConfirmation(null);
-                              startLeetecPayment(
-                                confirmation.paperId,
-                                checkoutIntent.current
-                              );
+                              setWalletCheckState("insufficient");
+                              setPaymentStatus({
+                                state: "idle",
+                                message:
+                                  "Enter a phone number to continue with LeeTec.",
+                              });
                             }}
                           >
                             Pay by phone instead
@@ -959,7 +968,11 @@ export default function Home() {
                             ? "Checking wallet…"
                             : initializePayment.isPending
                               ? "Sending phone prompt…"
-                              : "Buy securely"}{" "}
+                              : walletCheckState === "checking"
+                                ? "Checking wallet…"
+                                : walletCheckState === "insufficient"
+                                  ? "Continue to phone checkout"
+                                  : "Buy securely"}{" "}
                         <ChevronRight size={15} />
                       </Button>
                     ) : null}
