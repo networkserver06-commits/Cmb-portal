@@ -7,7 +7,8 @@ export const GROK_DAILY_LIMIT = 100;
 export const GROK_MODEL = process.env.GROK_MODEL?.trim() || "grok-4.6";
 const XAI_BASE_URL = "https://api.x.ai/v1";
 const MAX_PROMPT_CHARS = 6000;
-const MAX_LOCAL_DOCUMENT_CHARS = 120_000;
+// Keep enough room for long university PDFs while staying below Groq's context limit.
+const MAX_LOCAL_DOCUMENT_CHARS = 450_000;
 const GROQ_DEFAULT_MODEL = "openai/gpt-oss-20b";
 const GROQ_FALLBACK_MODELS = ["openai/gpt-oss-120b", "qwen/qwen3-32b"];
 
@@ -251,7 +252,6 @@ async function extractLocalDocumentText(bytes: Buffer, fileName: string, mimeTyp
       const pdf = await pdfjs.getDocument({
         data: new Uint8Array(bytes),
         useWorkerFetch: false,
-        disableFontFace: true,
       }).promise;
       const pages: string[] = [];
       for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
@@ -316,7 +316,7 @@ function paperPrompt(context: PaperContext) {
   const metadata = `Selected document: ${context.title}. Course: ${context.course}. Unit: ${context.unit}. Description: ${context.description}.`;
   if (!context.localText)
     return `${metadata}\nThe full document text is not available in this request. Be transparent about that limitation, use only the metadata above, and ask the student to paste a passage for a precise answer. Do not invent document facts.`;
-  return `${metadata}\nDocument text (primary source; do not invent facts outside it):\n${context.localText}`;
+  return `${metadata}\nThe complete extracted document follows. Use it as the primary source, search all page markers before answering, and do not invent facts outside it:\n${context.localText}`;
 }
 async function askWithXai(input: { model: string; prompt: string; context?: PaperContext }) {
   const content: Array<Record<string, string>> = [{ type: "input_text", text: input.prompt }];
