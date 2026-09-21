@@ -378,7 +378,7 @@ function AccountDashboard({
         )}
         {user.role === "admin" && (
           <section
-            className="mb-8 flex flex-col gap-4 rounded-3xl border border-[#e6d49c] bg-[#fff9e8] p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6"
+            className="account-admin-alert mb-8 flex flex-col gap-4 rounded-3xl border border-[#e6d49c] bg-[#fff9e8] p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6"
             aria-label="Administrator access detected"
           >
             <div className="flex items-start gap-3">
@@ -491,7 +491,7 @@ function AccountDashboard({
         <div className="min-w-0">
           {activeTab === "assistant" && (
             <section
-              className="account-reveal mb-8 rounded-3xl border border-[#c8ddd3] bg-[#f5fbf7] p-5 shadow-sm sm:p-7"
+              className="account-assistant-workspace account-reveal mb-8 rounded-3xl border border-[#c8ddd3] bg-[#f5fbf7] p-5 shadow-sm sm:p-7"
               aria-label="ScholarShelf Assistant"
             >
               <div className="mb-5">

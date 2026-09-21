@@ -868,3 +868,87 @@
     filter: drop-shadow(0 18px 35px rgba(29, 81, 70, 0.18));
   }
 }
+
+@layer components {
+  /* Dashboard contrast pass: every interactive surface remains readable in dark mode. */
+  .dark .account-dashboard .account-admin-alert {
+    background: linear-gradient(135deg, #3c3218, #4a3b1b) !important;
+    border-color: #b99445 !important;
+    color: #f7e8b5 !important;
+  }
+  .dark .account-dashboard .account-admin-alert p { color: #f3d98a !important; }
+  .dark .account-dashboard .account-admin-alert > div:first-child > div:first-child {
+    background: #d5ad52 !important;
+    color: #2a2414 !important;
+  }
+  .dark .account-dashboard .account-assistant-workspace {
+    background: #102c23 !important;
+    border-color: #2f6b55 !important;
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.2) !important;
+  }
+  .dark .account-dashboard .account-workspace-nav {
+    color: #dcefe7 !important;
+  }
+  .dark .account-dashboard .account-workspace-nav button {
+    color: #e8f3ed !important;
+  }
+  .dark .account-dashboard .account-workspace-nav button svg {
+    color: #9fc4b5 !important;
+  }
+  .dark .account-menu-content,
+  .dark .account-menu-content [data-slot="dropdown-menu-label"] {
+    color: #e7f5ee !important;
+  }
+  .dark .account-menu-content [data-slot="dropdown-menu-separator"] {
+    background: #2c5b4b !important;
+  }
+  .dark .account-menu-content .account-menu-item {
+    color: #e5f3ec !important;
+  }
+  .dark .account-menu-content .account-menu-item > span:last-of-type {
+    color: #a8cabb !important;
+  }
+  .dark .account-menu-content .account-menu-item[data-highlighted],
+  .dark .account-menu-content .account-menu-item[data-state="checked"] {
+    background: #22513f !important;
+    color: #f5fff9 !important;
+  }
+  .dark .account-menu-content .account-menu-item[data-highlighted] > span:last-of-type,
+  .dark .account-menu-content .account-menu-item[data-state="checked"] > span:last-of-type {
+    color: #c5ead9 !important;
+  }
+  .dark .account-menu-content [data-slot="dropdown-menu-label"] > span:last-child {
+    background: #1a3b30 !important;
+    color: #c7e3d6 !important;
+  }
+  .dark .account-menu-content .account-menu-item > span:first-child {
+    background: #2b765d !important;
+    color: #d8f2e5 !important;
+  }
+  .dark .account-menu-content [class~="text-destructive"] {
+    color: #ffb4aa !important;
+  }
+  .dark .study-assistant .section-eyebrow,
+  .dark .study-assistant svg {
+    color: #8dd7b7 !important;
+  }
+  .dark .study-assistant small { color: #f0d27b !important; }
+  .dark .account-dashboard .account-ai-dock {
+    filter: drop-shadow(0 22px 42px rgba(0, 0, 0, 0.45));
+  }
+  @media (max-width: 640px) {
+    .account-dashboard .account-workspace-nav {
+      border-radius: 1.35rem;
+      padding: 0.85rem;
+    }
+    .account-dashboard .account-workspace-nav > div { gap: 0.75rem; }
+    .account-dashboard .account-assistant-workspace {
+      border-radius: 1.35rem;
+      padding: 1rem;
+    }
+    .account-dashboard .account-menu-content {
+      max-height: min(68vh, 32rem);
+      border-radius: 1.15rem;
+    }
+  }
+}
