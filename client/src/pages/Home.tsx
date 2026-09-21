@@ -360,6 +360,9 @@ export default function Home() {
             <a className="text-[#153c34]" href="#catalogue">
               Catalogue
             </a>
+            <Link className="inline-flex items-center gap-1.5 text-[#1d604f] transition hover:text-[#153c34]" href="/ai">
+              <Sparkles size={14} /> AI study desk
+            </Link>
             <a href="#how-it-works">How it works</a>
             <a href="#support">Support</a>
             <a href="#share-app">Share app</a>
@@ -412,6 +415,9 @@ export default function Home() {
               <a href="#catalogue" onClick={() => setMobileOpen(false)}>
                 Catalogue
               </a>
+              <Link href="/ai" onClick={() => setMobileOpen(false)} className="inline-flex items-center gap-2 font-semibold text-[#1d604f]">
+                <Sparkles size={15} /> AI study desk
+              </Link>
               <a href="#how-it-works" onClick={() => setMobileOpen(false)}>
                 How it works
               </a>
@@ -494,6 +500,9 @@ export default function Home() {
                     How it works
                   </Button>
                 </a>
+                <Link href="/ai" className="inline-flex h-11 items-center gap-2 rounded-full border border-[#bcd2c8] bg-white/60 px-5 text-sm font-semibold text-[#1d5146] transition hover:bg-white">
+                  <Sparkles size={16} /> Open AI study desk
+                </Link>
               </div>
               {isAuthenticated ? (
                 <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-[#c9ddd4] bg-white/70 p-3 text-sm text-[#668078] shadow-sm">
@@ -572,7 +581,21 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="container py-10 md:py-14" aria-label="Grok study assistant">
+        <section className="container py-10 md:py-14" aria-label="AI study desk">
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="section-eyebrow">Study smarter</p>
+              <h2 className="mt-2 font-serif text-4xl font-semibold tracking-tight text-[#173e35]">
+                Your questions, made clearer.
+              </h2>
+              <p className="mt-3 max-w-xl text-[#6a8179]">
+                Ask for an explanation, explore an unlocked document, or create a revision summary in the dedicated AI study desk.
+              </p>
+            </div>
+            <Link href="/ai" className="inline-flex h-10 items-center gap-2 rounded-full border border-[#bcd2c8] px-4 text-sm font-semibold text-[#1d5146] transition hover:bg-white">
+              Open full AI tab <ChevronRight size={16} />
+            </Link>
+          </div>
           <GrokStudyAssistant isAuthenticated={isAuthenticated} />
         </section>
 

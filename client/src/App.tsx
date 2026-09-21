@@ -8,6 +8,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import NetworkStatus from "./components/NetworkStatus";
 import { ThemeProvider } from "./contexts/ThemeContext";
 const Home = lazy(() => import("./pages/Home"));
+const AI = lazy(() => import("./pages/AI"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Library = lazy(() => import("./pages/Library"));
 const PaymentResult = lazy(() => import("./pages/PaymentResult"));
@@ -73,6 +74,7 @@ function Router() {
       >
         <Switch>
           <Route path={"/"} component={Home} />
+          <Route path={"/ai"} component={AI} />
           <Route path={"/library"} component={Library} />
           <Route path={"/payment-result"} component={PaymentResult} />
           <Route path={"/paper/:paperId"} component={PublicPaperViewer} />

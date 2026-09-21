@@ -54,6 +54,14 @@ export function activeGrokProvider(): GrokProvider {
   if (preference === "groq") return "groq";
   return xaiKey() ? "xai" : "groq";
 }
+export function grokProviderOrder(): GrokProvider[] {
+  const preference = providerPreference();
+  if (preference === "xai") return ["xai"];
+  if (preference === "groq") return ["groq"];
+  return (["xai", "groq"] as GrokProvider[]).filter(provider =>
+    Boolean(keyForProvider(provider))
+  );
+}
 function keyForProvider(provider: GrokProvider) {
   return provider === "xai" ? xaiKey() : groqKey();
 }
@@ -80,7 +88,7 @@ function isDuplicateKey(error: unknown) {
   );
 }
 export function grokConfigured() {
-  return Boolean(keyForProvider(activeGrokProvider()));
+  return grokProviderOrder().length > 0;
 }
 export async function grokUsageForUser(userId: number) {
   const now = new Date();
@@ -350,18 +358,34 @@ async function askProvider(provider: GrokProvider, prompt: string, context?: Pap
   }
   throw lastError instanceof Error ? lastError : new Error(`${providerName(provider)} could not answer.`);
 }
+function canFailOverToAnotherProvider(error: unknown) {
+  const status = (error as { status?: number })?.status;
+  const message = errorMessage(error).toLowerCase();
+  return (
+    (typeof status === "number" && (status === 400 || status === 401 || status === 403 || status === 408 || status === 429 || status >= 500)) ||
+    message.includes("xai") ||
+    message.includes("groq") ||
+    message.includes("rate limit") ||
+    message.includes("timed out") ||
+    message.includes("timeout") ||
+    message.includes("fetch failed") ||
+    message.includes("could not answer")
+  );
+}
 export async function askGrok(input: {
   userId: number;
   prompt: string;
   paperId?: number;
   mode: "ask" | "summarize";
 }) {
-  const provider = activeGrokProvider();
-  if (!keyForProvider(provider))
+  const providers = grokProviderOrder();
+  if (providers.length === 0)
     throw new Error(
-      provider === "xai"
+      providerPreference() === "xai"
         ? "xAI Grok is not configured. Add XAI_API_KEY to Vercel or switch GROK_PROVIDER to groq."
-        : "Groq is not configured. Add GROQ_API_KEY to Vercel or switch GROK_PROVIDER to xai."
+        : providerPreference() === "groq"
+          ? "Groq is not configured. Add GROQ_API_KEY to Vercel or switch GROK_PROVIDER to xai."
+          : "No AI provider is configured. Add XAI_API_KEY or GROQ_API_KEY to Vercel."
     );
   const prompt = input.prompt.trim();
   if (input.mode === "ask" && prompt.length < 2)
@@ -372,32 +396,42 @@ export async function askGrok(input: {
     throw new Error("Choose a document before asking Grok for a summary.");
 
   const credit = await consumeGrokCredit(input.userId);
-  let uploadedFileId: string | undefined;
+  let lastError: unknown;
   try {
-    let context: PaperContext | undefined;
-    if (input.paperId) {
-      context = await paperContextForProvider(input.userId, input.paperId, provider);
-      uploadedFileId = context.fileId;
+    for (const provider of providers) {
+      let uploadedFileId: string | undefined;
+      try {
+        let context: PaperContext | undefined;
+        if (input.paperId) {
+          context = await paperContextForProvider(input.userId, input.paperId, provider);
+          uploadedFileId = context.fileId;
+        }
+        const userText =
+          input.mode === "summarize"
+            ? `Summarize this study document for a university student. Include: a short overview, key concepts, important definitions, likely exam points, and five revision questions. Do not invent facts that are not in the document.${prompt ? `\nStudent's focus: ${prompt}` : ""}`
+            : prompt;
+        const fullPrompt = context
+          ? `${paperPrompt(context)}\n\nStudent request: ${userText}`
+          : `No specific study document was selected.\n\nStudent request: ${userText}`;
+        const result = await askProvider(provider, fullPrompt, context);
+        return {
+          answer: result.answer,
+          model: result.model,
+          provider,
+          responseId: result.responseId,
+          ...credit,
+        } as const;
+      } catch (error) {
+        lastError = error;
+        if (provider === providers[providers.length - 1] || !canFailOverToAnotherProvider(error))
+          throw error;
+      } finally {
+        if (uploadedFileId) await deleteDocument(uploadedFileId);
+      }
     }
-    const userText =
-      input.mode === "summarize"
-        ? "Summarize this study document for a university student. Include: a short overview, key concepts, important definitions, likely exam points, and five revision questions. Do not invent facts that are not in the document."
-        : prompt;
-    const fullPrompt = context
-      ? `${paperPrompt(context)}\n\nStudent request: ${userText}`
-      : `No specific study document was selected.\n\nStudent request: ${userText}`;
-    const result = await askProvider(provider, fullPrompt, context);
-    return {
-      answer: result.answer,
-      model: result.model,
-      provider,
-      responseId: result.responseId,
-      ...credit,
-    } as const;
+    throw lastError instanceof Error ? lastError : new Error("No AI provider could answer.");
   } catch (error) {
     await refundGrokCredit(input.userId);
     throw error;
-  } finally {
-    if (uploadedFileId) await deleteDocument(uploadedFileId);
   }
 }
