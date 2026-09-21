@@ -656,7 +656,6 @@ export const appRouter = router({
             phoneNumber,
             amountKes: order.amountKes,
             accountReference: reference,
-            transactionDesc: `ScholarShelf paper ${paper.title}`,
           });
           return { reference, status: "pending" as const };
         } catch (error) {
@@ -697,7 +696,6 @@ export const appRouter = router({
             phoneNumber,
             amountKes: input.amountKes,
             accountReference: reference,
-            transactionDesc: "ScholarShelf wallet top-up",
           });
           return { reference, status: "pending" as const };
         } catch (error) {
@@ -713,7 +711,7 @@ export const appRouter = router({
     walletTopUpStatus: protectedProcedure
       .input(
         z.object({
-          reference: z.string().regex(/^WALLET-\\d+-\\d+-[A-Za-z0-9]+$/),
+          reference: z.string().regex(/^(?:WAL[A-Za-z0-9]+|WALLET-\d+-\d+-[A-Za-z0-9]+)$/),
         })
       )
       .query(({ ctx, input }) =>

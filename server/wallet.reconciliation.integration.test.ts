@@ -8,14 +8,14 @@ import {
 describe("wallet LeeTec reconciliation", () => {
   it("settles a successful transaction only after exact matching", () => {
     const transaction = {
-      accountReference: "WALLET-900-123-example",
+      accountReference: "WALabc123",
       amount: 30,
       currency: "KES",
       status: "SUCCESS",
     };
     expect(paymentStatus(transaction)).toBe("paid");
     expect(
-      paymentMatchesOrder(transaction, "WALLET-900-123-example", 30)
+      paymentMatchesOrder(transaction, "WALabc123", 30)
     ).toBe(true);
     expect(ledgerPaymentData(transaction).amount).toBe(3000);
   });

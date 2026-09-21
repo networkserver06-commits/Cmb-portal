@@ -18,12 +18,14 @@ describe("LeeTec payment safeguards", () => {
     );
   });
 
-  it("creates scoped wallet and paper references", () => {
-    expect(createPaymentReference(12, 7)).toMatch(/^CBM-12-7-/);
-    expect(createWalletTopUpReference(7)).toMatch(/^WALLET-7-/);
+  it("creates compact alphanumeric provider references", () => {
+    expect(createPaymentReference(12, 7)).toMatch(/^CBM[A-Za-z0-9]+$/);
+    expect(createPaymentReference(12, 7)).not.toContain("-");
+    expect(createWalletTopUpReference(7)).toMatch(/^WAL[A-Za-z0-9]+$/);
+    expect(createWalletTopUpReference(7)).not.toContain("-");
   });
 
-  it("sends a documented STK Push request with KES units", async () => {
+  it("sends the documented minimal STK Push request with KES units", async () => {
     const oldKey = process.env.LEETEC_API_KEY;
     const oldFetch = globalThis.fetch;
     process.env.LEETEC_API_KEY = "sk_test_example";
@@ -39,14 +41,12 @@ describe("LeeTec payment safeguards", () => {
       const result = await initializeLeetecStkPush({
         phoneNumber: "0712345678",
         amountKes: 100,
-        accountReference: "CBM-1-2-reference",
-        transactionDesc: "ScholarShelf paper",
+        accountReference: "CBMabc123",
       });
       expect(requestBody).toEqual({
         phoneNumber: "254712345678",
         amount: 100,
-        accountReference: "CBM-1-2-reference",
-        transactionDesc: "ScholarShelf paper",
+        accountReference: "CBMabc123",
       });
       expect(result.phoneNumber).toBe("254712345678");
     } finally {
@@ -57,22 +57,22 @@ describe("LeeTec payment safeguards", () => {
 
   it("matches only the exact reference, KES currency, and whole-KES amount", () => {
     const transaction = {
-      accountReference: "CBM-1-2-reference",
+      accountReference: "CBMabc123",
       amount: 250,
       currency: "KES",
       status: "SUCCESS",
     };
-    expect(paymentMatchesOrder(transaction, "CBM-1-2-reference", 250)).toBe(true);
-    expect(paymentMatchesOrder(transaction, "CBM-1-2-other", 250)).toBe(false);
-    expect(paymentMatchesOrder({ ...transaction, amount: 249 }, "CBM-1-2-reference", 250)).toBe(false);
+    expect(paymentMatchesOrder(transaction, "CBMabc123", 250)).toBe(true);
+    expect(paymentMatchesOrder(transaction, "CBMother123", 250)).toBe(false);
+    expect(paymentMatchesOrder({ ...transaction, amount: 249 }, "CBMabc123", 250)).toBe(false);
   });
 
   it("maps documented transaction statuses and ledger units safely", () => {
     expect(paymentStatus({ status: "PENDING" })).toBe("pending");
     expect(paymentStatus({ status: "SUCCESS" })).toBe("paid");
     expect(paymentStatus({ status: "FAILED" })).toBe("failed");
-    expect(ledgerPaymentData({ accountReference: "WALLET-1", amount: 100, currency: "KES" })).toMatchObject({
-      reference: "WALLET-1",
+    expect(ledgerPaymentData({ accountReference: "WALabc123", amount: 100, currency: "KES" })).toMatchObject({
+      reference: "WALabc123",
       amount: 10000,
       currency: "KES",
     });

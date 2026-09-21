@@ -97,11 +97,14 @@ export function normalizeKenyanPhone(value: string) {
 }
 
 export function createPaymentReference(paperId: number, userId: number) {
-  return `CBM-${paperId}-${userId}-${Date.now()}-${cryptoRandomSuffix()}`;
+  void paperId;
+  void userId;
+  return `CBM${Date.now().toString(36)}${cryptoRandomSuffix().slice(0, 8)}`;
 }
 
 export function createWalletTopUpReference(userId: number) {
-  return `WALLET-${userId}-${Date.now()}-${cryptoRandomSuffix()}`;
+  void userId;
+  return `WAL${Date.now().toString(36)}${cryptoRandomSuffix().slice(0, 8)}`;
 }
 
 function cryptoRandomSuffix() {
@@ -149,7 +152,6 @@ export async function initializeLeetecStkPush(input: {
   phoneNumber: string;
   amountKes: number;
   accountReference: string;
-  transactionDesc: string;
 }) {
   const phoneNumber = normalizeKenyanPhone(input.phoneNumber);
   const response = await fetch(`${baseUrl()}/api/v1/stkpush`, {
@@ -159,7 +161,6 @@ export async function initializeLeetecStkPush(input: {
       phoneNumber,
       amount: Math.round(input.amountKes),
       accountReference: input.accountReference,
-      transactionDesc: input.transactionDesc,
     }),
   });
   const payload = await readResponse(response, "STK Push");

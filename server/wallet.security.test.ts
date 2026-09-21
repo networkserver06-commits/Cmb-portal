@@ -13,10 +13,10 @@ describe("wallet security safeguards", () => {
   const serverSource = source("server/_core/index.ts");
   const accountSource = source("client/src/pages/Account.tsx");
 
-  it("creates wallet references scoped by user with a random suffix", () => {
+  it("creates compact provider references with a random suffix", () => {
     const first = createWalletTopUpReference(42);
     const second = createWalletTopUpReference(42);
-    expect(first).toMatch(/^WALLET-42-\d+-[A-Za-z0-9]+$/);
+    expect(first).toMatch(/^WAL[A-Za-z0-9]+$/);
     expect(first).not.toBe(second);
   });
 
@@ -34,34 +34,22 @@ describe("wallet security safeguards", () => {
   it("matches wallet payments only when reference, KES currency, and amount agree", () => {
     expect(
       paymentMatchesOrder(
-        {
-          accountReference: "WALLET-42-1000-abcd1234",
-          amount: 100,
-          currency: "KES",
-        },
-        "WALLET-42-1000-abcd1234",
+        { accountReference: "WALabc123", amount: 100, currency: "KES" },
+        "WALabc123",
         100
       )
     ).toBe(true);
     expect(
       paymentMatchesOrder(
-        {
-          accountReference: "WALLET-42-1000-abcd1234",
-          amount: 99,
-          currency: "KES",
-        },
-        "WALLET-42-1000-abcd1234",
+        { accountReference: "WALabc123", amount: 99, currency: "KES" },
+        "WALabc123",
         100
       )
     ).toBe(false);
     expect(
       paymentMatchesOrder(
-        {
-          accountReference: "WALLET-42-1000-abcd1234",
-          amount: 100,
-          currency: "USD",
-        },
-        "WALLET-42-1000-abcd1234",
+        { accountReference: "WALabc123", amount: 100, currency: "USD" },
+        "WALabc123",
         100
       )
     ).toBe(false);
