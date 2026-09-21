@@ -709,7 +709,14 @@ export default function PublicPaperViewer() {
           </div>
 
           <section className="mt-8" aria-label="AI study help for this document">
-            <GrokStudyAssistant isAuthenticated={isAuthenticated} />
+            <GrokStudyAssistant
+              isAuthenticated={isAuthenticated}
+              documentContext={{
+                id: publicPaper.legacyId,
+                title: publicPaper.title,
+                course: publicPaper.course,
+              }}
+            />
           </section>
 
           <section className="mt-8 overflow-hidden rounded-[1.7rem] border border-[#c9ddd4] bg-white shadow-[0_18px_55px_rgba(29,81,70,0.08)]">

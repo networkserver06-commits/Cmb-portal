@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, BookOpen, Loader2, Send, Sparkles } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -7,9 +7,11 @@ import { Link } from "wouter";
 export default function GrokStudyAssistant({
   isAuthenticated = true,
   compact = false,
+  documentContext,
 }: {
   isAuthenticated?: boolean;
   compact?: boolean;
+  documentContext?: { id: number; title: string; course?: string };
 }) {
   const [mode, setMode] = useState<"ask" | "summarize">("ask");
   const [paperId, setPaperId] = useState("");
@@ -38,10 +40,27 @@ export default function GrokStudyAssistant({
     },
   });
   const documents = useMemo(
-    () =>
-      (library.data ?? []).filter(item => item.paper).map(item => item.paper!),
-    [library.data]
+    () => {
+      const unlocked = (library.data ?? [])
+        .filter(item => item.paper)
+        .map(item => item.paper!);
+      if (!documentContext || unlocked.some(paper => paper.legacyId === documentContext.id))
+        return unlocked;
+      return [
+        {
+          legacyId: documentContext.id,
+          title: documentContext.title,
+          course: documentContext.course ?? "Current document",
+        } as (typeof unlocked)[number],
+        ...unlocked,
+      ];
+    },
+    [documentContext, library.data]
   );
+
+  useEffect(() => {
+    if (documentContext) setPaperId(String(documentContext.id));
+  }, [documentContext]);
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -63,8 +82,13 @@ export default function GrokStudyAssistant({
             <Sparkles size={14} /> ScholarShelf Assistant
           </div>
           <h2 className={`${compact ? "text-xl" : "text-2xl"} mt-2 font-serif font-semibold text-[#173e35]`}>
-            Ask, learn, and revise with ScholarShelf Assistant.
+            {documentContext ? "Study this document with ScholarShelf Assistant." : "Ask, learn, and revise with ScholarShelf Assistant."}
           </h2>
+          {documentContext && (
+            <div className="mt-3 inline-flex max-w-full items-center gap-2 rounded-full border border-[#c8ddd3] bg-white px-3 py-1.5 text-xs font-semibold text-[#1d5146]">
+              <BookOpen size={13} /> <span className="truncate">{documentContext.title}</span>
+            </div>
+          )}
           <p className={`${compact ? "hidden" : ""} mt-2 max-w-2xl text-sm leading-6 text-[#648078]`}>
             Get explanations, ask questions about an unlocked document, or create a structured revision summary. This is free for students with 100 requests each day.
           </p>
@@ -127,6 +151,11 @@ export default function GrokStudyAssistant({
           {mode === "summarize" && documents.length === 0 && (
             <span className="font-normal text-[#8a6b2c]">
               Unlock a document first to create its summary.
+            </span>
+          )}
+          {documentContext && paperId === String(documentContext.id) && (
+            <span className="font-normal text-[#2d7965]">
+              This page is attached to the document above. Ask questions or create a focused revision summary.
             </span>
           )}
         </label>

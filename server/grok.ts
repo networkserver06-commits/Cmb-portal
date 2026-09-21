@@ -277,7 +277,8 @@ async function paperContextForProvider(userId: number, paperId: number, provider
   const paper = await paperById(paperId);
   if (!paper || !paper.isAvailable)
     throw new Error("The selected study document is unavailable.");
-  if (!(await entitlementFor(userId, paperId)))
+  const isFreeDocument = paper.accessMode === "free" && Number(paper.priceKes) === 0;
+  if (!isFreeDocument && !(await entitlementFor(userId, paperId)))
     throw new Error("Unlock this document before asking Grok about it.");
   const context: PaperContext = {
     title: paper.title,
