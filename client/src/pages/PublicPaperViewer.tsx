@@ -708,18 +708,8 @@ export default function PublicPaperViewer() {
             </div>
           </div>
 
-          <section className="mt-8" aria-label="AI study help for this document">
-            <GrokStudyAssistant
-              isAuthenticated={isAuthenticated}
-              documentContext={{
-                id: publicPaper.legacyId,
-                title: publicPaper.title,
-                course: publicPaper.course,
-              }}
-            />
-          </section>
-
-          <section className="mt-8 overflow-hidden rounded-[1.7rem] border border-[#c9ddd4] bg-white shadow-[0_18px_55px_rgba(29,81,70,0.08)]">
+          <div className="mt-8 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)]">
+            <section className="order-2 overflow-hidden rounded-[1.7rem] border border-[#c9ddd4] bg-white shadow-[0_18px_55px_rgba(29,81,70,0.08)] lg:order-1">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e4eee9] bg-[#edf6f1] px-4 py-3 text-xs text-[#648078] md:px-6">
               <div className="flex items-center gap-2 font-semibold text-[#1d5146]">
                 <FileText size={15} />
@@ -737,7 +727,18 @@ export default function PublicPaperViewer() {
               mimeType={mimeType}
               title={publicPaper.title}
             />
-          </section>
+            </section>
+            <section className="order-1 lg:order-2 lg:sticky lg:top-24" aria-label="AI study help for this document">
+              <GrokStudyAssistant
+                isAuthenticated={isAuthenticated}
+                documentContext={{
+                  id: publicPaper.legacyId,
+                  title: publicPaper.title,
+                  course: publicPaper.course,
+                }}
+              />
+            </section>
+          </div>
 
           <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-[#dce7e1] bg-white p-4 text-sm text-[#718780] sm:flex-row sm:items-center sm:justify-between">
             <p>

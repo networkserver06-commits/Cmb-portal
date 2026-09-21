@@ -34,6 +34,7 @@ type PaperContext = {
   description: string;
   fileId?: string;
   localText?: string;
+  textAvailable?: boolean;
 };
 
 function cleanSecret(value: string | undefined) {
@@ -247,7 +248,11 @@ async function extractLocalDocumentText(bytes: Buffer, fileName: string, mimeTyp
   if (normalizedMime === "application/pdf" || extension === "pdf") {
     try {
       const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-      const pdf = await pdfjs.getDocument({ data: new Uint8Array(bytes) }).promise;
+      const pdf = await pdfjs.getDocument({
+        data: new Uint8Array(bytes),
+        useWorkerFetch: false,
+        disableFontFace: true,
+      }).promise;
       const pages: string[] = [];
       for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
         const page = await pdf.getPage(pageNumber);
@@ -260,7 +265,7 @@ async function extractLocalDocumentText(bytes: Buffer, fileName: string, mimeTyp
       }
       return pages.join(" ").replace(/\s+/g, " ").trim();
     } catch {
-      return "The document text could not be extracted locally. Use the document title and description to guide the answer.";
+      return "";
     }
   }
   if (officePreviewFileType(normalizedMime, fileName)) {
@@ -268,7 +273,7 @@ async function extractLocalDocumentText(bytes: Buffer, fileName: string, mimeTyp
       const preview = await renderOfficePreview({ bytes, fileName, mimeType });
       return preview ? htmlToText(preview.html) : "";
     } catch {
-      return "The document text could not be extracted locally. Use the document title and description to guide the answer.";
+      return "";
     }
   }
   return "";
@@ -303,12 +308,15 @@ async function paperContextForProvider(userId: number, paperId: number, provider
       paper.fileName || `study-document-${paperId}`,
       paper.fileMimeType || "application/octet-stream"
     )).slice(0, MAX_LOCAL_DOCUMENT_CHARS);
+    context.textAvailable = Boolean(context.localText);
   }
   return context;
 }
 function paperPrompt(context: PaperContext) {
   const metadata = `Selected document: ${context.title}. Course: ${context.course}. Unit: ${context.unit}. Description: ${context.description}.`;
-  return context.localText ? `${metadata}\nDocument text:\n${context.localText}` : metadata;
+  if (!context.localText)
+    return `${metadata}\nThe full document text is not available in this request. Be transparent about that limitation, use only the metadata above, and ask the student to paste a passage for a precise answer. Do not invent document facts.`;
+  return `${metadata}\nDocument text (primary source; do not invent facts outside it):\n${context.localText}`;
 }
 async function askWithXai(input: { model: string; prompt: string; context?: PaperContext }) {
   const content: Array<Record<string, string>> = [{ type: "input_text", text: input.prompt }];
