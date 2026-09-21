@@ -298,6 +298,10 @@ export default function Home() {
         }
       );
     }
+    if (walletCheckState === "insufficient") {
+      startLeetecPayment(paperId, intent);
+      return;
+    }
     setPaymentStatus({
       state: "processing",
       message: "Checking your ScholarShelf wallet before checkout…",
