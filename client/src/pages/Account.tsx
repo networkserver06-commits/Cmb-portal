@@ -198,7 +198,11 @@ function AccountDashboard({
   ).sort((left, right) => String(left).localeCompare(String(right)));
   const hasLibraryFilters =
     Boolean(libraryQuery.trim()) || libraryLevel !== "all";
-  const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
+  const requestedTab = new URLSearchParams(window.location.search).get("tab");
+  const initialTab = dashboardTabs.some(tab => tab.id === requestedTab)
+    ? (requestedTab as DashboardTab)
+    : "overview";
+  const [activeTab, setActiveTab] = useState<DashboardTab>(initialTab);
   const [profileName, setProfileName] = useState(user.name ?? "");
   const [profileNotice, setProfileNotice] = useState("");
   const [topupAmount, setTopupAmount] = useState<number | "">("");
@@ -272,7 +276,7 @@ function AccountDashboard({
               <ArrowLeft size={16} /> Back to catalogue
             </Link>
             <Link
-              href="/ai"
+              href="/account?tab=assistant"
               className="inline-flex items-center gap-1.5 rounded-full border border-[#c8d9d2] px-3 py-2 text-sm font-semibold text-[#1d604f] transition hover:bg-[#e8f1ed]"
             >
               <Sparkles size={15} /> <span className="hidden sm:inline">AI Assistant</span><span className="sm:hidden">AI</span>
@@ -477,10 +481,22 @@ function AccountDashboard({
         <div className="mb-8">
           <AndroidAppPrompt compact />
         </div>
-        <section className="mb-8" aria-label="ScholarShelf Assistant">
-          <GrokStudyAssistant />
-        </section>
         <div className="min-w-0">
+          <section
+            className={`account-reveal mb-8 rounded-3xl border border-[#c8ddd3] bg-[#f5fbf7] p-5 shadow-sm sm:p-7 ${activeTab !== "assistant" ? "hidden" : ""}`}
+            aria-label="ScholarShelf Assistant"
+          >
+            <div className="mb-5">
+              <p className="section-eyebrow">AI Assistant</p>
+              <h1 className="mt-2 font-serif text-4xl font-semibold tracking-tight text-[#173e35]">
+                Your dedicated study desk
+              </h1>
+              <p className="mt-3 max-w-xl text-[#718780]">
+                Ask, learn, and revise with ScholarShelf Assistant without leaving your private student dashboard.
+              </p>
+            </div>
+            <GrokStudyAssistant />
+          </section>
           <section
             className={`account-reveal flex flex-col justify-between gap-6 md:flex-row md:items-end ${activeTab !== "overview" ? "hidden" : ""}`}
           >
@@ -1359,6 +1375,7 @@ function AccountDashboard({
 type AccountMode = "login" | "create";
 type DashboardTab =
   | "overview"
+  | "assistant"
   | "downloads"
   | "purchases"
   | "submissions"
@@ -1378,6 +1395,12 @@ const dashboardTabs: Array<{
     label: "Overview",
     description: "Your study snapshot",
     icon: LayoutDashboard,
+  },
+  {
+    id: "assistant",
+    label: "AI Assistant",
+    description: "ScholarShelf study help",
+    icon: Sparkles,
   },
   {
     id: "downloads",

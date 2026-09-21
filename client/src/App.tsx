@@ -7,8 +7,9 @@ import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import NetworkStatus from "./components/NetworkStatus";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { useAuth } from "@/_core/hooks/useAuth";
 const Home = lazy(() => import("./pages/Home"));
-const AI = lazy(() => import("./pages/AI"));
+const AppDownload = lazy(() => import("./pages/AppDownload"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Library = lazy(() => import("./pages/Library"));
 const PaymentResult = lazy(() => import("./pages/PaymentResult"));
@@ -27,6 +28,20 @@ function CreateAccountRoute() {
 
 function AccountRoute() {
   return <Account />;
+}
+
+function AssistantRoute() {
+  const [, setLocation] = useLocation();
+  const { isAuthenticated, loading } = useAuth();
+  useEffect(() => {
+    if (loading) return;
+    setLocation(
+      isAuthenticated
+        ? "/account?tab=assistant"
+        : "/login?returnTo=%2Faccount%3Ftab%3Dassistant"
+    );
+  }, [isAuthenticated, loading, setLocation]);
+  return null;
 }
 
 function AnalyticsTracker() {
@@ -74,7 +89,8 @@ function Router() {
       >
         <Switch>
           <Route path={"/"} component={Home} />
-          <Route path={"/ai"} component={AI} />
+          <Route path={"/app"} component={AppDownload} />
+          <Route path={"/ai"} component={AssistantRoute} />
           <Route path={"/library"} component={Library} />
           <Route path={"/payment-result"} component={PaymentResult} />
           <Route path={"/paper/:paperId"} component={PublicPaperViewer} />

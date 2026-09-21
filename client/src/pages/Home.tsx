@@ -27,7 +27,6 @@ import EducationLevelSelect from "@/components/EducationLevelSelect";
 import ShareDocumentButton from "@/components/ShareDocumentButton";
 import ShareAppButton from "@/components/ShareAppButton";
 import AndroidAppPrompt from "@/components/AndroidAppPrompt";
-import GrokStudyAssistant from "@/components/GrokStudyAssistant";
 import { educationLevelLabel } from "@shared/educationLevels";
 import {
   RESOURCE_TYPES,
@@ -584,24 +583,6 @@ export default function Home() {
 
         <section className="container py-8 md:py-10" aria-label="Android app">
           <AndroidAppPrompt />
-        </section>
-
-        <section className="container py-10 md:py-14" aria-label="AI study desk">
-          <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="section-eyebrow">Study smarter</p>
-              <h2 className="mt-2 font-serif text-4xl font-semibold tracking-tight text-[#173e35]">
-                Your questions, made clearer.
-              </h2>
-              <p className="mt-3 max-w-xl text-[#6a8179]">
-                Ask for an explanation, explore an unlocked document, or create a revision summary in the dedicated AI study desk.
-              </p>
-            </div>
-            <Link href="/ai" className="inline-flex h-10 items-center gap-2 rounded-full border border-[#bcd2c8] px-4 text-sm font-semibold text-[#1d5146] transition hover:bg-white">
-              Open full AI tab <ChevronRight size={16} />
-            </Link>
-          </div>
-          <GrokStudyAssistant isAuthenticated={isAuthenticated} />
         </section>
 
         <section id="catalogue" className="container py-16 md:py-20">

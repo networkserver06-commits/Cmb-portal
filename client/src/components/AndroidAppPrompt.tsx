@@ -2,7 +2,7 @@ import { ArrowRight, Download, Smartphone } from "lucide-react";
 
 const androidDownloadUrl =
   (import.meta.env.VITE_ANDROID_APP_DOWNLOAD_URL as string | undefined)?.trim() ||
-  "https://portal.leetec.online/app";
+  "/app";
 
 export default function AndroidAppPrompt({ compact = false }: { compact?: boolean }) {
   return (
@@ -39,7 +39,7 @@ export default function AndroidAppPrompt({ compact = false }: { compact?: boolea
           download
           className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-[#1d5146] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#153c34] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d5146] focus-visible:ring-offset-2"
         >
-          <Download size={17} /> Download Android app <ArrowRight size={15} />
+          <Download size={17} /> Download ScholarShelf app <ArrowRight size={15} />
         </a>
       </div>
     </section>
