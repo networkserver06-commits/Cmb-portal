@@ -64,6 +64,7 @@ import {
   paymentStatus,
   verifyLeetecTransaction,
   normalizeKenyanPhone,
+  MIN_LEETEC_AMOUNT_KES,
 } from "./leetec";
 
 const educationLevelInput = z.enum(EDUCATION_LEVELS);
@@ -671,7 +672,7 @@ export const appRouter = router({
     initializeWalletTopUp: protectedProcedure
       .input(
         z.object({
-          amountKes: z.number().int().min(10).max(150000),
+          amountKes: z.number().int().min(MIN_LEETEC_AMOUNT_KES).max(150000),
           phoneNumber: z.string().min(8).max(20),
         })
       )

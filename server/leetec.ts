@@ -1,4 +1,5 @@
 const DEFAULT_LEETEC_BASE_URL = "https://leetec.online";
+export const MIN_LEETEC_AMOUNT_KES = 100;
 
 export type LeetecTransaction = {
   status?: string;
@@ -92,9 +93,14 @@ async function readResponse(response: Response, action: string) {
       accepted: payload.accepted ?? null,
       message: message || null,
     });
+    const actionableMessage =
+      message ===
+      "The STK request was not accepted and no payment record was created. Correct the error and retry."
+        ? "LeeTec rejected the STK Push with HTTP 400 but gave no specific reason. Check that this API key belongs to the LeeTec workspace with an active M-Pesa destination, use an eligible Kenyan M-Pesa number, and retry with an amount of at least KES 100."
+        : message;
     throw new Error(
-      message
-        ? `LeeTec ${action} failed: ${message}`
+      actionableMessage
+        ? `LeeTec ${action} failed: ${actionableMessage}`
         : `LeeTec ${action} failed with status ${response.status}.`
     );
   }
@@ -172,6 +178,10 @@ export async function initializeLeetecStkPush(input: {
   if (!/^sk_(live|test)_[A-Za-z0-9_-]+$/.test(apiKey()))
     throw new Error(
       "LeeTec API key is missing or invalid. Set the server-only LEETEC_API_KEY in Vercel."
+    );
+  if (input.amountKes < MIN_LEETEC_AMOUNT_KES)
+    throw new Error(
+      `LeeTec STK Push amounts must be at least KES ${MIN_LEETEC_AMOUNT_KES}.`
     );
   const phoneNumber = normalizeKenyanPhone(input.phoneNumber);
   const response = await fetch(`${baseUrl()}/api/v1/stkpush`, {
