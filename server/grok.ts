@@ -440,6 +440,15 @@ export async function askGrok(input: {
           context = await paperContextForProvider(input.userId, input.paperId, provider);
           uploadedFileId = context.fileId;
         }
+        if (provider === "groq" && context?.textAvailable === false) {
+          return {
+            answer: `I can see the document title and course, but this file appears to be scanned or image-based, so Groq could not read its words reliably. I will not guess the contents.\n\nPlease try one of these options:\n1. Paste the page or paragraph you want explained into the question box.\n2. Ask again with a page or section name after the document text becomes available.\n3. Upload a text-based PDF or DOCX version for a full summary.\n\nYou can also ask me to explain a quoted passage, extract definitions, create exam questions, or make revision flashcards from text you provide.`,
+            model: "document-reader",
+            provider,
+            responseId: null,
+            ...credit,
+          } as const;
+        }
         const userText =
           input.mode === "summarize"
             ? `Summarize this study document for a university student. Include: a short overview, key concepts, important definitions, likely exam points, and five revision questions. Do not invent facts that are not in the document.${prompt ? `\nStudent's focus: ${prompt}` : ""}`

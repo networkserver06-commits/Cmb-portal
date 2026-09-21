@@ -18,6 +18,11 @@ export default function GrokStudyAssistant({
   const [prompt, setPrompt] = useState("");
   const [focus, setFocus] = useState("");
   const [copied, setCopied] = useState(false);
+  const [lastRequest, setLastRequest] = useState<{
+    mode: "ask" | "summarize";
+    paperId?: number;
+    prompt: string;
+  }>();
   const [answer, setAnswer] = useState("");
   const [answerProvider, setAnswerProvider] = useState<"xai" | "groq" | "">("");
   const [error, setError] = useState("");
@@ -72,11 +77,13 @@ export default function GrokStudyAssistant({
     const focusedPrompt = focus.trim()
       ? `Focus on page or section ${focus.trim()} of the document. ${prompt.trim()}`
       : prompt.trim();
-    ask.mutate({
+    const request = {
       mode,
       paperId: paperId ? Number(paperId) : undefined,
       prompt: focusedPrompt,
-    });
+    };
+    setLastRequest(request);
+    ask.mutate(request);
   };
 
   const askQuickly = (question: string) => {
@@ -260,6 +267,30 @@ export default function GrokStudyAssistant({
             </button>
           </div>
           {answer}
+          <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-[#e5eee9] pt-4">
+            <button
+              type="button"
+              disabled={ask.isPending || !lastRequest}
+              onClick={() => lastRequest && ask.mutate(lastRequest)}
+              className="rounded-full bg-[#1d5146] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#153c34] disabled:opacity-50"
+            >
+              {ask.isPending ? "Trying again…" : "Ask again"}
+            </button>
+            {[
+              ["Explain a passage", "Explain this quoted passage in simple terms: "],
+              ["Make flashcards", "Create revision flashcards from the document: "],
+              ["More exam practice", "Create more exam questions and short answers from the document: "],
+            ].map(([label, prefix]) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => askQuickly(prefix)}
+                className="rounded-full border border-[#c8d9d2] px-3 py-1.5 text-xs font-semibold text-[#34745f] hover:bg-[#eaf5ef]"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </article>
       )}
     </section>
