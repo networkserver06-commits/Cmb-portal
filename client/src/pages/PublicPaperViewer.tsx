@@ -7,6 +7,7 @@ import {
   Eye,
   FileText,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 import DOMPurify from "dompurify";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -17,6 +18,8 @@ import { trpc } from "@/lib/trpc";
 import { educationLevelLabel } from "@shared/educationLevels";
 import { resourceTypeLabel } from "@shared/resourceTypes";
 import ShareDocumentButton from "@/components/ShareDocumentButton";
+import GrokStudyAssistant from "@/components/GrokStudyAssistant";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
@@ -79,14 +82,14 @@ function ViewerShell({ children }: { children: React.ReactNode }) {
               </div>
             </div>
           </a>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 rounded-full border border-[#c8d9d2] px-3 py-2 text-sm font-semibold text-[#1d5146] transition hover:bg-[#e8f1ed]"
-          >
-            <ArrowLeft size={15} />
-            <span className="hidden sm:inline">Back to catalogue</span>
-            <span className="sm:hidden">Catalogue</span>
-          </Link>
+          <nav className="flex items-center gap-2" aria-label="Document navigation">
+            <Link href="/" className="inline-flex items-center gap-2 rounded-full border border-[#c8d9d2] px-3 py-2 text-sm font-semibold text-[#1d5146] transition hover:bg-[#e8f1ed]">
+              <ArrowLeft size={15} /> <span className="hidden sm:inline">Catalogue</span>
+            </Link>
+            <Link href="/ai" className="inline-flex items-center gap-2 rounded-full border border-[#c8d9d2] px-3 py-2 text-sm font-semibold text-[#1d5146] transition hover:bg-[#e8f1ed]">
+              <Sparkles size={15} /> <span className="hidden sm:inline">AI help</span>
+            </Link>
+          </nav>
         </div>
       </header>
       {children}
@@ -569,6 +572,7 @@ function PublicDocumentPreview({
 
 export default function PublicPaperViewer() {
   const [location] = useLocation();
+  const { isAuthenticated } = useAuth();
   const paperId = useMemo(() => {
     const path = location.split(/[?#]/)[0];
     const value = Number(path.split("/").filter(Boolean).at(-1));
@@ -588,6 +592,25 @@ export default function PublicPaperViewer() {
     ? `/api/papers/${publicPaper.legacyId}/office-preview`
     : "";
   const mimeType = String(publicPaper?.fileMimeType ?? "").toLowerCase();
+  const recordPaperView = trpc.analytics.recordPaperView.useMutation();
+
+  useEffect(() => {
+    if (!publicPaper?.legacyId) return;
+    try {
+      const key = "scholarshelf-view-session";
+      const sessionId =
+        sessionStorage.getItem(key) ??
+        globalThis.crypto?.randomUUID?.() ??
+        `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      sessionStorage.setItem(key, sessionId);
+      void recordPaperView.mutateAsync({
+        paperId: publicPaper.legacyId,
+        sessionId,
+      });
+    } catch {
+      // View analytics must never block document reading.
+    }
+  }, [publicPaper?.legacyId]);
 
   if (catalogue.isLoading) {
     return (
@@ -654,6 +677,11 @@ export default function PublicPaperViewer() {
                 {publicPaper.unit} · {educationLevelLabel(publicPaper.level)} ·{" "}
                 {publicPaper.cycle}
               </p>
+              <div className="mt-3 flex flex-wrap items-center gap-3 text-xs font-medium text-[#648078]">
+                <span className="inline-flex items-center gap-1.5"><Eye size={14} /> {Number(publicPaper.viewCount ?? 0).toLocaleString()} views</span>
+                <span aria-hidden="true">·</span>
+                <span>Shared by {publicPaper.contributorName ?? "ScholarShelf contributor"}</span>
+              </div>
               {publicPaper.description && (
                 <p className="mt-4 max-w-3xl text-sm leading-6 text-[#718780]">
                   {publicPaper.description}
@@ -679,6 +707,10 @@ export default function PublicPaperViewer() {
               </a>
             </div>
           </div>
+
+          <section className="mt-8" aria-label="AI study help for this document">
+            <GrokStudyAssistant isAuthenticated={isAuthenticated} />
+          </section>
 
           <section className="mt-8 overflow-hidden rounded-[1.7rem] border border-[#c9ddd4] bg-white shadow-[0_18px_55px_rgba(29,81,70,0.08)]">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e4eee9] bg-[#edf6f1] px-4 py-3 text-xs text-[#648078] md:px-6">

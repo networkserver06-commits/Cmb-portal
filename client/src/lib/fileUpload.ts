@@ -111,14 +111,26 @@ export async function uploadPortalDocument(input: {
   });
   let uploadedBytes = 0;
   const chunkSize = initialized.chunkSize || PORTAL_UPLOAD_CHUNK_BYTES;
-  for (let index = 0; index < totalChunks; index += 1) {
-    const start = index * chunkSize;
-    const chunk = input.file.slice(start, Math.min(input.file.size, start + chunkSize));
-    await sendChunkWithRetry(initialized.uploadId, index, chunk, loaded => {
-      uploadedBytes += loaded;
-      input.onProgress?.(Math.min(99, Math.round((uploadedBytes / input.file.size) * 100)));
-    });
-  }
+  let nextIndex = 0;
+  const worker = async () => {
+    while (nextIndex < totalChunks) {
+      const index = nextIndex++;
+      const start = index * chunkSize;
+      const chunk = input.file.slice(
+        start,
+        Math.min(input.file.size, start + chunkSize)
+      );
+      await sendChunkWithRetry(initialized.uploadId, index, chunk, loaded => {
+        uploadedBytes += loaded;
+        input.onProgress?.(
+          Math.min(99, Math.round((uploadedBytes / input.file.size) * 100))
+        );
+      });
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(3, totalChunks) }, () => worker())
+  );
   const response = await jsonRequest<{
     fileId?: string;
     fileName?: string;

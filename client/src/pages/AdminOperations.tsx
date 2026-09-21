@@ -16,6 +16,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import RouteProgress from "@/components/RouteProgress";
+import { toast } from "sonner";
 import {
   Check,
   Eye,
@@ -61,13 +62,17 @@ function PaperReplacement({ paper }: { paper: any }) {
       });
       setMessage("Paper file updated and linked securely.");
       setTone("success");
+      toast.success("Paper file updated", {
+        description: "The replacement document is now securely linked.",
+      });
     } catch (error) {
-      setMessage(
+      const message =
         error instanceof Error
           ? error.message
-          : "The paper file could not be updated."
-      );
+          : "The paper file could not be updated.";
+      setMessage(message);
       setTone("error");
+      toast.error("Paper upload failed", { description: message });
       setProgress(0);
     }
   };

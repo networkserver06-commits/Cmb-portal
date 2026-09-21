@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CheckCircle2, FileUp, Loader2, ShieldCheck } from "lucide-react";
+import { toast } from "sonner";
 
 export default function PublishPaper({
   onSubmitted,
@@ -43,6 +44,12 @@ export default function PublishPaper({
         result.publication.status === "published"
           ? "Safety check passed. Your document is now published in the free library."
           : "Your document was held for administrator review because the safety detector needs a closer look."
+      );
+      toast.success(
+        result.publication.status === "published"
+          ? "Document published successfully"
+          : "Document submitted for administrator review",
+        { description: "Your document is now linked to your account." }
       );
       onSubmitted?.();
     },
@@ -84,11 +91,12 @@ export default function PublishPaper({
         authorized: true,
       });
     } catch (uploadError) {
-      setError(
+      const message =
         uploadError instanceof Error
           ? uploadError.message
-          : "Unable to upload this document."
-      );
+          : "Unable to upload this document.";
+      setError(message);
+      toast.error("Document upload failed", { description: message });
       setProgress(0);
     } finally {
       setUploading(false);

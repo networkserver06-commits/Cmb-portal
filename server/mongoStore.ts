@@ -188,6 +188,12 @@ export async function mongo(): Promise<Db> {
         .collection("operational_records")
         .createIndex({ eventType: 1, createdAt: -1 }),
       database
+        .collection("paper_views")
+        .createIndex({ paperId: 1, sessionId: 1 }, { unique: true }),
+      database
+        .collection("paper_views")
+        .createIndex({ paperId: 1, createdAt: -1 }),
+      database
         .collection("grok_usage")
         .createIndex({ userId: 1, dayKey: 1 }, { unique: true }),
       database

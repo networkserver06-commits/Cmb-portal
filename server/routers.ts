@@ -293,7 +293,8 @@ export const appRouter = router({
         .optional()
     )
     .query(async ({ input }) => {
-      const rows = await (await mongo())
+      const database = await mongo();
+      const rows = await database
         .collection("papers")
         .find(
           { isAvailable: true },
@@ -304,12 +305,32 @@ export const appRouter = router({
               fileId: 0,
               submissionId: 0,
               publishedBy: 0,
-              submittedBy: 0,
             },
           }
         )
         .sort({ createdAt: -1 })
         .toArray();
+      const contributorIds = rows
+        .map((paper: any) => paper.submittedBy ?? paper.createdBy ?? paper.ownerId)
+        .filter((id: unknown): id is number => Number.isInteger(id));
+      const contributors = await database
+        .collection<any>("users")
+        .find(
+          { legacyId: { $in: contributorIds } },
+          { projection: { legacyId: 1, name: 1 } }
+        )
+        .toArray();
+      const contributorNames = new Map(
+        contributors.map(user => [user.legacyId, user.name || "ScholarShelf contributor"])
+      );
+      const viewTotals = await database
+        .collection<any>("paper_views")
+        .aggregate([
+          { $match: { paperId: { $in: rows.map((paper: any) => paper.legacyId) } } },
+          { $group: { _id: "$paperId", views: { $sum: 1 } } },
+        ])
+        .toArray();
+      const viewsByPaper = new Map(viewTotals.map(row => [row._id, row.views]));
       const search = input?.search?.trim().toLowerCase();
       const level = input?.level;
       const documentType = input?.documentType;
@@ -336,6 +357,16 @@ export const appRouter = router({
               .includes(search)
           );
         return matchesLevel && matchesDocumentType && matchesSearch;
+      }).map((paper: any) => {
+        const { submittedBy, createdBy, ownerId, ...publicPaper } = paper;
+        return {
+        ...publicPaper,
+        contributorName:
+          contributorNames.get(
+            submittedBy ?? createdBy ?? ownerId
+          ) ?? "ScholarShelf contributor",
+        viewCount: viewsByPaper.get(paper.legacyId) ?? 0,
+        };
       });
     }),
   announcements: publicProcedure.query(
@@ -347,6 +378,29 @@ export const appRouter = router({
         .toArray()
   ),
   analytics: router({
+    recordPaperView: publicProcedure
+      .input(
+        z.object({
+          paperId: z.number().int().positive(),
+          sessionId: z.string().min(16).max(80),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        await (await mongo()).collection("paper_views").updateOne(
+          { paperId: input.paperId, sessionId: input.sessionId },
+          {
+            $setOnInsert: {
+              paperId: input.paperId,
+              sessionId: input.sessionId,
+              ipAddress: ctx.req.ip,
+              userAgent: ctx.req.get("user-agent") ?? null,
+              createdAt: new Date(),
+            },
+          },
+          { upsert: true }
+        );
+        return { success: true } as const;
+      }),
     recordVisit: publicProcedure
       .input(
         z.object({
