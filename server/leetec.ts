@@ -74,8 +74,24 @@ async function readResponse(response: Response, action: string) {
   } catch {
     throw new Error(`LeeTec ${action} returned an invalid response (${response.status}).`);
   }
-  if (!response.ok || payload.status === false) {
-    const message = String(payload.message ?? "").trim();
+  const rawMessage =
+    payload.message ?? payload.error ?? payload.detail ?? payload.reason ?? "";
+  const message =
+    typeof rawMessage === "string"
+      ? rawMessage.trim()
+      : JSON.stringify(rawMessage);
+  const rejected =
+    !response.ok ||
+    payload.status === false ||
+    payload.success === false ||
+    payload.accepted === false;
+  if (rejected) {
+    console.error(`[LeeTec] ${action} rejected`, {
+      httpStatus: response.status,
+      providerStatus: payload.status ?? null,
+      accepted: payload.accepted ?? null,
+      message: message || null,
+    });
     throw new Error(
       message
         ? `LeeTec ${action} failed: ${message}`
@@ -153,6 +169,10 @@ export async function initializeLeetecStkPush(input: {
   amountKes: number;
   accountReference: string;
 }) {
+  if (!/^sk_(live|test)_[A-Za-z0-9_-]+$/.test(apiKey()))
+    throw new Error(
+      "LeeTec API key is missing or invalid. Set the server-only LEETEC_API_KEY in Vercel."
+    );
   const phoneNumber = normalizeKenyanPhone(input.phoneNumber);
   const response = await fetch(`${baseUrl()}/api/v1/stkpush`, {
     method: "POST",
