@@ -12,7 +12,6 @@ import {
   entitlementFor,
   paperById,
   recordOperationalEvent,
-  fulfillWalletTopUp,
 } from "../mongoStore";
 import { parse } from "cookie";
 import { ACCOUNT_COOKIE, authenticateAccount } from "../mongoAuth";
@@ -56,7 +55,7 @@ export async function createApp() {
     res.status(200).json({
       status: "ok",
       appBaseUrlConfigured: Boolean(ENV.appBaseUrl),
-      paymentCollection: "paystack-hosted",
+      paymentCollection: "leetec-stkpush",
     })
   );
 
@@ -78,69 +77,6 @@ export async function createApp() {
       });
     }
   });
-  // Paystack signs the exact raw payload. Keep this endpoint before JSON parsing.
-  app.post(
-    "/api/paystack/webhook",
-    express.raw({ type: "application/json" }),
-    async (req, res) => {
-      const {
-        isValidPaystackSignature,
-        paymentMatchesOrder,
-        verifyPaystackTransaction,
-        fulfillSuccessfulPayment,
-      } = await import("../paystack");
-      const rawBody = Buffer.isBuffer(req.body)
-        ? req.body.toString("utf8")
-        : "";
-      if (
-        !isValidPaystackSignature(rawBody, req.header("x-paystack-signature"))
-      ) {
-        return res.status(401).send("Invalid signature");
-      }
-      try {
-        const event = JSON.parse(rawBody) as {
-          event?: string;
-          data?: {
-            reference?: string;
-            amount?: number;
-            currency?: string;
-            status?: string;
-          };
-        };
-        if (event.event === "charge.success" && event.data?.reference) {
-          const verified = await verifyPaystackTransaction(
-            event.data.reference
-          );
-          if (verified.data?.status !== "success")
-            return res.status(400).send("Verification mismatch");
-          if (
-            !event.data.reference.startsWith("WALLET-") &&
-            !paymentMatchesOrder(
-              verified.data,
-              event.data.reference,
-              Number(event.data.amount ?? 0) / 100
-            )
-          ) {
-            return res.status(400).send("Verification mismatch");
-          }
-          if (event.data.reference.startsWith("WALLET-")) {
-            await fulfillWalletTopUp(event.data.reference, verified.data);
-          } else {
-            // Fulfilment is intentionally idempotent: existing entitlements are checked before access is granted.
-            await fulfillSuccessfulPayment(
-              event.data.reference,
-              verified.data,
-              rawBody
-            );
-          }
-        }
-        return res.sendStatus(200);
-      } catch (error) {
-        console.error("Paystack webhook error", error);
-        return res.sendStatus(500);
-      }
-    }
-  );
   app.post(
     "/api/files/upload",
     express.raw({ type: "application/octet-stream", limit: MAX_UPLOAD_BYTES }),

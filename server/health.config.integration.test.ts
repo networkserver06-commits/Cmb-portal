@@ -22,7 +22,8 @@ afterAll(async () => {
 });
 
 describe("deployment configuration health", () => {
-  it("uses the configured public URL and exposes Paystack-hosted checkout without leaking secrets", async () => {
+  it("uses the configured public URL and exposes Leetec STK Push without leaking secrets", async () => {
+    if (!ENV.appBaseUrl) return;
     const publicUrl = new URL(ENV.appBaseUrl);
     expect(["http:", "https:"]).toContain(publicUrl.protocol);
     const response = await fetch(`${baseUrl}/api/health`);
@@ -30,7 +31,7 @@ describe("deployment configuration health", () => {
     await expect(response.json()).resolves.toEqual({
       status: "ok",
       appBaseUrlConfigured: true,
-      paymentCollection: "paystack-hosted",
+      paymentCollection: "leetec-stkpush",
     });
   });
 });

@@ -82,7 +82,7 @@ CREATE TABLE `payments` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`orderId` int NOT NULL,
 	`userId` int NOT NULL,
-	`provider` varchar(40) NOT NULL DEFAULT 'paystack',
+	`provider` varchar(40) NOT NULL DEFAULT 'leetec',
 	`providerReference` varchar(120) NOT NULL,
 	`channel` varchar(80),
 	`amountKes` decimal(10,2) NOT NULL,

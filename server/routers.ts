@@ -24,7 +24,6 @@ import {
   resetAccountPassword,
   validatePasswordResetToken,
   verifyEmailToken,
-  publicPortalUrl,
 } from "./mongoAuth";
 import {
   mongo,
@@ -36,7 +35,6 @@ import {
   purchasePaperWithWallet,
   walletSummaryForAdmin,
   walletTopUpByReference,
-  walletTopUpPaymentMatches,
   fulfillWalletTopUp,
   recordOperationalEvent,
 } from "./mongoStore";
@@ -59,12 +57,14 @@ import {
 import {
   createPaymentReference,
   createWalletTopUpReference,
-  fulfillSuccessfulPayment,
-  getPaystackReadiness,
-  initializePaystackCheckout,
+  getLeetecReadiness,
+  initializeLeetecStkPush,
+  ledgerPaymentData,
   paymentMatchesOrder,
-  verifyPaystackTransaction,
-} from "./paystack";
+  paymentStatus,
+  verifyLeetecTransaction,
+  normalizeKenyanPhone,
+} from "./leetec";
 
 const educationLevelInput = z.enum(EDUCATION_LEVELS);
 const resourceTypeInput = z.enum(RESOURCE_TYPES).default("examination-paper");
@@ -187,24 +187,14 @@ export async function reconcileWalletTopUp(userId: number, reference: string) {
   const topUp = await walletTopUpByReference(userId, reference);
   if (!topUp || topUp.status !== "pending") return topUp;
   try {
-    const verified = await verifyPaystackTransaction(reference);
-    const data = verified.data;
+    const data = await verifyLeetecTransaction(reference);
     if (
-      verified.status &&
-      data?.status === "success" &&
-      walletTopUpPaymentMatches(
-        {
-          reference: data.reference,
-          amount: data.amount,
-          currency: data.currency,
-        },
-        reference,
-        topUp.amountKes
-      )
+      paymentStatus(data) === "paid" &&
+      paymentMatchesOrder(data, reference, topUp.amountKes)
     ) {
-      await fulfillWalletTopUp(reference, data);
+      await fulfillWalletTopUp(reference, ledgerPaymentData(data!));
     } else if (
-      ["failed", "abandoned", "cancelled"].includes(data?.status ?? "")
+      paymentStatus(data) === "failed"
     ) {
       await db
         .collection("wallet_topups")
@@ -564,20 +554,9 @@ export const appRouter = router({
         if (!order) return { status: "pending" as const };
         if (order.status === "pending") {
           try {
-            const verified = await verifyPaystackTransaction(input.reference);
-            const data = verified.data;
-            if (data?.status === "success") {
-              if (
-                !paymentMatchesOrder(
-                  {
-                    reference: data.reference,
-                    amount: data.amount,
-                    currency: data.currency,
-                  },
-                  input.reference,
-                  order.amountKes
-                )
-              ) {
+            const data = await verifyLeetecTransaction(input.reference);
+            if (paymentStatus(data) === "paid") {
+              if (!paymentMatchesOrder(data, input.reference, order.amountKes)) {
                 await db
                   .collection("orders")
                   .updateOne(
@@ -585,15 +564,13 @@ export const appRouter = router({
                     { $set: { status: "failed" } }
                   );
               } else {
-                await fulfillSuccessfulPayment(
+                await (await import("./mongoStore")).fulfillPayment(
                   input.reference,
-                  data,
-                  JSON.stringify(verified)
+                  ledgerPaymentData(data!),
+                  JSON.stringify(data)
                 );
               }
-            } else if (
-              ["failed", "abandoned", "cancelled"].includes(data?.status ?? "")
-            ) {
+            } else if (paymentStatus(data) === "failed") {
               await db
                 .collection("orders")
                 .updateOne(
@@ -649,15 +626,18 @@ export const appRouter = router({
         );
       }),
     initializePayment: protectedProcedure
-      .input(z.object({ paperId: z.number().int().positive() }))
+      .input(
+        z.object({
+          paperId: z.number().int().positive(),
+          phoneNumber: z.string().min(8).max(20),
+        })
+      )
       .mutation(async ({ ctx, input }) => {
         const paper = await paperById(input.paperId);
         if (!paper?.isAvailable || paper.accessMode === "free")
           throw new Error("This paper is free and does not require payment");
         const reference = createPaymentReference(paper.legacyId, ctx.user.id);
-        const callbackUrl = publicPortalUrl(
-          `/payment-result?reference=${encodeURIComponent(reference)}`
-        );
+        const phoneNumber = normalizeKenyanPhone(input.phoneNumber);
         const order = {
           _id: new (await import("mongodb")).ObjectId(),
           legacyId: await nextId("orders"),
@@ -665,19 +645,20 @@ export const appRouter = router({
           paperId: paper.legacyId,
           reference,
           amountKes: Number(paper.priceKes),
+          phoneNumber,
           status: "pending" as const,
           createdAt: new Date(),
         };
         const db = await mongo();
         await db.collection("orders").insertOne(order);
         try {
-          const checkout = await initializePaystackCheckout({
-            email: ctx.user.email ?? `${ctx.user.openId}@student.local`,
+          await initializeLeetecStkPush({
+            phoneNumber,
             amountKes: order.amountKes,
-            reference,
-            callbackUrl,
+            accountReference: reference,
+            transactionDesc: `ScholarShelf paper ${paper.title}`,
           });
-          return { reference, authorizationUrl: checkout.authorizationUrl };
+          return { reference, status: "pending" as const };
         } catch (error) {
           await db
             .collection("orders")
@@ -689,18 +670,22 @@ export const appRouter = router({
         }
       }),
     initializeWalletTopUp: protectedProcedure
-      .input(z.object({ amountKes: z.number().int().min(10).max(150000) }))
+      .input(
+        z.object({
+          amountKes: z.number().int().min(10).max(150000),
+          phoneNumber: z.string().min(8).max(20),
+        })
+      )
       .mutation(async ({ ctx, input }) => {
         const reference = createWalletTopUpReference(ctx.user.id);
-        const callbackUrl = publicPortalUrl(
-          `/account?wallet_reference=${encodeURIComponent(reference)}`
-        );
+        const phoneNumber = normalizeKenyanPhone(input.phoneNumber);
         const now = new Date();
         const topUp = {
           _id: new (await import("mongodb")).ObjectId(),
           legacyId: await nextId("wallet_topups"),
           userId: ctx.user.id,
           reference,
+          phone: phoneNumber,
           amountKes: input.amountKes,
           status: "pending" as const,
           createdAt: now,
@@ -708,13 +693,13 @@ export const appRouter = router({
         };
         await (await mongo()).collection("wallet_topups").insertOne(topUp);
         try {
-          const checkout = await initializePaystackCheckout({
-            email: ctx.user.email ?? `${ctx.user.openId}@student.local`,
+          await initializeLeetecStkPush({
+            phoneNumber,
             amountKes: input.amountKes,
-            reference,
-            callbackUrl,
+            accountReference: reference,
+            transactionDesc: "ScholarShelf wallet top-up",
           });
-          return { reference, authorizationUrl: checkout.authorizationUrl };
+          return { reference, status: "pending" as const };
         } catch (error) {
           await (await mongo())
             .collection("wallet_topups")
@@ -762,7 +747,7 @@ export const appRouter = router({
         environment:
           process.env.NODE_ENV === "production" ? "production" : "development",
         database: "connected" as const,
-        paystack: await getPaystackReadiness(),
+      leetec: await getLeetecReadiness(),
         checkedAt: new Date().toISOString(),
       };
     }),

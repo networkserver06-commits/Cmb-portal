@@ -199,6 +199,7 @@ function AccountDashboard({
   const [profileName, setProfileName] = useState(user.name ?? "");
   const [profileNotice, setProfileNotice] = useState("");
   const [topupAmount, setTopupAmount] = useState<number | "">("");
+  const [phoneNumber, setPhoneNumber] = useState(user.phone ?? "");
   const [topupReference, setTopupReference] = useState(
     () =>
       new URLSearchParams(window.location.search).get("wallet_reference") ?? ""
@@ -230,8 +231,9 @@ function AccountDashboard({
   const initializeWalletTopUp = trpc.student.initializeWalletTopUp.useMutation({
     onSuccess: data => {
       setTopupReference(data.reference);
-      setWalletNotice("Redirecting you to Paystack’s secure checkout…");
-      window.location.assign(data.authorizationUrl);
+      setWalletNotice(
+        "LeeTec sent an M-Pesa payment prompt to your phone. Approve it to complete the top-up."
+      );
     },
     onError: error => setWalletNotice(error.message),
   });
@@ -922,7 +924,7 @@ function AccountDashboard({
               <div>
                 <p className="section-eyebrow">Wallet & funds</p>
                 <h2 className="mt-1 font-serif text-2xl font-semibold text-[#173e35]">
-                  Add funds with Paystack
+                  Add funds with LeeTec
                 </h2>
               </div>
               <WalletCards className="text-[#4b8876]" size={22} />
@@ -940,7 +942,7 @@ function AccountDashboard({
                     {wallet.data?.totalTopUps ?? 0} confirmed top-ups
                   </p>
                   <p className="mt-1 max-w-xs text-xs leading-5 text-[#718780]">
-                    Pending or failed checkouts are not included until Paystack
+                    Pending or failed payments are not included until LeeTec
                     confirms them.
                   </p>
                 </div>
@@ -963,9 +965,24 @@ function AccountDashboard({
                       "Enter an amount between KES 10 and KES 150,000."
                     );
                   setTopupInputError("");
-                  initializeWalletTopUp.mutate({ amountKes: amount });
+                  initializeWalletTopUp.mutate({ amountKes: amount, phoneNumber });
                 }}
               >
+                <label className="block text-sm font-semibold text-[#274d43]">
+                  Kenyan phone number
+                  <Input
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    value={phoneNumber}
+                    onChange={event => {
+                      setPhoneNumber(event.target.value);
+                      setTopupInputError("");
+                    }}
+                    placeholder="0712 345 678"
+                    className="mt-2 h-12 rounded-2xl border-[#c8d9d2] bg-white"
+                  />
+                </label>
                 <label className="block text-sm font-semibold text-[#274d43]">
                   Amount (KES)
                   <Input
@@ -1003,8 +1020,9 @@ function AccountDashboard({
                 </p>
               )}
               <p className="mt-4 text-xs leading-5 text-[#648078]">
-                You will finish securely on Paystack. The portal confirms the
-                payment server-side before your wallet balance changes.
+                LeeTec will send an M-Pesa prompt to your phone. The portal
+                confirms the payment from LeeTec transaction history before your
+                wallet balance changes.
               </p>
               {walletNotice && (
                 <p
@@ -1036,7 +1054,7 @@ function AccountDashboard({
                     >
                       <span>
                         <span className="block font-semibold text-[#274d43]">
-                          Paystack wallet top-up
+                          LeeTec wallet top-up
                         </span>
                         <span className="text-xs text-[#82958e]">
                           {new Date(transaction.createdAt).toLocaleString()}
@@ -1635,7 +1653,7 @@ export default function Account({
             Keep every resource in one trusted library.
           </h1>
           <p className="mt-5 max-w-md text-lg leading-8 text-[#648078]">
-            Create your student account to track Paystack purchases and access
+            Create your student account to track LeeTec purchases and access
             unlocked resources securely.
           </p>
           <div className="mt-8 flex items-center gap-3 text-sm text-[#4b8876]">

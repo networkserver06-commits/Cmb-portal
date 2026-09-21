@@ -494,7 +494,7 @@ export async function fulfillWalletTopUp(
       reference,
       providerReference: provider.reference,
       amountKes: topUp.amountKes,
-      channel: provider.channel ?? "paystack-hosted",
+      channel: provider.channel ?? "leetec-stkpush",
     },
   });
   return {
@@ -608,7 +608,7 @@ export async function fulfillPayment(
         orderId: order.legacyId,
         userId: order.userId,
         providerReference,
-        channel: provider.channel ?? "paystack-hosted",
+      channel: provider.channel ?? "leetec-stkpush",
         amountKes: order.amountKes,
         status: "success",
         rawEvent,

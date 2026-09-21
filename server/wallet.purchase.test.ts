@@ -24,7 +24,7 @@ describe("wallet-first checkout", () => {
     ).toEqual({ balanceKes: 650, totalTopUps: 1 });
   });
 
-  it("checks the server wallet before starting the Paystack fallback", () => {
+  it("checks the server wallet before starting the LeeTec fallback", () => {
     expect(routerSource).toContain("payWithWallet: protectedProcedure");
     expect(routerSource).toContain("purchasePaperWithWallet");
     expect(homeSource).toContain(
@@ -35,6 +35,6 @@ describe("wallet-first checkout", () => {
     expect(homeSource).toContain("Confirm and buy");
     expect(homeSource).toContain("/api/papers/${selectedPaper.id}/view");
     expect(homeSource).toContain("/api/papers/${selectedPaper.id}/download");
-    expect(homeSource).toContain("startPaystackCheckout(paperId, intent)");
+    expect(homeSource).toContain("startLeetecPayment(paperId, intent)");
   });
 });

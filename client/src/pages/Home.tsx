@@ -91,6 +91,7 @@ export default function Home() {
     amountKes: number;
     balanceKes: number;
   } | null>(null);
+  const [phoneNumber, setPhoneNumber] = useState(user?.phone ?? "");
   const [selectedPaperId, setSelectedPaperId] = useState<number | null>(() => {
     const value = Number(
       new URLSearchParams(window.location.search).get("paper")
@@ -141,7 +142,7 @@ export default function Home() {
         ...current,
         state: "error",
         message:
-          "Paystack did not confirm this payment. You can retry checkout safely.",
+          "LeeTec did not confirm this payment. You can retry safely.",
       }));
   }, [paymentCheck.data?.status, paymentStatus.state]);
   const filteredPapers = useMemo(() => {
@@ -174,22 +175,22 @@ export default function Home() {
     setSelectedPaperId(null);
     setPaymentStatus({ state: "idle", message: "" });
   };
-  const startPaystackCheckout = (paperId: number, intent: number) => {
+  const startLeetecPayment = (paperId: number, intent: number) => {
     setPaymentStatus({
       state: "processing",
-      message: "Preparing secure Paystack checkout…",
+      message: "Sending a secure LeeTec payment prompt to your phone…",
     });
     initializePayment.mutate(
-      { paperId },
+      { paperId, phoneNumber },
       {
         onSuccess: result => {
           if (intent !== checkoutIntent.current) return;
           setPaymentStatus({
-            state: "processing",
-            message: "Redirecting you to Paystack’s secure checkout…",
+            state: "authorizing",
+            message:
+              "Approve the LeeTec payment prompt on your phone. This page will check the payment status automatically.",
             reference: result.reference,
           });
-          window.location.assign(result.authorizationUrl);
         },
         onError: error =>
           setPaymentStatus({
@@ -227,9 +228,9 @@ export default function Home() {
           setPaymentStatus({
             state: "processing",
             message:
-              "Your wallet balance changed before confirmation. Preparing secure Paystack checkout instead…",
+              "Your wallet balance changed before confirmation. Sending a secure LeeTec payment prompt instead…",
           });
-          startPaystackCheckout(paperId, intent);
+          startLeetecPayment(paperId, intent);
         },
         onError: error =>
           setPaymentStatus({
@@ -294,10 +295,10 @@ export default function Home() {
             state: "processing",
             message:
               balanceKes > 0
-                ? `Wallet balance: KES ${balanceKes.toLocaleString()}. Preparing secure Paystack checkout…`
-                : "Your wallet has no available balance. Preparing secure Paystack checkout…",
+                ? `Wallet balance: KES ${balanceKes.toLocaleString()}. Sending a secure LeeTec payment prompt…`
+                : "Your wallet has no available balance. Sending a secure LeeTec payment prompt…",
           });
-          startPaystackCheckout(paperId, intent);
+          startLeetecPayment(paperId, intent);
           return;
         }
         setPaymentStatus({ state: "idle", message: "" });
@@ -751,6 +752,24 @@ export default function Home() {
                       </div>
                     </div>
                   )}
+                {selectedPaper && isAuthenticated && (
+                  <label className="block rounded-2xl border border-[#d8e8df] bg-white/75 p-4 text-sm font-semibold text-[#274d43]">
+                    Kenyan phone number for LeeTec STK Push
+                    <input
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      value={phoneNumber}
+                      onChange={event => setPhoneNumber(event.target.value)}
+                      placeholder="0712 345 678"
+                      aria-label="Kenyan phone number for LeeTec payment"
+                      className="mt-2 h-11 w-full rounded-xl border border-[#c8d9d2] bg-white px-3 text-sm font-normal outline-none focus:border-[#4b8876] focus:ring-2 focus:ring-[#4b8876]/25"
+                    />
+                    <span className="mt-2 block text-xs font-normal leading-5 text-[#718780]">
+                      LeeTec will send an M-Pesa payment prompt to this number.
+                    </span>
+                  </label>
+                )}
                 {walletConfirmation && selectedPaper && (
                   <div className="rounded-2xl border border-[#d8c47d] bg-[#fff9e8] p-4 text-sm text-[#6f5517]">
                     <div className="flex items-start gap-3">
@@ -786,13 +805,13 @@ export default function Home() {
                             onClick={() => {
                               const confirmation = walletConfirmation;
                               setWalletConfirmation(null);
-                              startPaystackCheckout(
+                              startLeetecPayment(
                                 confirmation.paperId,
                                 checkoutIntent.current
                               );
                             }}
                           >
-                            Use Paystack instead
+                            Pay by phone instead
                           </Button>
                         </div>
                       </div>
@@ -926,7 +945,7 @@ export default function Home() {
                           : payWithWallet.isPending
                             ? "Checking wallet…"
                             : initializePayment.isPending
-                              ? "Opening Paystack…"
+                              ? "Sending phone prompt…"
                               : "Buy securely"}{" "}
                         <ChevronRight size={15} />
                       </Button>
@@ -1051,7 +1070,7 @@ export default function Home() {
                 <div className="step-card">
                   <span>02</span>
                   <h3>Pay securely</h3>
-                  <p>Complete payment securely on Paystack.</p>
+                  <p>Approve a secure LeeTec M-Pesa payment prompt.</p>
                 </div>
                 <div className="step-card">
                   <span>03</span>

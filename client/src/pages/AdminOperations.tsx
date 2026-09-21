@@ -324,7 +324,7 @@ export default function AdminOperations() {
                   Payment and file operations
                 </h2>
                 <p className="mt-1 text-xs text-[#82958e]">
-                  Live Paystack records and secure document replacement.
+                  Live LeeTec payment records and secure document replacement.
                 </p>
               </div>
             </div>

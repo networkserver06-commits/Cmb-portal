@@ -541,7 +541,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "'paystack'"
+          "default": "'leetec'"
         },
         "providerReference": {
           "name": "providerReference",

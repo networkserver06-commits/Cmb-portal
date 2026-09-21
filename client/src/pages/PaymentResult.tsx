@@ -95,7 +95,7 @@ export default function PaymentResult() {
             Payment reference required
           </h1>
           <p className="mt-2 text-sm text-[#718780]">
-            Open this page from a Paystack payment result or your account
+            Open this page from a LeeTec payment result or your account
             history.
           </p>
           <a href="/library">
@@ -137,7 +137,7 @@ export default function PaymentResult() {
             Payment reference not found
           </h1>
           <p className="mt-2 text-sm text-[#718780]">
-            Check the reference in your Paystack receipt or return to the
+            Check the reference in your LeeTec receipt or return to the
             catalogue.
           </p>
           <a href="/">
@@ -175,7 +175,7 @@ export default function PaymentResult() {
     <div className="min-h-screen bg-[#f7f8f6] text-[#19312c] account-route-shell">
       <RouteProgress
         visible={order.status === "pending"}
-        label="Waiting for Paystack confirmation…"
+        label="Waiting for LeeTec confirmation…"
       />
       <header className="border-b border-[#dce6e1] bg-white">
         <div className="container flex h-20 items-center justify-between">
@@ -213,10 +213,10 @@ export default function PaymentResult() {
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-[#718780]">
             {paid
-              ? "Paystack has confirmed your payment and the paper is unlocked in your personal library."
+              ? "LeeTec has confirmed your payment and the paper is unlocked in your personal library."
               : failed
                 ? "You can safely return to the catalogue and retry checkout."
-                : "Finish checkout securely on Paystack. This page checks the order automatically."}
+                : "Approve the LeeTec payment prompt on your phone. This page checks the order automatically."}
           </p>
         </div>
         <section className="account-panel-transition mt-10 rounded-3xl border border-[#dfe9e3] bg-white p-6 shadow-sm md:p-8">

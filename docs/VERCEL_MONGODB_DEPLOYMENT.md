@@ -25,19 +25,19 @@ Enter each secret in **Vercel → Project Settings → Environment Variables** f
 | ------------------------------------------ | ---------------------- | -------------------------------------------------------------------------------------- |
 | `MONGODB_URI`                              | Server only            | MongoDB collections, operational records, and the `portal_files` GridFS bucket.        |
 | `MONGODB_DATABASE`                         | Server only            | Database name; use `examvault` unless an alternate name is deliberately chosen.        |
-| `APP_BASE_URL`                             | Server only            | Canonical public HTTPS URL used for Paystack return links and account-email links.     |
+| `APP_BASE_URL`                             | Server only            | Canonical public HTTPS URL used for account-email links.                               |
 | `JWT_SECRET`                               | Server only            | Account-session signing.                                                               |
-| `PAYSTACK_SECRET_KEY`                      | Server only            | Paystack-hosted checkout initialization, payment verification, and webhook validation. |
-| `VITE_PAYSTACK_PUBLIC_KEY`                 | Client build variable  | The public key used for payment-readiness status.                                      |
+| `LEETEC_BASE_URL`                          | Server only            | LeeTec API origin; use `https://leetec.online` unless deliberately overridden.         |
+| `LEETEC_API_KEY`                            | Server only            | LeeTec STK Push and transaction-history authentication.                                 |
 | `RESEND_API_KEY`                           | Server only            | Email verification and password-reset delivery.                                        |
 | `PASSWORD_RESET_FROM_EMAIL`                | Server only            | A sender identity verified with Resend.                                                |
 | OAuth variables already used by the portal | Server/client as named | Existing Manus/OAuth session compatibility, where applicable.                          |
 
-Never prefix a secret with `VITE_`. Only client-safe configuration such as the Paystack **public** key may use that prefix.
+Never prefix a secret with `VITE_`. LeeTec credentials must remain server-only.
 
-## Paystack Checkout and Webhook
+## LeeTec STK Push and Reconciliation
 
-The server creates a pending order or wallet top-up, requests a Paystack-hosted authorization URL, and redirects the customer to Paystack. This design does not collect custom payer contact data or depend on a hard-coded merchant identifier. Enable the payment channels appropriate to the connected Paystack business account, then configure `https://YOUR_PUBLIC_DOMAIN/api/paystack/webhook` in Paystack. The server independently verifies the returned reference, currency, and amount before granting a paper entitlement or wallet credit. [4] [5]
+The server creates a pending order or wallet top-up, collects a Kenyan phone number, and sends a LeeTec STK Push through `POST /api/v1/stkpush`. It then polls authenticated `GET /api/v1/transactions` and independently verifies the account reference, KES currency, and exact amount before granting a paper entitlement or wallet credit. LeeTec’s public documentation describes optional webhooks but does not publish a signed payload contract; the portal therefore does not invent webhook verification logic.
 
 ## MongoDB Atlas Setup
 
@@ -67,5 +67,4 @@ Protected paper downloads continue to use the existing `/api/papers/:paperId/dow
 [1]: https://vercel.com/docs/functions/limitations "Vercel Functions Limits"
 [2]: https://vercel.com/docs/projects/environment-variables "Vercel Environment Variables"
 [3]: https://www.mongodb.com/docs/drivers/node/current/crud/gridfs/ "MongoDB Node.js Driver: Store Large Files with GridFS"
-[4]: https://paystack.com/docs/payments/accept-payments/ "Paystack: Accept Payments"
-[5]: https://paystack.com/docs/payments/webhooks/ "Paystack: Webhooks"
+[4]: https://leetec.online/docs "LeeTec Engine API documentation"

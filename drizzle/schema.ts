@@ -82,7 +82,7 @@ export const payments = mysqlTable(
     id: int("id").autoincrement().primaryKey(),
     orderId: int("orderId").notNull(),
     userId: int("userId").notNull(),
-    provider: varchar("provider", { length: 40 }).default("paystack").notNull(),
+    provider: varchar("provider", { length: 40 }).default("leetec").notNull(),
     providerReference: varchar("providerReference", { length: 120 })
       .notNull()
       .unique(),

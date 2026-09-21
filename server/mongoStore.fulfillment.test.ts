@@ -25,7 +25,7 @@ describe("MongoDB payment fulfilment replay", () => {
         reference,
         amount: 1000,
         currency: "KES",
-        channel: "paystack-hosted",
+        channel: "leetec-stkpush",
       };
       const first = await fulfillPayment(
         reference,

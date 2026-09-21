@@ -173,7 +173,7 @@ describe("account route regression coverage", () => {
     expect(homeSource).toContain('"Paid resource"');
     expect(homeSource).toContain('"Secure price"');
     expect(homeSource).toContain('"Buy securely"');
-    expect(homeSource).toContain('"Opening Paystack…"');
+    expect(homeSource).toContain('"Sending phone prompt…"');
     expect(homeSource).toContain("confirmation returns you to your library");
     expect(homeSource).toContain(
       "Choose Sign in or Create account to continue from this resource."
@@ -203,7 +203,7 @@ describe("account route regression coverage", () => {
       'import RouteProgress from "@/components/RouteProgress"'
     );
     expect(paymentSource).toContain("Loading your payment result…");
-    expect(paymentSource).toContain("Waiting for Paystack confirmation…");
+    expect(paymentSource).toContain("Waiting for LeeTec confirmation…");
     expect(paymentSource).toContain("trpc.student.paymentStatus.useQuery");
     expect(paymentSource).toContain("utils.student.library.invalidate()");
     expect(paymentSource).toContain(

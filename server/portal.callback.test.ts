@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { ENV } from "./_core/env";
 import { publicPortalUrl } from "./mongoAuth";
 
-describe("Paystack callback URLs", () => {
+describe("Portal return URLs", () => {
   const originalBaseUrl = ENV.appBaseUrl;
 
   afterEach(() => {

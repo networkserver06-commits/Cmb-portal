@@ -330,13 +330,13 @@ export default function AdminControls() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="free">Free access</SelectItem>
-                <SelectItem value="paid">Paystack checkout</SelectItem>
+                <SelectItem value="paid">LeeTec M-Pesa payment</SelectItem>
               </SelectContent>
             </Select>
             <p className="mt-1 text-[11px] leading-4 text-[#82958e]">
               {resourceMode === "free"
                 ? "Learners can open this resource without payment."
-                : "Learners pay securely through the Paystack checkout flow."}
+                : "Learners pay securely through LeeTec M-Pesa STK Push."}
             </p>
           </div>
           {(
@@ -516,7 +516,7 @@ export default function AdminControls() {
                     <div className="mt-0.5 text-xs text-[#82958e]">
                       {resourceTypeLabel(item.documentType)} · {item.accessMode === "free"
                         ? "Free access"
-                        : "Paystack checkout"}{" "}
+                        : "LeeTec payment"} {" "}
                       · KES {Number(item.priceKes).toLocaleString()}
                     </div>
                   </div>

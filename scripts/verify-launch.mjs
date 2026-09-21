@@ -4,8 +4,7 @@ import { resolve } from "node:path";
 const required = [
   "MONGODB_URI",
   "JWT_SECRET",
-  "PAYSTACK_SECRET_KEY",
-  "VITE_PAYSTACK_PUBLIC_KEY",
+  "LEETEC_API_KEY",
   "RESEND_API_KEY",
   "PASSWORD_RESET_FROM_EMAIL",
 ];
@@ -15,6 +14,9 @@ const mongoUriValid = /^mongodb(?:\+srv)?:\/\//.test(
 );
 const mongoDatabaseValid = /^[A-Za-z0-9_-]{1,63}$/.test(
   process.env.MONGODB_DATABASE || "examvault"
+);
+const leetecBaseUrlValid = /^https:\/\//.test(
+  process.env.LEETEC_BASE_URL || "https://leetec.online"
 );
 const forbidden = readdirSync(process.cwd(), { withFileTypes: true })
   .filter(
@@ -38,6 +40,10 @@ if (!mongoDatabaseValid) {
   console.error(
     "MONGODB_DATABASE must contain only letters, numbers, underscores, or hyphens"
   );
+  process.exitCode = 1;
+}
+if (!leetecBaseUrlValid) {
+  console.error("LEETEC_BASE_URL must use HTTPS");
   process.exitCode = 1;
 }
 if (forbidden.length) {

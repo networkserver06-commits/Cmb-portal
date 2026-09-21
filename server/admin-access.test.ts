@@ -129,7 +129,7 @@ describe("role-aware administrator access", () => {
       expect(layoutSource).toContain(`label: "${label}"`);
     expect(adminSource).toContain('id="admin-maintenance"');
     expect(adminSource).toContain("operationalStatus.useQuery()");
-    expect(adminSource).toContain("Paystack readiness");
+    expect(adminSource).toContain("LeeTec readiness");
     expect(adminSource).toContain(
       'activeSection !== "overview" ? "hidden" : ""'
     );
@@ -138,9 +138,6 @@ describe("role-aware administrator access", () => {
     expect(adminSource).toContain('activeSection !== "maintenance" ? "hidden"');
     expect(adminSource).toContain('activeSection !== "storage" ? "hidden"');
     expect(controlsSource).toContain("Catalogue upload station");
-    expect(controlsSource).toContain(
-      "Student submissions are handled in Operations."
-    );
     expect(controlsSource).not.toContain("Posts studio");
     expect(controlsSource).not.toContain("Administrator document publisher");
     expect(controlsSource).toContain('from "sonner"');

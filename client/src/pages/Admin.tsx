@@ -798,8 +798,8 @@ function AdminWorkspace() {
               Funds & wallet activity
             </h2>
             <p className="mt-2 text-sm leading-6 text-[#afc9bd]">
-              Wallet funds are counted only after Paystack confirms the matching
-              hosted-checkout reference, amount, and KES currency. Client-side
+              Wallet funds are counted only after LeeTec confirms the matching
+              STK Push reference, amount, and KES currency. Client-side
               balances are never trusted.
             </p>
             <div className="mt-7 grid gap-3 sm:grid-cols-2">
@@ -857,7 +857,7 @@ function AdminWorkspace() {
                           KES {Number(row.amountKes).toLocaleString()}
                         </span>
                         <span className="text-[#afc9bd]">
-                          Paystack checkout ·{" "}
+                          LeeTec payment ·{" "}
                           {new Date(row.createdAt).toLocaleDateString()}
                         </span>
                       </span>
@@ -936,13 +936,13 @@ function AdminWorkspace() {
             </div>
             <div className="rounded-2xl bg-[#f5f9f6] p-4">
               <div className="text-xs font-semibold text-[#789087]">
-                Paystack mode
+                LeeTec API
               </div>
               <div className="mt-2 font-semibold capitalize text-[#173e35]">
-                {operational.data?.paystack.mode ?? "—"}
+                {operational.data?.leetec.apiMessage ?? "—"}
               </div>
               <div className="mt-1 text-[11px] text-[#82958e]">
-                Secret/public key match required
+                Server API key and endpoint status
               </div>
             </div>
             <div className="rounded-2xl bg-[#f5f9f6] p-4">
@@ -951,7 +951,7 @@ function AdminWorkspace() {
               </div>
               <div className="mt-2 font-semibold text-[#173e35]">Hosted</div>
               <div className="mt-1 text-[11px] text-[#82958e]">
-                Paystack authorization URL
+                M-Pesa STK Push
               </div>
             </div>
           </div>
@@ -959,24 +959,24 @@ function AdminWorkspace() {
             <div className="rounded-2xl border border-[#edf2ef] p-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-[#274d43]">
-                  Paystack readiness
+                  LeeTec readiness
                 </h3>
                 <Badge
-                  className={`border-0 ${operational.data?.paystack.ready ? "bg-[#e5f2eb] text-[#34745f]" : "bg-[#fff4d5] text-[#94701d]"}`}
+                  className={`border-0 ${operational.data?.leetec.ready ? "bg-[#e5f2eb] text-[#34745f]" : "bg-[#fff4d5] text-[#94701d]"}`}
                 >
                   {operational.isLoading
                     ? "Checking"
-                    : operational.data?.paystack.ready
+                    : operational.data?.leetec.ready
                       ? "Ready"
                       : "Review settings"}
                 </Badge>
               </div>
               <p className="mt-2 text-xs text-[#82958e]">
-                {operational.data?.paystack.apiMessage ??
-                  "Checking secure Paystack API connectivity…"}
+                {operational.data?.leetec.apiMessage ??
+                  "Checking secure LeeTec API connectivity…"}
               </p>
               <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                {Object.entries(operational.data?.paystack.checks ?? {}).map(
+                {Object.entries(operational.data?.leetec.checks ?? {}).map(
                   ([name, passed]) => (
                     <div
                       key={name}
@@ -1005,9 +1005,9 @@ function AdminWorkspace() {
                 posture
               </div>
               <p className="mt-3 text-xs leading-5 text-[#b5cec2]">
-                Keep secret keys in Vercel server-side environment variables,
-                use matching test or live key pairs, and rely on webhook
-                signatures plus server verification before granting downloads.
+                Keep the LeeTec API key in Vercel server-side environment
+                variables. The portal confirms payment status from LeeTec
+                transaction history before granting downloads.
               </p>
             </div>
           </div>
@@ -1047,7 +1047,7 @@ function AdminWorkspace() {
                 Secure payments
               </div>
               <div className="mt-1 text-xs leading-5 text-[#82958e]">
-                Paystack secrets and webhook validation stay on the server.
+                LeeTec API keys stay on the server and are never exposed to the browser.
               </div>
             </div>
             <div className="rounded-2xl bg-[#f5f9f6] p-4">
