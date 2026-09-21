@@ -439,6 +439,7 @@ export const appRouter = router({
           mode: z.enum(["ask", "summarize"]),
           prompt: z.string().max(6000).default(""),
           paperId: z.number().int().positive().optional(),
+          referenceText: z.string().max(16000).optional(),
         })
       )
       .mutation(({ ctx, input }) =>
@@ -447,6 +448,7 @@ export const appRouter = router({
           mode: input.mode,
           prompt: input.prompt,
           paperId: input.paperId,
+          referenceText: input.referenceText,
         })
       ),
     library: protectedProcedure.query(async ({ ctx }) => {

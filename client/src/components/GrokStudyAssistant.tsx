@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, BookOpen, Check, Clipboard, Loader2, Send, Sparkles } from "lucide-react";
+import { AlertCircle, BookOpen, Check, Clipboard, FileUp, Loader2, Send, Sparkles } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
@@ -18,10 +18,13 @@ export default function GrokStudyAssistant({
   const [prompt, setPrompt] = useState("");
   const [focus, setFocus] = useState("");
   const [copied, setCopied] = useState(false);
+  const [referenceText, setReferenceText] = useState("");
+  const [referenceFile, setReferenceFile] = useState("");
   const [lastRequest, setLastRequest] = useState<{
     mode: "ask" | "summarize";
     paperId?: number;
     prompt: string;
+    referenceText?: string;
   }>();
   const [answer, setAnswer] = useState("");
   const [answerProvider, setAnswerProvider] = useState<"xai" | "groq" | "">("");
@@ -81,6 +84,7 @@ export default function GrokStudyAssistant({
       mode,
       paperId: paperId ? Number(paperId) : undefined,
       prompt: focusedPrompt,
+      referenceText: referenceText.trim() || undefined,
     };
     setLastRequest(request);
     ask.mutate(request);
@@ -89,6 +93,22 @@ export default function GrokStudyAssistant({
   const askQuickly = (question: string) => {
     setMode("ask");
     setPrompt(question);
+  };
+
+  const readReferenceFile = async (file?: File) => {
+    if (!file) return;
+    const textLike = file.type.startsWith("text/") || /\.(txt|md|csv|json|html?)$/i.test(file.name);
+    if (!textLike) {
+      setError("For an uploaded reference, choose a TXT, MD, CSV, JSON, or HTML file. For PDF/DOCX, select the document above instead.");
+      return;
+    }
+    if (file.size > 120_000) {
+      setError("Keep the reference file under 120 KB, or paste only the passage you want to study.");
+      return;
+    }
+    setReferenceText((await file.text()).slice(0, 16000));
+    setReferenceFile(file.name);
+    setError("");
   };
 
   const copyAnswer = async () => {
@@ -220,6 +240,33 @@ export default function GrokStudyAssistant({
             ))}
           </div>
         )}
+
+        <div className="grid gap-2 rounded-2xl border border-[#c8d9d2] bg-white/70 p-3">
+          <label htmlFor="assistant-reference" className="text-sm font-semibold text-[#274d43]">
+            Add text or upload a reference (optional)
+          </label>
+          <textarea
+            id="assistant-reference"
+            value={referenceText}
+            onChange={event => setReferenceText(event.target.value.slice(0, 16000))}
+            rows={3}
+            placeholder="Paste a paragraph, page, or your lecturer's notes here…"
+            className="rounded-xl border border-[#c8d9d2] bg-white px-3 py-2.5 text-sm font-normal outline-none focus:border-[#4b8876] focus:ring-2 focus:ring-[#4b8876]/25"
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-[#c8d9d2] px-3 py-1.5 text-xs font-semibold text-[#34745f] hover:bg-[#eaf5ef]">
+              <FileUp size={14} /> Upload text file
+              <input
+                type="file"
+                accept=".txt,.md,.csv,.json,.html,.htm,text/*"
+                className="sr-only"
+                onChange={event => void readReferenceFile(event.target.files?.[0])}
+              />
+            </label>
+            {referenceFile && <span className="text-xs text-[#648078]">Loaded: {referenceFile}</span>}
+            <span className="text-xs text-[#718780]">TXT, MD, CSV, JSON, or HTML · up to 120 KB</span>
+          </div>
+        </div>
 
         <label className="grid gap-2 text-sm font-semibold text-[#274d43]">
           {mode === "summarize" ? "Summary instructions (optional)" : "Your question"}

@@ -411,6 +411,7 @@ export async function askGrok(input: {
   prompt: string;
   paperId?: number;
   mode: "ask" | "summarize";
+  referenceText?: string;
 }) {
   const providers = grokProviderOrder();
   if (providers.length === 0)
@@ -422,6 +423,7 @@ export async function askGrok(input: {
           : "No AI provider is configured. Add XAI_API_KEY or GROQ_API_KEY to Vercel."
     );
   const prompt = input.prompt.trim();
+  const referenceText = input.referenceText?.trim().slice(0, 16000) ?? "";
   if (input.mode === "ask" && prompt.length < 2)
     throw new Error("Ask ScholarShelf Assistant a question with at least 2 characters.");
   if (prompt.length > MAX_PROMPT_CHARS)
@@ -453,9 +455,12 @@ export async function askGrok(input: {
           input.mode === "summarize"
             ? `Summarize this study document for a university student. Include: a short overview, key concepts, important definitions, likely exam points, and five revision questions. Do not invent facts that are not in the document.${prompt ? `\nStudent's focus: ${prompt}` : ""}`
             : prompt;
+        const suppliedText = referenceText
+          ? `\n\nStudent-provided passage (use this as a source and explain it clearly):\n${referenceText}`
+          : "";
         const fullPrompt = context
-          ? `${paperPrompt(context)}\n\nStudent request: ${userText}`
-          : `No specific study document was selected.\n\nStudent request: ${userText}`;
+          ? `${paperPrompt(context)}${suppliedText}\n\nStudent request: ${userText}`
+          : `No specific study document was selected.${suppliedText}\n\nStudent request: ${userText}`;
         const result = await askProvider(provider, fullPrompt, context);
         return {
           answer: result.answer,
