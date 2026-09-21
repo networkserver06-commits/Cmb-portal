@@ -108,11 +108,18 @@ async function readResponse(response: Response, action: string) {
 }
 
 export function normalizeKenyanPhone(value: string) {
-  const compact = value.trim().replace(/[\s()-]/g, "");
-  const normalized = compact.startsWith("+") ? compact.slice(1) : compact;
-  const withCountryCode = normalized.startsWith("0")
-    ? `254${normalized.slice(1)}`
-    : normalized;
+  const compact = value.trim().replace(/[\s().-]/g, "");
+  const withoutPlus = compact.startsWith("+") ? compact.slice(1) : compact;
+  const normalized = withoutPlus.startsWith("00")
+    ? withoutPlus.slice(2)
+    : withoutPlus;
+  const withCountryCode = normalized.startsWith("254")
+    ? normalized
+    : normalized.startsWith("0")
+      ? `254${normalized.slice(1)}`
+      : /^[17]\d{8}$/.test(normalized)
+        ? `254${normalized}`
+        : normalized;
   if (!/^254(?:1|7)\d{8}$/.test(withCountryCode))
     throw new Error("Enter a valid Kenyan mobile number, for example 0712345678.");
   return withCountryCode;

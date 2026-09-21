@@ -13,6 +13,11 @@ describe("LeeTec payment safeguards", () => {
   it("normalizes Kenyan mobile numbers to the API format", () => {
     expect(normalizeKenyanPhone("0712 345 678")).toBe("254712345678");
     expect(normalizeKenyanPhone("+254712345678")).toBe("254712345678");
+    expect(normalizeKenyanPhone("00254712345678")).toBe("254712345678");
+    expect(normalizeKenyanPhone("254 110 123456")).toBe("254110123456");
+    expect(normalizeKenyanPhone("0723-617-436")).toBe("254723617436");
+    expect(normalizeKenyanPhone("712345678")).toBe("254712345678");
+    expect(normalizeKenyanPhone("0110 123 456")).toBe("254110123456");
     expect(() => normalizeKenyanPhone("0201234567")).toThrow(
       "valid Kenyan mobile number"
     );
