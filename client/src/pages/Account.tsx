@@ -398,22 +398,22 @@ function AccountDashboard({
           </section>
         )}
         <div
-          className="account-workspace-nav mb-8 rounded-3xl border border-[#dfe9e3] bg-white p-4 shadow-sm sm:p-5"
+          className="account-workspace-nav mb-8 rounded-[2rem] border border-[#dfe9e3] bg-white p-4 shadow-[0_12px_30px_rgba(29,81,70,0.06)] ring-1 ring-white sm:p-5"
           aria-live="polite"
         >
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex min-w-0 items-center gap-3">
-              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#e8f1ed] text-[#2d7965]">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#e8f1ed] text-[#2d7965] shadow-inner shadow-[#2d7965]/5">
                 <activeTabDetails.icon size={18} />
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#94aaa2]">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#94aaa2]">
                   Student workspace
                 </p>
-                <p className="truncate text-sm font-semibold text-[#274d43]">
+                <p className="mt-0.5 truncate text-base font-bold text-[#274d43]">
                   Choose a destination
                 </p>
-                <p className="truncate text-xs text-[#82958e]">
+                <p className="mt-0.5 truncate text-xs text-[#82958e]">
                   {activeTabDetails.label} · {activeTabDetails.description}
                 </p>
               </div>
@@ -423,52 +423,55 @@ function AccountDashboard({
                 Dashboard menu
               </span>
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+              <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="flex h-12 w-full items-center justify-between gap-3 rounded-2xl border border-[#c8d9d2] bg-white px-4 text-left text-sm font-semibold text-[#274d43] shadow-sm outline-none transition hover:-translate-y-0.5 hover:border-[#4b8876] hover:shadow-md focus-visible:ring-2 focus-visible:ring-[#4b8876]"
+                    className="group flex h-14 w-full items-center justify-between gap-3 rounded-2xl border border-[#c8d9d2] bg-[#fbfdfb] px-4 text-left text-sm font-semibold text-[#274d43] shadow-sm outline-none transition duration-200 hover:-translate-y-0.5 hover:border-[#4b8876] hover:bg-white hover:shadow-md focus-visible:ring-4 focus-visible:ring-[#4b8876]/15 data-[state=open]:border-[#4b8876] data-[state=open]:bg-white data-[state=open]:shadow-md"
                     aria-label="Open student dashboard menu"
                   >
                     <span className="flex min-w-0 items-center gap-3">
-                      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#e8f1ed] text-[#2d7965]">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#e8f1ed] text-[#2d7965]">
                         <activeTabDetails.icon size={15} />
                       </span>
-                      <span className="truncate">{activeTabDetails.label}</span>
+                      <span className="min-w-0 truncate text-[15px]">{activeTabDetails.label}</span>
                     </span>
                     <ChevronDown
                       size={16}
-                      className="shrink-0 text-[#6c877d]"
+                      className="shrink-0 text-[#6c877d] transition-transform duration-200 group-data-[state=open]:rotate-180"
                     />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="end"
-                  className="account-menu-content w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-[#dfe9e3] bg-white p-2 shadow-2xl shadow-[#173e35]/12"
+                  className="account-menu-content z-50 w-[min(24rem,calc(100vw-2rem))] max-h-[min(70vh,34rem)] overflow-y-auto rounded-[1.35rem] border border-[#dfe9e3] bg-white p-2.5 shadow-[0_20px_50px_rgba(23,62,53,0.16)] ring-1 ring-black/[0.03]"
                 >
-                  <DropdownMenuLabel className="px-3 pb-2 pt-1 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-                    Student workspace
+                  <DropdownMenuLabel className="flex items-center justify-between px-3 pb-2 pt-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#94aaa2]">
+                    <span>Student workspace</span>
+                    <span className="rounded-full bg-[#f1f6f3] px-2 py-1 text-[9px] tracking-[0.12em] text-[#6b8f83]">
+                      {dashboardTabs.length} tabs
+                    </span>
                   </DropdownMenuLabel>
                   {dashboardTabs.map(tab => (
                     <DropdownMenuItem
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`account-menu-item cursor-pointer items-start gap-3 rounded-xl px-3 py-3 transition-colors ${activeTab === tab.id ? "bg-[#e8f1ed]" : ""}`}
+                      className={`account-menu-item group/item my-0.5 min-h-[4.25rem] cursor-pointer items-center gap-3 rounded-2xl px-3 py-2.5 outline-none transition-all duration-150 data-[highlighted]:bg-[#f4faf6] data-[highlighted]:shadow-sm ${activeTab === tab.id ? "bg-[#e8f1ed] shadow-sm ring-1 ring-[#c8ddd3]" : ""}`}
                     >
                       <span
-                        className={`mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg ${activeTab === tab.id ? "bg-[#1d5146] text-[#e8c979]" : "bg-muted text-muted-foreground"}`}
+                        className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl transition-colors ${activeTab === tab.id ? "bg-[#1d5146] text-[#e8c979] shadow-sm" : "bg-[#f4f6f4] text-[#6f8e84] group-data-[highlighted]/item:bg-[#e8f1ed] group-data-[highlighted]/item:text-[#2d7965]"}`}
                       >
                         <tab.icon size={16} />
                       </span>
                       <span className="min-w-0">
-                        <span className="block font-semibold">{tab.label}</span>
-                        <span className="mt-0.5 block text-xs text-muted-foreground">
+                        <span className="block text-[14px] font-bold leading-5 text-[#274d43]">{tab.label}</span>
+                        <span className="mt-0.5 block truncate text-xs leading-4 text-[#82958e]">
                           {tab.description}
                         </span>
                       </span>
                       {activeTab === tab.id && (
                         <CheckCircle2
                           size={16}
-                          className="ml-auto mt-1 shrink-0 text-[#34745f]"
+                          className="ml-auto shrink-0 text-[#34745f]"
                         />
                       )}
                     </DropdownMenuItem>
