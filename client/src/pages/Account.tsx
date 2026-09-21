@@ -5,7 +5,6 @@ import { filterAndSortLibrary, type LibrarySort } from "@/lib/libraryFilters";
 import { educationLevelLabel } from "@shared/educationLevels";
 import { resourceTypeLabel } from "@shared/resourceTypes";
 import ShareDocumentButton from "@/components/ShareDocumentButton";
-import AndroidAppPrompt from "@/components/AndroidAppPrompt";
 import GrokStudyAssistant from "@/components/GrokStudyAssistant";
 import PublishPaper from "./PublishPaper";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -481,9 +480,6 @@ function AccountDashboard({
             </div>
           </div>
         </div>
-        <div className="mb-8">
-          <AndroidAppPrompt compact />
-        </div>
         <div className="min-w-0">
           <section
             className={`account-reveal mb-8 rounded-3xl border border-[#c8ddd3] bg-[#f5fbf7] p-5 shadow-sm sm:p-7 ${activeTab !== "assistant" ? "hidden" : ""}`}
@@ -499,6 +495,56 @@ function AccountDashboard({
               </p>
             </div>
             <GrokStudyAssistant />
+          </section>
+          <section
+            className={`account-reveal mb-8 rounded-[2rem] border border-[#c8ddd3] bg-white p-5 shadow-[0_12px_30px_rgba(29,81,70,0.06)] sm:p-8 ${activeTab !== "app" ? "hidden" : ""}`}
+            aria-label="ScholarShelf Android app"
+          >
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+              <div className="flex min-w-0 items-start gap-4">
+                <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-[#1d5146] text-[#e8c979] shadow-sm">
+                  <Smartphone size={25} />
+                </div>
+                <div>
+                  <p className="section-eyebrow">ScholarShelf mobile</p>
+                  <h1 className="mt-2 font-serif text-3xl font-semibold tracking-tight text-[#173e35] sm:text-4xl">
+                    Install the ScholarShelf app
+                  </h1>
+                  <p className="mt-3 max-w-2xl text-sm leading-6 text-[#718780]">
+                    Keep your library, dashboard, and ScholarShelf Assistant close at hand with the Android app installation guide.
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/app"
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-[#1d5146] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#153c34] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#1d5146]/15"
+              >
+                <Download size={16} /> Open install guide
+              </Link>
+            </div>
+            <div className="mt-8 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl border border-[#dfe9e3] bg-[#f7fbf8] p-4">
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#94aaa2]">Platform</p>
+                <p className="mt-2 font-semibold text-[#274d43]">Android 7.0+</p>
+                <p className="mt-1 text-xs leading-5 text-[#82958e]">Designed for phones and tablets.</p>
+              </div>
+              <div className="rounded-2xl border border-[#dfe9e3] bg-[#f7fbf8] p-4">
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#94aaa2]">Includes</p>
+                <p className="mt-2 font-semibold text-[#274d43]">Library + AI Assistant</p>
+                <p className="mt-1 text-xs leading-5 text-[#82958e]">Your study tools in one focused app.</p>
+              </div>
+              <div className="rounded-2xl border border-[#dfe9e3] bg-[#f7fbf8] p-4">
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#94aaa2]">Install help</p>
+                <p className="mt-2 font-semibold text-[#274d43]">Step-by-step guide</p>
+                <p className="mt-1 text-xs leading-5 text-[#82958e]">Permission and troubleshooting steps included.</p>
+              </div>
+            </div>
+            <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-[#e6d49c] bg-[#fff9e8] p-4 text-sm text-[#7a5b16] sm:flex-row sm:items-center sm:justify-between">
+              <p className="leading-6"><strong>Ready to install?</strong> Open the guide to download the published Android package and follow the four steps.</p>
+              <Link href="/app" className="inline-flex shrink-0 items-center justify-center rounded-full border border-[#d6b95e] px-4 py-2 text-xs font-bold text-[#7a5b16] transition hover:bg-[#fff3c9]">
+                View instructions
+              </Link>
+            </div>
           </section>
           <section
             className={`account-reveal flex flex-col justify-between gap-6 md:flex-row md:items-end ${activeTab !== "overview" ? "hidden" : ""}`}
@@ -1379,6 +1425,7 @@ type AccountMode = "login" | "create";
 type DashboardTab =
   | "overview"
   | "assistant"
+  | "app"
   | "downloads"
   | "purchases"
   | "submissions"
@@ -1404,6 +1451,12 @@ const dashboardTabs: Array<{
     label: "AI Assistant",
     description: "ScholarShelf study help",
     icon: Sparkles,
+  },
+  {
+    id: "app",
+    label: "ScholarShelf App",
+    description: "Install the Android app",
+    icon: Smartphone,
   },
   {
     id: "downloads",

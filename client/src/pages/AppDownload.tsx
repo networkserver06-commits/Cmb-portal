@@ -2,8 +2,7 @@ import { Link } from "wouter";
 import { ArrowLeft, CheckCircle2, Download, ExternalLink, HelpCircle, Smartphone } from "lucide-react";
 
 const androidDownloadUrl =
-  (import.meta.env.VITE_ANDROID_APP_DOWNLOAD_URL as string | undefined)?.trim() ||
-  "https://portal.leetec.online/app";
+  (import.meta.env.VITE_ANDROID_APP_DOWNLOAD_URL as string | undefined)?.trim() || "";
 
 const steps = [
   {
@@ -48,15 +47,21 @@ export default function AppDownload() {
           <p className="mt-5 max-w-xl text-base leading-7 text-[#d4e6df]">
             Download the ScholarShelf Android app for quick access to your library, student dashboard, and ScholarShelf Assistant.
           </p>
-          <a
-            href={androidDownloadUrl}
-            target="_blank"
-            rel="noreferrer"
-            download
-            className="mt-8 inline-flex items-center gap-2 rounded-full bg-[#e8c979] px-5 py-3 text-sm font-bold text-[#19312c] transition hover:bg-[#f1d995] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e8c979] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1d5146]"
-          >
-            <Download size={17} /> Download Android app <ExternalLink size={15} />
-          </a>
+          {androidDownloadUrl ? (
+            <a
+              href={androidDownloadUrl}
+              target="_blank"
+              rel="noreferrer"
+              download
+              className="mt-8 inline-flex items-center gap-2 rounded-full bg-[#e8c979] px-5 py-3 text-sm font-bold text-[#19312c] transition hover:bg-[#f1d995] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e8c979] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1d5146]"
+            >
+              <Download size={17} /> Download APK <ExternalLink size={15} />
+            </a>
+          ) : (
+            <div className="mt-8 inline-flex items-center gap-2 rounded-full border border-[#b9d6ca] bg-white/10 px-5 py-3 text-sm font-semibold text-[#d4e6df]">
+              <Download size={17} /> APK release link coming soon
+            </div>
+          )}
           <p className="mt-4 text-xs text-[#b9d6ca]">Android 7.0 and newer · Secure ScholarShelf sign-in</p>
         </section>
 
@@ -87,6 +92,11 @@ export default function AppDownload() {
             <p className="flex items-start gap-2 font-semibold"><CheckCircle2 size={17} className="mt-0.5 shrink-0" /> Installation blocked?</p>
             <p className="mt-1">Open Android Settings, search for “Install unknown apps”, select the browser used for the download, enable permission, then open the APK again.</p>
           </div>
+          {!androidDownloadUrl && (
+            <div className="mt-4 rounded-2xl border border-[#c8ddd3] bg-[#f5fbf7] p-4 text-sm leading-6 text-[#52766a]">
+              The installation guide is ready. A signed public APK URL still needs to be published before Android can download the installable package directly.
+            </div>
+          )}
         </section>
       </div>
     </main>
