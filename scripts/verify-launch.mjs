@@ -5,7 +5,6 @@ const required = [
   "MONGODB_URI",
   "JWT_SECRET",
   "LEETEC_API_KEY",
-  "XAI_API_KEY",
   "RESEND_API_KEY",
   "PASSWORD_RESET_FROM_EMAIL",
 ];
@@ -18,6 +17,12 @@ const mongoDatabaseValid = /^[A-Za-z0-9_-]{1,63}$/.test(
 );
 const leetecBaseUrlValid = /^https:\/\//.test(
   process.env.LEETEC_BASE_URL || "https://leetec.online"
+);
+const grokProviderValid = ["auto", "xai", "groq"].includes(
+  (process.env.GROK_PROVIDER || "auto").toLowerCase()
+);
+const grokKeyConfigured = Boolean(
+  process.env.XAI_API_KEY || process.env.GROQ_API_KEY || process.env.GROK_API_KEY
 );
 const forbidden = readdirSync(process.cwd(), { withFileTypes: true })
   .filter(
@@ -45,6 +50,16 @@ if (!mongoDatabaseValid) {
 }
 if (!leetecBaseUrlValid) {
   console.error("LEETEC_BASE_URL must use HTTPS");
+  process.exitCode = 1;
+}
+if (!grokProviderValid) {
+  console.error("GROK_PROVIDER must be auto, xai, or groq");
+  process.exitCode = 1;
+}
+if (!grokKeyConfigured) {
+  console.error(
+    "Configure at least one AI provider key: XAI_API_KEY, GROQ_API_KEY, or GROK_API_KEY"
+  );
   process.exitCode = 1;
 }
 if (forbidden.length) {

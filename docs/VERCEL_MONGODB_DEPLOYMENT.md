@@ -29,7 +29,13 @@ Enter each secret in **Vercel → Project Settings → Environment Variables** f
 | `JWT_SECRET`                               | Server only            | Account-session signing.                                                               |
 | `LEETEC_BASE_URL`                          | Server only            | LeeTec API origin; use `https://leetec.online` unless deliberately overridden.         |
 | `LEETEC_API_KEY`                            | Server only            | LeeTec STK Push and transaction-history authentication.                                 |
-| `XAI_API_KEY`                               | Server only            | Grok 4.6 student questions and document summaries through the xAI Responses and Files APIs. |
+| `GROK_PROVIDER`                             | Server only            | `auto`, `xai`, or `groq`; defaults to `auto`.                                                 |
+| `XAI_API_KEY`                               | Server only            | xAI Grok 4.6 questions and document summaries when the xAI provider is selected.              |
+| `GROQ_API_KEY`                              | Server only            | Groq chat completions when the Groq provider is selected.                                      |
+| `GROK_API_KEY`                              | Server only            | Optional compatibility alias for `GROQ_API_KEY`.                                               |
+| `XAI_MODEL`                                 | Server only            | Optional xAI model override; defaults to `grok-4.6`.                                           |
+| `GROQ_MODEL`                                | Server only            | Optional Groq primary model; defaults to `openai/gpt-oss-20b`.                                 |
+| `GROQ_FALLBACK_MODEL`                       | Server only            | Optional Groq fallback before the built-in model fallbacks.                                    |
 | `RESEND_API_KEY`                           | Server only            | Email verification and password-reset delivery.                                        |
 | `PASSWORD_RESET_FROM_EMAIL`                | Server only            | A sender identity verified with Resend.                                                |
 | OAuth variables already used by the portal | Server/client as named | Existing Manus/OAuth session compatibility, where applicable.                          |
@@ -42,7 +48,7 @@ The server creates a pending order or wallet top-up, collects a Kenyan phone num
 
 ## Grok Student Assistant
 
-The Home page displays Grok to everyone, but only authenticated students can use it. The dashboard provides the same assistant with unlocked library documents available for document-aware questions and summaries. The server uses `grok-4.6` through `https://api.x.ai/v1/responses`, temporarily uploads entitled documents to the xAI Files API, and deletes those temporary files after each response. MongoDB tracks one credit per request for each user and enforces a 100-request daily limit that resets at 00:00 UTC. Add `XAI_API_KEY` to Vercel before testing this feature; students are not charged directly for Grok usage.
+The Home page displays the assistant to everyone, but only authenticated students can use it. Set `GROK_PROVIDER=xai` to force xAI, `GROK_PROVIDER=groq` to force Groq, or use `auto` to prefer xAI when `XAI_API_KEY` is configured and otherwise use Groq. The dashboard provides the same assistant with unlocked library documents available for document-aware questions and summaries. xAI uses its temporary Files API attachments; Groq uses local portal extraction for PDF, office, and text documents before sending context to chat. MongoDB tracks one credit per request for each user and enforces a 100-request daily limit that resets at 00:00 UTC. Configure at least one of `XAI_API_KEY` or `GROQ_API_KEY` in Vercel; students are not charged directly for Grok usage.
 
 ## MongoDB Atlas Setup
 

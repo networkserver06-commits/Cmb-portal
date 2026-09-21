@@ -1,18 +1,23 @@
+import Groq from "groq-sdk";
 import { entitlementFor, mongo, paperById } from "./mongoStore";
 import { readPortalFileBytes } from "./fileStore";
+import { officePreviewFileType, renderOfficePreview } from "./officePreview";
 
 export const GROK_DAILY_LIMIT = 100;
 export const GROK_MODEL = process.env.GROK_MODEL?.trim() || "grok-4.6";
 const XAI_BASE_URL = "https://api.x.ai/v1";
 const MAX_PROMPT_CHARS = 6000;
+const MAX_LOCAL_DOCUMENT_CHARS = 120_000;
+const GROQ_DEFAULT_MODEL = "openai/gpt-oss-20b";
+const GROQ_FALLBACK_MODELS = ["openai/gpt-oss-120b", "qwen/qwen3-32b"];
 
+type GrokProvider = "xai" | "groq";
 type GrokUsageDoc = {
   userId: number;
   dayKey: string;
   usedCredits: number;
   updatedAt: Date;
 };
-
 type GrokResponse = {
   id?: string;
   status?: string;
@@ -22,15 +27,50 @@ type GrokResponse = {
   }>;
   error?: { message?: string } | string;
 };
+type PaperContext = {
+  title: string;
+  course: string;
+  unit: string;
+  description: string;
+  fileId?: string;
+  localText?: string;
+};
 
-function apiKey() {
+function xaiKey() {
   return process.env.XAI_API_KEY?.trim() ?? "";
 }
-
+function groqKey() {
+  return (
+    process.env.GROQ_API_KEY?.trim() || process.env.GROK_API_KEY?.trim() || ""
+  );
+}
+function providerPreference() {
+  const value = process.env.GROK_PROVIDER?.trim().toLowerCase();
+  return value === "xai" || value === "groq" ? value : "auto";
+}
+export function activeGrokProvider(): GrokProvider {
+  const preference = providerPreference();
+  if (preference === "xai") return "xai";
+  if (preference === "groq") return "groq";
+  return xaiKey() ? "xai" : "groq";
+}
+function keyForProvider(provider: GrokProvider) {
+  return provider === "xai" ? xaiKey() : groqKey();
+}
+function providerName(provider: GrokProvider) {
+  return provider === "xai" ? "xAI Grok" : "Groq";
+}
+function modelCandidates(provider: GrokProvider) {
+  if (provider === "xai") return [process.env.XAI_MODEL?.trim() || GROK_MODEL];
+  return [
+    process.env.GROQ_MODEL?.trim() || GROQ_DEFAULT_MODEL,
+    process.env.GROQ_FALLBACK_MODEL?.trim() || "",
+    ...GROQ_FALLBACK_MODELS,
+  ].filter(Boolean).filter((model, index, all) => all.indexOf(model) === index);
+}
 function dayKey(now = new Date()) {
   return now.toISOString().slice(0, 10);
 }
-
 function isDuplicateKey(error: unknown) {
   return Boolean(
     error &&
@@ -39,11 +79,9 @@ function isDuplicateKey(error: unknown) {
       (error as { code?: number }).code === 11000
   );
 }
-
 export function grokConfigured() {
-  return /^xai-[A-Za-z0-9_-]+$/.test(apiKey()) || apiKey().length >= 20;
+  return Boolean(keyForProvider(activeGrokProvider()));
 }
-
 export async function grokUsageForUser(userId: number) {
   const now = new Date();
   const nextUtcMidnight = new Date(
@@ -57,10 +95,10 @@ export async function grokUsageForUser(userId: number) {
     usedCredits,
     remainingCredits: Math.max(0, GROK_DAILY_LIMIT - usedCredits),
     dailyLimit: GROK_DAILY_LIMIT,
+    provider: activeGrokProvider(),
     resetsAtUtc: nextUtcMidnight.toISOString(),
   } as const;
 }
-
 export async function consumeGrokCredit(userId: number) {
   const db = await mongo();
   const key = dayKey();
@@ -99,7 +137,6 @@ export async function consumeGrokCredit(userId: number) {
     ),
   } as const;
 }
-
 export async function refundGrokCredit(userId: number) {
   await (await mongo())
     .collection<GrokUsageDoc>("grok_usage")
@@ -109,7 +146,7 @@ export async function refundGrokCredit(userId: number) {
     );
 }
 
-function extractOutputText(payload: GrokResponse) {
+function extractXaiText(payload: GrokResponse) {
   const text = (payload.output ?? [])
     .flatMap(item => item.content ?? [])
     .filter(item => item.type === "output_text" && typeof item.text === "string")
@@ -119,28 +156,30 @@ function extractOutputText(payload: GrokResponse) {
   if (text) return text;
   throw new Error("Grok returned no answer. Please try again.");
 }
-
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+function isModelFallbackError(error: unknown) {
+  const status = (error as { status?: number })?.status;
+  const message = errorMessage(error).toLowerCase();
+  return status === 400 || status === 404 || message.includes("model") || message.includes("rate limit");
+}
 async function parseXaiResponse(response: Response, action: string) {
   let payload: GrokResponse;
   try {
     payload = (await response.json()) as GrokResponse;
   } catch {
-    throw new Error(`Grok ${action} returned an invalid response.`);
+    throw new Error(`xAI Grok ${action} returned an invalid response.`);
   }
   if (!response.ok || payload.error) {
     const message =
-      typeof payload.error === "string"
-        ? payload.error
-        : payload.error?.message;
+      typeof payload.error === "string" ? payload.error : payload.error?.message;
     if (response.status === 401 || response.status === 403)
-      throw new Error(
-        "Grok is not configured correctly. Add a valid server-only XAI_API_KEY to Vercel."
-      );
-    throw new Error(message || `Grok ${action} failed (${response.status}).`);
+      throw new Error("xAI Grok is not configured correctly. Check XAI_API_KEY.");
+    throw new Error(message || `xAI Grok ${action} failed (${response.status}).`);
   }
   return payload;
 }
-
 async function uploadDocument(bytes: Buffer, fileName: string, mimeType: string) {
   const form = new FormData();
   const documentBytes = bytes.buffer.slice(
@@ -151,48 +190,178 @@ async function uploadDocument(bytes: Buffer, fileName: string, mimeType: string)
   form.append("purpose", "assistants");
   const response = await fetch(`${XAI_BASE_URL}/files`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${apiKey()}` },
+    headers: { Authorization: `Bearer ${xaiKey()}` },
     body: form,
     signal: AbortSignal.timeout(60_000),
   });
   return await parseXaiResponse(response, "file upload");
 }
-
 async function deleteDocument(fileId: string) {
   await fetch(`${XAI_BASE_URL}/files/${encodeURIComponent(fileId)}`, {
     method: "DELETE",
-    headers: { Authorization: `Bearer ${apiKey()}` },
+    headers: { Authorization: `Bearer ${xaiKey()}` },
     signal: AbortSignal.timeout(15_000),
   }).catch(() => undefined);
 }
-
-async function paperAttachment(userId: number, paperId: number) {
+function htmlToText(html: string) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+async function extractLocalDocumentText(bytes: Buffer, fileName: string, mimeType: string) {
+  const normalizedMime = mimeType.split(";", 1)[0].toLowerCase();
+  const extension = fileName.toLowerCase().split(".").pop() ?? "";
+  if (
+    normalizedMime.startsWith("text/") ||
+    ["md", "txt", "csv", "json", "html", "htm", "rtf"].includes(extension)
+  ) {
+    return normalizedMime.includes("html") || ["html", "htm"].includes(extension)
+      ? htmlToText(bytes.toString("utf8"))
+      : bytes.toString("utf8").replace(/\s+/g, " ").trim();
+  }
+  if (normalizedMime === "application/pdf" || extension === "pdf") {
+    try {
+      const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+      const pdf = await pdfjs.getDocument({ data: new Uint8Array(bytes) }).promise;
+      const pages: string[] = [];
+      for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+        const page = await pdf.getPage(pageNumber);
+        const content = await page.getTextContent();
+        pages.push(
+          content.items
+            .map(item => ("str" in item ? String(item.str) : ""))
+            .join(" ")
+        );
+      }
+      return pages.join(" ").replace(/\s+/g, " ").trim();
+    } catch {
+      return "The document text could not be extracted locally. Use the document title and description to guide the answer.";
+    }
+  }
+  if (officePreviewFileType(normalizedMime, fileName)) {
+    try {
+      const preview = await renderOfficePreview({ bytes, fileName, mimeType });
+      return preview ? htmlToText(preview.html) : "";
+    } catch {
+      return "The document text could not be extracted locally. Use the document title and description to guide the answer.";
+    }
+  }
+  return "";
+}
+async function paperContextForProvider(userId: number, paperId: number, provider: GrokProvider) {
   const paper = await paperById(paperId);
   if (!paper || !paper.isAvailable)
     throw new Error("The selected study document is unavailable.");
   if (!(await entitlementFor(userId, paperId)))
     throw new Error("Unlock this document before asking Grok about it.");
-  if (!paper.fileId) return { paper, fileId: undefined };
+  const context: PaperContext = {
+    title: paper.title,
+    course: paper.course,
+    unit: paper.unit,
+    description: paper.description ?? "Not provided",
+  };
+  if (!paper.fileId) return context;
   const bytes = await readPortalFileBytes(paper.fileId);
-  const uploaded = await uploadDocument(
-    bytes,
-    paper.fileName || `study-document-${paperId}`,
-    paper.fileMimeType || "application/octet-stream"
-  );
-  const fileId = String((uploaded as { id?: string }).id ?? "");
-  if (!fileId) throw new Error("Grok did not accept the study document upload.");
-  return { paper, fileId };
+  if (provider === "xai") {
+    const uploaded = await uploadDocument(
+      bytes,
+      paper.fileName || `study-document-${paperId}`,
+      paper.fileMimeType || "application/octet-stream"
+    );
+    const fileId = String((uploaded as { id?: string }).id ?? "");
+    if (!fileId) throw new Error("xAI Grok did not accept the study document upload.");
+    context.fileId = fileId;
+  } else {
+    context.localText = (await extractLocalDocumentText(
+      bytes,
+      paper.fileName || `study-document-${paperId}`,
+      paper.fileMimeType || "application/octet-stream"
+    )).slice(0, MAX_LOCAL_DOCUMENT_CHARS);
+  }
+  return context;
 }
-
+function paperPrompt(context: PaperContext) {
+  const metadata = `Selected document: ${context.title}. Course: ${context.course}. Unit: ${context.unit}. Description: ${context.description}.`;
+  return context.localText ? `${metadata}\nDocument text:\n${context.localText}` : metadata;
+}
+async function askWithXai(input: { model: string; prompt: string; context?: PaperContext }) {
+  const content: Array<Record<string, string>> = [{ type: "input_text", text: input.prompt }];
+  if (input.context?.fileId) content.push({ type: "input_file", file_id: input.context.fileId });
+  const response = await fetch(`${XAI_BASE_URL}/responses`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${xaiKey()}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: input.model,
+      store: false,
+      input: [
+        {
+          role: "system",
+          content:
+            "You are ScholarShelf Grok, a patient university study assistant. Explain clearly, distinguish document facts from general guidance, encourage academic integrity, and never claim to have read a document unless it was attached.",
+        },
+        { role: "user", content },
+      ],
+    }),
+    signal: AbortSignal.timeout(120_000),
+  });
+  return { answer: extractXaiText(await parseXaiResponse(response, "response")), responseId: null as string | null };
+}
+async function askWithGroq(input: { model: string; prompt: string; context?: PaperContext }) {
+  const client = new Groq({ apiKey: groqKey() });
+  const result = await client.chat.completions.create({
+    model: input.model,
+    temperature: 0.2,
+    max_completion_tokens: 2048,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are ScholarShelf Groq, a patient university study assistant. Explain clearly, distinguish document facts from general guidance, encourage academic integrity, and never claim to have read a document unless it was provided.",
+      },
+      { role: "user", content: input.prompt },
+    ],
+  });
+  const answer = result.choices[0]?.message?.content?.trim();
+  if (!answer) throw new Error("Groq returned no answer. Please try again.");
+  return { answer, responseId: null as string | null };
+}
+async function askProvider(provider: GrokProvider, prompt: string, context?: PaperContext) {
+  let lastError: unknown;
+  for (const model of modelCandidates(provider)) {
+    try {
+      return {
+        ...(provider === "xai"
+          ? await askWithXai({ model, prompt, context })
+          : await askWithGroq({ model, prompt, context })),
+        model,
+      };
+    } catch (error) {
+      lastError = error;
+      if (!isModelFallbackError(error)) throw error;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error(`${providerName(provider)} could not answer.`);
+}
 export async function askGrok(input: {
   userId: number;
   prompt: string;
   paperId?: number;
   mode: "ask" | "summarize";
 }) {
-  if (!grokConfigured())
+  const provider = activeGrokProvider();
+  if (!keyForProvider(provider))
     throw new Error(
-      "Grok is not configured yet. Add XAI_API_KEY to the Vercel production environment."
+      provider === "xai"
+        ? "xAI Grok is not configured. Add XAI_API_KEY to Vercel or switch GROK_PROVIDER to groq."
+        : "Groq is not configured. Add GROQ_API_KEY to Vercel or switch GROK_PROVIDER to xai."
     );
   const prompt = input.prompt.trim();
   if (input.mode === "ask" && prompt.length < 2)
@@ -205,47 +374,24 @@ export async function askGrok(input: {
   const credit = await consumeGrokCredit(input.userId);
   let uploadedFileId: string | undefined;
   try {
-    let paperContext = "No specific study document was selected.";
-    let fileId: string | undefined;
+    let context: PaperContext | undefined;
     if (input.paperId) {
-      const attachment = await paperAttachment(input.userId, input.paperId);
-      fileId = attachment.fileId;
-      uploadedFileId = fileId;
-      paperContext = `Selected document: ${attachment.paper.title}. Course: ${attachment.paper.course}. Unit: ${attachment.paper.unit}. Description: ${attachment.paper.description ?? "Not provided"}.`;
+      context = await paperContextForProvider(input.userId, input.paperId, provider);
+      uploadedFileId = context.fileId;
     }
     const userText =
       input.mode === "summarize"
         ? "Summarize this study document for a university student. Include: a short overview, key concepts, important definitions, likely exam points, and five revision questions. Do not invent facts that are not in the document."
         : prompt;
-    const content: Array<Record<string, string>> = [
-      { type: "input_text", text: `${paperContext}\n\nStudent request: ${userText}` },
-    ];
-    if (fileId) content.push({ type: "input_file", file_id: fileId });
-    const response = await fetch(`${XAI_BASE_URL}/responses`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey()}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: GROK_MODEL,
-        store: false,
-        input: [
-          {
-            role: "system",
-            content:
-              "You are ScholarShelf Grok, a patient university study assistant. Explain clearly, use headings and bullets, distinguish document facts from general guidance, encourage academic integrity, and never claim to have read a document unless it was attached.",
-          },
-          { role: "user", content },
-        ],
-      }),
-      signal: AbortSignal.timeout(120_000),
-    });
-    const payload = await parseXaiResponse(response, "response");
+    const fullPrompt = context
+      ? `${paperPrompt(context)}\n\nStudent request: ${userText}`
+      : `No specific study document was selected.\n\nStudent request: ${userText}`;
+    const result = await askProvider(provider, fullPrompt, context);
     return {
-      answer: extractOutputText(payload),
-      model: GROK_MODEL,
-      responseId: payload.id ?? null,
+      answer: result.answer,
+      model: result.model,
+      provider,
+      responseId: result.responseId,
       ...credit,
     } as const;
   } catch (error) {

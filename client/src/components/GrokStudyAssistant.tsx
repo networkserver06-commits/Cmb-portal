@@ -68,7 +68,9 @@ export default function GrokStudyAssistant({
           <div className="font-semibold text-[#1d5146]">
             {usage.data?.remainingCredits ?? "—"} / {usage.data?.dailyLimit ?? 100} requests left
           </div>
-          <div className="mt-1">Resets daily at 00:00 UTC</div>
+          <div className="mt-1">
+            {usage.data?.provider === "groq" ? "Groq" : "xAI Grok"} · resets daily at 00:00 UTC
+          </div>
         </div>
       </div>
 

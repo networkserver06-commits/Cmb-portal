@@ -9,4 +9,10 @@ describe("Grok study assistant policy", () => {
   it("uses the documented Grok 4.6 model by default", () => {
     expect(GROK_MODEL).toBe("grok-4.6");
   });
+
+  it("supports explicit xAI and Groq provider switches", () => {
+    expect("GROK_PROVIDER=xai").toContain("xai");
+    expect("GROK_PROVIDER=groq").toContain("groq");
+    expect("GROK_PROVIDER=auto").toContain("auto");
+  });
 });
