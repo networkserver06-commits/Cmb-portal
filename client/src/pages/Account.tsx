@@ -481,21 +481,23 @@ function AccountDashboard({
           </div>
         </div>
         <div className="min-w-0">
-          <section
-            className={`account-reveal mb-8 rounded-3xl border border-[#c8ddd3] bg-[#f5fbf7] p-5 shadow-sm sm:p-7 ${activeTab !== "assistant" ? "hidden" : ""}`}
-            aria-label="ScholarShelf Assistant"
-          >
-            <div className="mb-5">
-              <p className="section-eyebrow">AI Assistant</p>
-              <h1 className="mt-2 font-serif text-4xl font-semibold tracking-tight text-[#173e35]">
-                Your dedicated study desk
-              </h1>
-              <p className="mt-3 max-w-xl text-[#718780]">
-                Ask, learn, and revise with ScholarShelf Assistant without leaving your private student dashboard.
-              </p>
-            </div>
-            <GrokStudyAssistant />
-          </section>
+          {activeTab === "assistant" && (
+            <section
+              className="account-reveal mb-8 rounded-3xl border border-[#c8ddd3] bg-[#f5fbf7] p-5 shadow-sm sm:p-7"
+              aria-label="ScholarShelf Assistant"
+            >
+              <div className="mb-5">
+                <p className="section-eyebrow">AI Assistant</p>
+                <h1 className="mt-2 font-serif text-4xl font-semibold tracking-tight text-[#173e35]">
+                  Your dedicated study desk
+                </h1>
+                <p className="mt-3 max-w-xl text-[#718780]">
+                  Ask, learn, and revise with ScholarShelf Assistant without leaving your private student dashboard.
+                </p>
+              </div>
+              <GrokStudyAssistant />
+            </section>
+          )}
           <section
             className={`account-reveal mb-8 rounded-[2rem] border border-[#c8ddd3] bg-white p-5 shadow-[0_12px_30px_rgba(29,81,70,0.06)] sm:p-8 ${activeTab !== "app" ? "hidden" : ""}`}
             aria-label="ScholarShelf Android app"
