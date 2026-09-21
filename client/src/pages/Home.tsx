@@ -176,6 +176,19 @@ export default function Home() {
     setPaymentStatus({ state: "idle", message: "" });
   };
   const startLeetecPayment = (paperId: number, intent: number) => {
+    const phoneDigits = phoneNumber.replace(/\D/g, "");
+    if (
+      !/^(?:0[17]\d{8}|[17]\d{8}|254[17]\d{8}|00254[17]\d{8})$/.test(
+        phoneDigits
+      )
+    ) {
+      setPaymentStatus({
+        state: "error",
+        message:
+          "Enter a valid Kenyan mobile number before starting LeeTec checkout.",
+      });
+      return;
+    }
     setPaymentStatus({
       state: "processing",
       message: "Sending a secure LeeTec payment prompt to your phone…",

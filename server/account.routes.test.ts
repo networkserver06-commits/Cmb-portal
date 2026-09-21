@@ -186,6 +186,10 @@ describe("account route regression coverage", () => {
     expect(homeSource).toContain("selected resource will stay ready");
     expect(homeSource).toContain("new URLSearchParams(window.location.search)");
     expect(homeSource).toContain("<Dialog");
+    expect(homeSource).toContain("walletBalance.refetch()");
+    expect(homeSource).toContain("Checking your ScholarShelf wallet before checkout…");
+    expect(homeSource).toContain("Enter a valid Kenyan mobile number before starting LeeTec checkout.");
+    expect(homeSource).toContain("phoneNumber.replace(/\\D/g, \"\")");
     expect(homeSource).toContain("onOpenChange");
     expect(homeSource).toContain("cancelCheckout");
     expect(homeSource).toContain("checkoutIntent");
