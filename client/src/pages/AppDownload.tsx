@@ -2,7 +2,8 @@ import { Link } from "wouter";
 import { ArrowLeft, CheckCircle2, Download, ExternalLink, HelpCircle, Smartphone } from "lucide-react";
 
 const androidDownloadUrl =
-  (import.meta.env.VITE_ANDROID_APP_DOWNLOAD_URL as string | undefined)?.trim() || "";
+  (import.meta.env.VITE_ANDROID_APP_DOWNLOAD_URL as string | undefined)?.trim() ||
+  "https://expo.dev/artifacts/eas/PkZ-KS7LyPuIO7WdQSurW_mVGQCjswv4ctytUsay3BE.apk";
 
 const steps = [
   {

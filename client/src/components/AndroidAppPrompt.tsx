@@ -2,7 +2,7 @@ import { ArrowRight, Download, Smartphone } from "lucide-react";
 
 const androidDownloadUrl =
   (import.meta.env.VITE_ANDROID_APP_DOWNLOAD_URL as string | undefined)?.trim() ||
-  "/app";
+  "https://expo.dev/artifacts/eas/PkZ-KS7LyPuIO7WdQSurW_mVGQCjswv4ctytUsay3BE.apk";
 
 export default function AndroidAppPrompt({ compact = false }: { compact?: boolean }) {
   return (
