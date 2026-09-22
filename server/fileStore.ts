@@ -17,6 +17,24 @@ export function chunkCountForBytes(totalBytes: number) {
   return Math.ceil(totalBytes / CHUNK_UPLOAD_BYTES);
 }
 
+export function bufferFromStoredChunk(value: unknown): Buffer {
+  if (Buffer.isBuffer(value)) return value;
+  if (value instanceof Uint8Array) return Buffer.from(value);
+  if (value && typeof value === "object") {
+    const binary = value as {
+      value?: (asRaw?: boolean) => unknown;
+      buffer?: unknown;
+    };
+    if (typeof binary.value === "function") {
+      const raw = binary.value(true);
+      if (Buffer.isBuffer(raw)) return raw;
+      if (raw instanceof Uint8Array) return Buffer.from(raw);
+    }
+    if (binary.buffer instanceof Uint8Array) return Buffer.from(binary.buffer);
+  }
+  throw new Error("The stored upload chunk is not valid binary data.");
+}
+
 const fileTypes = {
   pdf: ["application/pdf"],
   doc: ["application/msword"],
@@ -528,11 +546,7 @@ export async function completeChunkedPortalUpload(input: {
     chunks.some((chunk, index) => chunk.index !== index)
   )
     throw new Error("Some upload chunks are missing. Please retry the upload.");
-  const chunkBytes = chunks.map(chunk =>
-    Buffer.isBuffer(chunk.bytes)
-      ? chunk.bytes
-      : Buffer.from(chunk.bytes as unknown as Uint8Array)
-  );
+  const chunkBytes = chunks.map(chunk => bufferFromStoredChunk(chunk.bytes));
   const totalBytes = chunkBytes.reduce((sum, bytes) => sum + bytes.byteLength, 0);
   if (totalBytes !== session.totalBytes)
     throw new Error("The uploaded file size does not match its upload manifest.");

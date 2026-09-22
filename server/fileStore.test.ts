@@ -1,5 +1,7 @@
 import { afterAll, afterEach, describe, expect, it } from "vitest";
+import { Binary } from "mongodb";
 import {
+  bufferFromStoredChunk,
   deletePortalFile,
   CHUNK_UPLOAD_BYTES,
   chunkCountForBytes,
@@ -107,6 +109,13 @@ describe("GridFS upload validation", () => {
       Math.ceil(MAX_UPLOAD_BYTES / CHUNK_UPLOAD_BYTES)
     );
     expect(chunkCountForBytes(MAX_UPLOAD_BYTES)).toBe(72);
+  });
+
+  it("normalizes MongoDB BSON Binary chunks without changing their byte length", () => {
+    const bytes = Buffer.from("%PDF-1.4\nmanifest-regression");
+    expect(bufferFromStoredChunk(new Binary(bytes))).toEqual(bytes);
+    expect(bufferFromStoredChunk(bytes)).toEqual(bytes);
+    expect(bufferFromStoredChunk(new Uint8Array(bytes))).toEqual(bytes);
   });
 
   it("persists an uploaded document in GridFS with MongoDB metadata and removes it safely when unreferenced", async () => {
