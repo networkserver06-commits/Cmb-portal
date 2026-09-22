@@ -438,18 +438,14 @@ export async function beginChunkedPortalUpload(input: {
   fileName: string;
   mimeType: string;
   totalBytes: number;
-  totalChunks: number;
 }) {
   validateUpload({
     fileName: input.fileName,
     mimeType: input.mimeType,
     byteLength: input.totalBytes,
   });
-  if (
-    !Number.isInteger(input.totalChunks) ||
-    input.totalChunks < 1 ||
-    input.totalChunks > Math.ceil(MAX_UPLOAD_BYTES / CHUNK_UPLOAD_BYTES)
-  )
+  const totalChunks = Math.ceil(input.totalBytes / CHUNK_UPLOAD_BYTES);
+  if (totalChunks < 1 || totalChunks > Math.ceil(MAX_UPLOAD_BYTES / CHUNK_UPLOAD_BYTES))
     throw new Error("The upload contains an invalid number of chunks.");
   const uploadId = randomUUID();
   await (await mongo()).collection<ChunkUploadSession>("upload_sessions").insertOne({
@@ -459,7 +455,7 @@ export async function beginChunkedPortalUpload(input: {
     fileName: input.fileName,
     mimeType: input.mimeType,
     totalBytes: input.totalBytes,
-    totalChunks: input.totalChunks,
+    totalChunks,
     createdAt: new Date(),
     expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000),
   });
@@ -528,13 +524,15 @@ export async function completeChunkedPortalUpload(input: {
     chunks.some((chunk, index) => chunk.index !== index)
   )
     throw new Error("Some upload chunks are missing. Please retry the upload.");
-  const totalBytes = chunks.reduce(
-    (sum, chunk) => sum + chunk.bytes.byteLength,
-    0
+  const chunkBytes = chunks.map(chunk =>
+    Buffer.isBuffer(chunk.bytes)
+      ? chunk.bytes
+      : Buffer.from(chunk.bytes as unknown as Uint8Array)
   );
+  const totalBytes = chunkBytes.reduce((sum, bytes) => sum + bytes.byteLength, 0);
   if (totalBytes !== session.totalBytes)
     throw new Error("The uploaded file size does not match its upload manifest.");
-  const firstChunk = chunks[0]?.bytes ?? Buffer.alloc(0);
+  const firstChunk = chunkBytes[0] ?? Buffer.alloc(0);
   const validated = validateUpload({
     fileName: session.fileName,
     mimeType: session.mimeType,
@@ -553,9 +551,9 @@ export async function completeChunkedPortalUpload(input: {
     },
   });
   try {
-    for (const chunk of chunks) {
-      hash.update(chunk.bytes);
-      upload.write(chunk.bytes);
+    for (const bytes of chunkBytes) {
+      hash.update(bytes);
+      upload.write(bytes);
     }
     upload.end();
     await new Promise<void>((resolve, reject) => {

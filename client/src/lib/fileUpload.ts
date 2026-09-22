@@ -95,7 +95,6 @@ export async function uploadPortalDocument(input: {
 }) {
   const validationError = validatePortalDocument(input.file, input.purpose);
   if (validationError) throw new Error(validationError);
-  const totalChunks = Math.ceil(input.file.size / PORTAL_UPLOAD_CHUNK_BYTES);
   const initialized = await jsonRequest<{
     uploadId: string;
     chunkSize: number;
@@ -106,11 +105,11 @@ export async function uploadPortalDocument(input: {
       fileName: input.file.name,
       mimeType: input.file.type || "application/octet-stream",
       totalBytes: input.file.size,
-      totalChunks,
     }),
   });
   let uploadedBytes = 0;
   const chunkSize = initialized.chunkSize || PORTAL_UPLOAD_CHUNK_BYTES;
+  const totalChunks = Math.ceil(input.file.size / chunkSize);
   let nextIndex = 0;
   const worker = async () => {
     while (nextIndex < totalChunks) {

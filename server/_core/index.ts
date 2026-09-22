@@ -147,7 +147,6 @@ export async function createApp() {
         fileName: String(req.body?.fileName ?? ""),
         mimeType: String(req.body?.mimeType ?? "application/octet-stream"),
         totalBytes: Number(req.body?.totalBytes),
-        totalChunks: Number(req.body?.totalChunks),
       });
       return res.status(201).json(result);
     } catch (error) {
