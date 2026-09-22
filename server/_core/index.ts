@@ -126,7 +126,7 @@ export async function createApp() {
             : "The file could not be uploaded.";
         return res
           .status(
-            message.includes("4 MiB") || message.includes("larger") ? 413 : 400
+            message.includes("250 MiB") || message.includes("larger") ? 413 : 400
           )
           .json({ error: message });
       }
@@ -450,7 +450,7 @@ export async function createApp() {
         error.statusCode === 413
       )
         return res.status(413).json({
-          error: "Files must be 4 MiB or smaller for reliable Vercel uploads.",
+          error: "Files must be 250 MiB or smaller for reliable chunked uploads.",
         });
       return next(error);
     }

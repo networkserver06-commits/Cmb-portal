@@ -160,12 +160,12 @@ export function buildStorageHealthChecks(
       detail: `${totals.temporary} recent submission file${totals.temporary === 1 ? " is" : "s are"} retained while the review workflow completes.`,
     });
   }
-  if (usage.largestFileBytes >= 3.5 * 1024 * 1024) {
+  if (usage.largestFileBytes >= 225 * 1024 * 1024) {
     checks.push({
       id: "large-file",
       tone: "attention",
       title: "Largest file is near the upload ceiling",
-      detail: `${usage.largestFileName ?? "A tracked file"} is close to the 4 MiB per-file upload limit; keep future uploads optimized.`,
+      detail: `${usage.largestFileName ?? "A tracked file"} is close to the 250 MiB per-file upload limit; keep future uploads optimized.`,
     });
   }
   checks.push({

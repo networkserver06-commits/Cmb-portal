@@ -67,7 +67,7 @@ describe("storage management safeguards", () => {
     expect(routerSource).toContain("cleanupStorage: adminProcedure");
     expect(routerSource).toContain("files: adminProcedure");
     expect(routerSource).toContain("operationalRecords: adminProcedure");
-    expect(fileStoreSource).toContain("MAX_UPLOAD_BYTES = 4 * 1024 * 1024");
+    expect(fileStoreSource).toContain("MAX_UPLOAD_BYTES = 250 * 1024 * 1024");
     expect(fileStoreSource).toContain("portalFiles");
     expect(indexSource).toContain('"/api/files/upload"');
     expect(indexSource).toContain("express.raw");

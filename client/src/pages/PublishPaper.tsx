@@ -179,7 +179,7 @@ export default function PublishPaper({
         <span className="min-w-0 flex-1 truncate">
           {file
             ? `${file.name} · ${(file.size / 1024 / 1024).toFixed(2)} MiB`
-            : "Select a PDF, Word, Excel, PowerPoint, or supported document (maximum 4 MiB)"}
+            : "Select a PDF, Word, Excel, PowerPoint, or supported document (maximum 250 MiB)"}
         </span>
         <input
           className="sr-only"

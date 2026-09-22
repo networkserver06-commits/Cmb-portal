@@ -48,7 +48,7 @@ describe("storage usage summaries and checks", () => {
         cleanupEligibleBytes: 512 * 1024,
         recentBytes: 0,
         temporaryBytes: 512 * 1024,
-        largestFileBytes: 3.75 * 1024 * 1024,
+        largestFileBytes: 225 * 1024 * 1024,
         largestFileName: "large-paper.pdf",
       }
     );
@@ -58,7 +58,7 @@ describe("storage usage summaries and checks", () => {
       "large-file",
       "tracking",
     ]);
-    expect(checks.find(check => check.id === "large-file")?.detail).toContain("4 MiB");
+    expect(checks.find(check => check.id === "large-file")?.detail).toContain("250 MiB");
     expect(checks.find(check => check.id === "tracking")?.detail).toContain("not a provider-wide quota estimate");
   });
 

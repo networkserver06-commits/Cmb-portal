@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, BookOpen, Check, Clipboard, FileUp, Loader2, Send, Sparkles } from "lucide-react";
+import { AlertCircle, BookOpen, Check, Clipboard, FileUp, Loader2, Send, Sparkles, X } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
@@ -8,10 +8,12 @@ export default function GrokStudyAssistant({
   isAuthenticated = true,
   compact = false,
   documentContext,
+  onClose,
 }: {
   isAuthenticated?: boolean;
   compact?: boolean;
   documentContext?: { id: number; title: string; course?: string };
+  onClose?: () => void;
 }) {
   const [mode, setMode] = useState<"ask" | "summarize">("ask");
   const [paperId, setPaperId] = useState("");
@@ -141,13 +143,26 @@ export default function GrokStudyAssistant({
             Get explanations, ask questions about an unlocked document, or create a structured revision summary. This is free for students with 100 requests each day.
           </p>
         </div>
-        <div className={`${compact ? "hidden" : ""} rounded-2xl border border-[#c8ddd3] bg-white px-4 py-3 text-right text-xs text-[#5f786f]`}>
-          <div className="font-semibold text-[#1d5146]">
-            {usage.data?.remainingCredits ?? "—"} / {usage.data?.dailyLimit ?? 100} requests left
+        <div className="flex items-start gap-2">
+          <div className={`${compact ? "hidden" : ""} rounded-2xl border border-[#c8ddd3] bg-white px-4 py-3 text-right text-xs text-[#5f786f]`}>
+            <div className="font-semibold text-[#1d5146]">
+              {usage.data?.remainingCredits ?? "—"} / {usage.data?.dailyLimit ?? 100} requests left
+            </div>
+            <div className="mt-1">
+              {usage.data?.provider === "groq" ? "Groq" : "xAI"} · resets daily at 00:00 UTC
+            </div>
           </div>
-          <div className="mt-1">
-            {usage.data?.provider === "groq" ? "Groq" : "xAI"} · resets daily at 00:00 UTC
-          </div>
+          {compact && onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[#c8d9d2] bg-white text-[#5f786f] transition hover:border-[#4b8876] hover:bg-[#eaf5ef] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4b8876]"
+              aria-label="Close quick AI assistant"
+              title="Close quick AI assistant"
+            >
+              <X size={16} />
+            </button>
+          )}
         </div>
       </div>
 

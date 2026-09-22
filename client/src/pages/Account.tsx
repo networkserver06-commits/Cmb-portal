@@ -202,6 +202,7 @@ function AccountDashboard({
     ? (requestedTab as DashboardTab)
     : "overview";
   const [activeTab, setActiveTab] = useState<DashboardTab>(initialTab);
+  const [quickAssistantOpen, setQuickAssistantOpen] = useState(true);
   const [profileName, setProfileName] = useState(user.name ?? "");
   const [profileNotice, setProfileNotice] = useState("");
   const [topupAmount, setTopupAmount] = useState<number | "">("");
@@ -368,13 +369,23 @@ function AccountDashboard({
       </header>
 
       <main className="container py-8 md:py-12">
-        {activeTab !== "assistant" && (
+        {activeTab !== "assistant" && quickAssistantOpen && (
           <aside
-            className="account-ai-dock fixed bottom-4 left-4 z-30 hidden w-[min(22rem,calc(100vw-2rem))] lg:block"
+            className="account-ai-dock fixed bottom-4 left-4 z-30 hidden max-h-[min(34rem,calc(100vh-2rem))] w-[min(22rem,calc(100vw-2rem))] overflow-y-auto lg:block"
             aria-label="Quick AI study assistant"
           >
-            <GrokStudyAssistant compact />
+            <GrokStudyAssistant compact onClose={() => setQuickAssistantOpen(false)} />
           </aside>
+        )}
+        {activeTab !== "assistant" && !quickAssistantOpen && (
+          <button
+            type="button"
+            onClick={() => setQuickAssistantOpen(true)}
+            className="fixed bottom-4 left-4 z-30 hidden items-center gap-2 rounded-full border border-[#c8d9d2] bg-white px-4 py-3 text-sm font-semibold text-[#1d5146] shadow-[0_12px_30px_rgba(29,81,70,0.16)] transition hover:-translate-y-0.5 hover:bg-[#eaf5ef] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4b8876] lg:inline-flex"
+            aria-label="Open quick AI assistant"
+          >
+            <Sparkles size={15} /> Open AI assistant
+          </button>
         )}
         {user.role === "admin" && (
           <section

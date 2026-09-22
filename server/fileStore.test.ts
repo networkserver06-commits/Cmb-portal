@@ -53,7 +53,7 @@ describe("GridFS upload validation", () => {
         mimeType: "application/pdf",
         byteLength: MAX_UPLOAD_BYTES + 1,
       })
-    ).toThrow("4 MiB");
+    ).toThrow("250 MiB");
     expect(() =>
       validateUpload({
         fileName: "revision.pdf",

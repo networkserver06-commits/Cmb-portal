@@ -2,7 +2,7 @@
 
 ## Documentation Verification
 
-The Vercel and MongoDB deployment guide has been reviewed in the project workspace. It documents the serverless build settings, required production secrets, 4 MiB Vercel-safe upload boundary, GridFS collection model, direct-route validation, and staged deployment checks.
+The Vercel and MongoDB deployment guide has been reviewed in the project workspace. It documents the serverless build settings, required production secrets, 250 MiB total upload boundary with 3.5 MiB Vercel-safe chunks, GridFS collection model, direct-route validation, and staged deployment checks.
 
 The legacy-file migration runbook has also been reviewed. It preserves old `fileKey` fallback downloads until each GridFS file is linked and verified for an entitled user, and it defines a rollback path that does not require an application redeployment.
 

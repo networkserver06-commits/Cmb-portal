@@ -3,7 +3,7 @@
 - [x] Inventory the existing portal’s routes, core user journeys, data stores, and upload implementation before modifying behavior.
 - [x] Preserve all existing core workflows and document any compatibility decisions in the migration guide.
 - [x] Replace persistent application data with MongoDB collections for users, submissions, workflows, operational records, and activity events.
-- [x] Enforce a Vercel-safe 4 MiB authenticated upload limit so file writes never exceed the platform request-body ceiling.
+- [x] Enforce a 250 MiB authenticated upload limit through retryable 3.5 MiB chunks so individual file writes never exceed the Vercel request-body ceiling.
 - [x] Implement MongoDB/GridFS-backed file storage with document metadata and scoped access controls.
 - [x] Repair uploads with authenticated server-side handling, file type and size validation, progress feedback, reliable errors, and submission status updates.
 - [x] Implement robust role-based authorization for administrator and user access throughout the server and client.

@@ -84,7 +84,7 @@ function PaperReplacement({ paper }: { paper: any }) {
             {paper.title}
           </p>
           <p className="mt-1 text-xs text-[#82958e]">
-            Replace with a validated PDF or document up to 4 MiB.
+            Replace with a validated PDF or document up to 250 MiB.
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">

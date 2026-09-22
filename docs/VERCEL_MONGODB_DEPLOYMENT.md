@@ -4,7 +4,7 @@
 
 This guide deploys the upgraded ScholarShelf portal on Vercel while keeping MongoDB as the persistent system of record for portal data and GridFS as the store for new document bytes. The supplied `api/index.ts` Vercel function builds the Express application, and `vercel.json` routes `/api/*` traffic to that function while preserving client-side routing for direct visits.
 
-> The portal accepts document uploads up to **4 MiB**. This intentionally stays below Vercel Functions’ 4.5 MB request/response payload boundary and avoids platform-level request-size failures. [1]
+> The portal accepts document uploads up to **250 MiB**. Files are transferred as authenticated **3.5 MiB binary chunks**, so each Vercel function request remains below the platform request-size boundary while GridFS stores the complete document. [1]
 
 ## Required Vercel Project Settings
 
@@ -69,7 +69,7 @@ GridFS stores bytes in `portal_files.files` and `portal_files.chunks`; the porta
 
 ## Upload and Download Behavior
 
-The browser sends raw document bytes to `POST /api/files/upload` after authentication. The function validates the file name, extension, MIME type, PDF signature where applicable, and byte length before writing to GridFS. The browser receives determinate upload progress through `XMLHttpRequest`; tRPC receives only the resulting GridFS file identifier. This prevents base64 request inflation and keeps documents out of browser-trusted payload fields.
+The browser starts an authenticated upload session at `POST /api/files/upload/init`, sends the document to `POST /api/files/upload/chunk` in 3.5 MiB binary chunks with retry support, and finalizes it at `POST /api/files/upload/complete`. The server validates the file name, extension, MIME type, PDF signature where applicable, total byte length, chunk ordering, and ownership before writing the complete document to GridFS. The browser receives determinate progress and tRPC receives only the resulting GridFS file identifier. This prevents base64 request inflation and keeps documents out of browser-trusted payload fields.
 
 Protected paper downloads continue to use the existing `/api/papers/:paperId/download` route. When a record has been migrated to GridFS, the route performs the entitlement check and streams the GridFS document. Until migration is complete, a legacy `fileKey` still follows the signed legacy download fallback, preserving access for previously published papers.
 

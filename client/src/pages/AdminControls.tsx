@@ -51,7 +51,7 @@ function friendlyAdminResourceError(message: string) {
   if (normalized.includes("price"))
     return "Check the access choice and enter a positive KES price for paid resources, or choose Free access for a zero price.";
   if (normalized.includes("file") || normalized.includes("document"))
-    return "Choose a supported document under 4 MiB, then try again. Your selected file was not published.";
+    return "Choose a supported document up to 250 MiB, then try again. Your selected file was not published.";
   if (normalized.includes("title")) return "Add a clear title with at least two characters.";
   if (normalized.includes("course"))
     return "Add the subject, course, or collection name so learners can find this resource.";
@@ -412,7 +412,7 @@ export default function AdminControls() {
             </span>
             <span className="mt-1 block text-xs leading-4 text-[#82958e]">
               PDF, Word, Excel, PowerPoint, OpenDocument, RTF, EPUB, TXT, CSV,
-              or HTML · maximum 4 MiB
+              or HTML · maximum 250 MiB
             </span>
           </span>
           {paperFile && (
