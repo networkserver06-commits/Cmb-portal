@@ -533,6 +533,7 @@ export const appRouter = router({
           purpose: "submission",
         });
         const safety = await detectSubmissionSafety(file);
+        const automaticallyPublished = safety.decision === "auto_publish";
         const now = new Date();
         const db = await mongo();
         const submission = {
@@ -550,12 +551,15 @@ export const appRouter = router({
           fileId: file.gridFsId,
           fileName: file.fileName,
           mimeType: file.mimeType,
-          status: "pending" as const,
-          safetyStatus: "held",
+          status: automaticallyPublished ? ("approved" as const) : ("pending" as const),
+          safetyStatus: automaticallyPublished ? ("passed" as const) : ("held" as const),
           safetyReasons: safety.reasons,
-          approvalMode: "admin_review",
-          reviewNote:
-            "Held for administrator review. Automated scanning is advisory only.",
+          approvalMode: automaticallyPublished
+            ? ("automatic" as const)
+            : ("admin_review" as const),
+          reviewNote: automaticallyPublished
+            ? "Automatically approved after the safety scan verified the document."
+            : "Held for administrator review because the safety scan found uncertainty.",
           createdAt: now,
           updatedAt: now,
         };
@@ -567,23 +571,50 @@ export const appRouter = router({
           entityId: submission.legacyId,
         });
 
+        const paper = automaticallyPublished
+          ? await publishSubmissionAsPaper(
+              db,
+              submission,
+              ctx.user.id,
+              "automatic"
+            )
+          : null;
+        if (paper) {
+          await db.collection("submissions").updateOne(
+            { _id: submission._id },
+            {
+              $set: {
+                paperId: paper.legacyId,
+                publishedAt: now,
+                updatedAt: now,
+              },
+            }
+          );
+        }
+
         await recordOperationalEvent({
-          eventType: "submission.held_for_review",
+          eventType: automaticallyPublished
+            ? "submission.auto_published"
+            : "submission.held_for_review",
           actorId: ctx.user.id,
           subjectType: "submission",
           subjectId: String(submission.legacyId),
           detail: {
             reasons: safety.reasons,
-            automatedPublicationDisabled: true,
+            automatedPublication: automaticallyPublished,
+            paperId: paper?.legacyId,
           },
         });
 
         return {
           success: true,
-          submission,
+          submission: paper
+            ? { ...submission, paperId: paper.legacyId, publishedAt: now }
+            : submission,
           publication: {
-            status: "held_for_review",
+            status: automaticallyPublished ? "published" : "held_for_review",
             reasons: safety.reasons,
+            paperId: paper?.legacyId,
           },
         };
       }),

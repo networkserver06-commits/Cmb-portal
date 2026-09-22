@@ -212,13 +212,16 @@ describe("protected document viewing and rejection cleanup", () => {
     expect(publishSource).toContain("published in the free library");
     expect(publishSource).toContain("held for administrator review");
     expect(routerSource).toContain("detectSubmissionSafety(file)");
-    expect(routerSource).toContain('safetyStatus: automaticallyPublished ? "passed" : "held"');
+    expect(routerSource).toContain("const automaticallyPublished = safety.decision === \"auto_publish\"");
+    expect(routerSource).toContain("safetyStatus: automaticallyPublished ?");
     expect(routerSource).toContain("documentType: input.documentType");
     expect(routerSource).toContain("documentType: submission.documentType");
     expect(routerSource).toContain("documentType: z.enum(RESOURCE_TYPES).optional()");
     expect(routerSource).toContain("status: automaticallyPublished ?");
     expect(routerSource).toContain('"approved" as const');
     expect(routerSource).toContain('"pending" as const');
+    expect(routerSource).toContain('"submission.auto_published"');
+    expect(routerSource).toContain('"submission.held_for_review"');
   });
 
   it("purges rejected files before recording rejection and preserves moderation history", () => {
