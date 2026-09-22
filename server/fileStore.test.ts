@@ -1,6 +1,8 @@
 import { afterAll, afterEach, describe, expect, it } from "vitest";
 import {
   deletePortalFile,
+  CHUNK_UPLOAD_BYTES,
+  chunkCountForBytes,
   MAX_UPLOAD_BYTES,
   portalFileById,
   uploadPortalFile,
@@ -95,6 +97,16 @@ describe("GridFS upload validation", () => {
         validateUpload({ fileName, mimeType, byteLength: 4 }).extension
       ).toBe(fileName.split(".").pop());
     }
+  });
+
+  it("derives stable chunk manifests at boundaries through the maximum upload size", () => {
+    expect(chunkCountForBytes(1)).toBe(1);
+    expect(chunkCountForBytes(CHUNK_UPLOAD_BYTES)).toBe(1);
+    expect(chunkCountForBytes(CHUNK_UPLOAD_BYTES + 1)).toBe(2);
+    expect(chunkCountForBytes(MAX_UPLOAD_BYTES)).toBe(
+      Math.ceil(MAX_UPLOAD_BYTES / CHUNK_UPLOAD_BYTES)
+    );
+    expect(chunkCountForBytes(MAX_UPLOAD_BYTES)).toBe(72);
   });
 
   it("persists an uploaded document in GridFS with MongoDB metadata and removes it safely when unreferenced", async () => {

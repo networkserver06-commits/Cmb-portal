@@ -13,6 +13,10 @@ export const MAX_SCAN_BYTES = 4 * 1024 * 1024;
 export const CHUNK_UPLOAD_BYTES = 3.5 * 1024 * 1024;
 export const PORTAL_FILE_BUCKET = "portal_files";
 
+export function chunkCountForBytes(totalBytes: number) {
+  return Math.ceil(totalBytes / CHUNK_UPLOAD_BYTES);
+}
+
 const fileTypes = {
   pdf: ["application/pdf"],
   doc: ["application/msword"],
@@ -444,7 +448,7 @@ export async function beginChunkedPortalUpload(input: {
     mimeType: input.mimeType,
     byteLength: input.totalBytes,
   });
-  const totalChunks = Math.ceil(input.totalBytes / CHUNK_UPLOAD_BYTES);
+  const totalChunks = chunkCountForBytes(input.totalBytes);
   if (totalChunks < 1 || totalChunks > Math.ceil(MAX_UPLOAD_BYTES / CHUNK_UPLOAD_BYTES))
     throw new Error("The upload contains an invalid number of chunks.");
   const uploadId = randomUUID();
