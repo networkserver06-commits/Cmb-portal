@@ -448,6 +448,7 @@ export async function createApp() {
     req: express.Request,
     res: express.Response
   ) => {
+    let previewPriceKes = 0;
     try {
       const paperId = Number(req.params.paperId);
       if (!Number.isInteger(paperId))
@@ -455,6 +456,7 @@ export async function createApp() {
       const paper = await paperById(paperId);
       if (!paper?.isAvailable || (!paper.fileId && !paper.fileKey))
         return res.status(404).json({ error: "Paper preview unavailable" });
+      previewPriceKes = Number(paper.priceKes);
 
       let bytes: Buffer;
       if (paper.fileId) {
@@ -488,8 +490,18 @@ export async function createApp() {
       });
     } catch (error) {
       console.error("Public paper preview error", error);
-      if (!res.headersSent)
-        return res.status(422).json({ error: "This paper preview is temporarily unavailable." });
+      if (!res.headersSent) {
+        res.setHeader("X-Content-Type-Options", "nosniff");
+        res.setHeader("Cache-Control", "private, no-store");
+        return res.status(200).json({
+          title: "Limited preview",
+          scope: "Preview temporarily limited",
+          excerpt:
+            "The opening excerpt is temporarily unavailable for this resource. You can still review the paper details and unlock the complete document through secure checkout.",
+          isPaid: true,
+          priceKes: previewPriceKes,
+        });
+      }
     }
   };
   app.get("/api/papers/:paperId/free-view", handlePublicFreePaper);
