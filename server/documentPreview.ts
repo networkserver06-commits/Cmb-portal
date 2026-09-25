@@ -60,8 +60,24 @@ export async function buildLimitedDocumentPreview(input: {
   mimeType: string;
 }) {
   const normalizedMime = input.mimeType.split(";", 1)[0].trim().toLowerCase();
-  if (normalizedMime === "application/pdf" || normalizedMime.endsWith("+pdf"))
-    return await extractPdfFirstPage(input.bytes);
+  if (normalizedMime === "application/pdf" || normalizedMime.endsWith("+pdf")) {
+    try {
+      const preview = await extractPdfFirstPage(input.bytes);
+      return preview.excerpt
+        ? preview
+        : {
+            excerpt:
+              "This PDF is image-based, so text cannot be extracted safely in the preview. The first page is available after purchase.",
+            scope: "First page protected preview",
+          };
+    } catch {
+      return {
+        excerpt:
+          "This PDF preview is temporarily limited because its text layer could not be read safely. The complete first page and document are available after purchase.",
+        scope: "First page protected preview",
+      };
+    }
+  }
 
   if (
     normalizedMime.startsWith("text/") ||
@@ -75,12 +91,20 @@ export async function buildLimitedDocumentPreview(input: {
   }
 
   if (officePreviewFileType(normalizedMime, input.fileName)) {
-    const rendered = await renderOfficePreview(input);
-    const text = rendered ? htmlToPreviewText(rendered.html) : "";
-    return {
-      excerpt: limitPreview(text),
-      scope: "Opening excerpt",
-    };
+    try {
+      const rendered = await renderOfficePreview(input);
+      const text = rendered ? htmlToPreviewText(rendered.html) : "";
+      return {
+        excerpt: limitPreview(text) || "The opening excerpt is available after purchase.",
+        scope: "Opening excerpt",
+      };
+    } catch {
+      return {
+        excerpt:
+          "This document’s opening excerpt could not be rendered safely. Unlock the resource to read the complete document.",
+        scope: "Limited preview",
+      };
+    }
   }
 
   return {
