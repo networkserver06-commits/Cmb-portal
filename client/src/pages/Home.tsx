@@ -1055,14 +1055,21 @@ export default function Home() {
                       View free resource <ChevronRight size={14} />
                     </a>
                   ) : (
-                    <Button
-                      onClick={() => setSelectedPaperId(paper.id)}
-                      size="sm"
-                      className="rounded-full bg-[#1d5146] hover:bg-[#153c34]"
-                    >
-                      {isAuthenticated ? "View & buy" : "View resource"}{" "}
-                      <ChevronRight size={14} />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={publicPaperHref(paper.id)}
+                        className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[#b8d1c5] bg-white px-3 text-xs font-semibold text-[#1d5146] transition hover:bg-[#e8f1ed]"
+                      >
+                        Preview <ChevronRight size={14} />
+                      </a>
+                      <Button
+                        onClick={() => setSelectedPaperId(paper.id)}
+                        size="sm"
+                        className="rounded-full bg-[#1d5146] hover:bg-[#153c34]"
+                      >
+                        {isAuthenticated ? "Buy" : "View & buy"}
+                      </Button>
+                    </div>
                   )}
                 </div>
               </article>

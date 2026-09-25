@@ -28,6 +28,7 @@ import {
   uploadPortalFile,
 } from "../fileStore";
 import { officePreviewFileType, renderOfficePreview } from "../officePreview";
+import { buildLimitedDocumentPreview } from "../documentPreview";
 import { runRetentionCleanup } from "../retentionCleanup";
 import { sdk } from "./sdk";
 import { ENV } from "./env";
@@ -443,8 +444,57 @@ export async function createApp() {
         });
     }
   };
+  const handlePublicPaperPreview = async (
+    req: express.Request,
+    res: express.Response
+  ) => {
+    try {
+      const paperId = Number(req.params.paperId);
+      if (!Number.isInteger(paperId))
+        return res.status(404).json({ error: "Paper not found" });
+      const paper = await paperById(paperId);
+      if (!paper?.isAvailable || (!paper.fileId && !paper.fileKey))
+        return res.status(404).json({ error: "Paper preview unavailable" });
+
+      let bytes: Buffer;
+      if (paper.fileId) {
+        if (!(await portalFileById(paper.fileId)))
+          return res.status(404).json({ error: "Paper document not found" });
+        bytes = await readPortalFileBytes(paper.fileId);
+      } else {
+        const signedUrl = await storageGetSignedUrl(paper.fileKey!);
+        const response = await fetch(signedUrl);
+        if (!response.ok)
+          return res.status(404).json({ error: "Paper document not found" });
+        const arrayBuffer = await response.arrayBuffer();
+        if (arrayBuffer.byteLength > MAX_UPLOAD_BYTES)
+          return res.status(413).json({ error: "The selected file is too large" });
+        bytes = Buffer.from(arrayBuffer);
+      }
+
+      const preview = await buildLimitedDocumentPreview({
+        bytes,
+        fileName: String(paper.fileName ?? paper.fileKey ?? "document"),
+        mimeType: String(paper.fileMimeType ?? "application/octet-stream"),
+      });
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader("Cache-Control", "private, no-store");
+      return res.json({
+        title: paper.title,
+        scope: preview.scope,
+        excerpt: preview.excerpt,
+        isPaid: paper.accessMode === "purchase" || Number(paper.priceKes) > 0,
+        priceKes: Number(paper.priceKes),
+      });
+    } catch (error) {
+      console.error("Public paper preview error", error);
+      if (!res.headersSent)
+        return res.status(422).json({ error: "This paper preview is temporarily unavailable." });
+    }
+  };
   app.get("/api/papers/:paperId/free-view", handlePublicFreePaper);
   app.get("/api/papers/:paperId/office-preview", handlePublicOfficePreview);
+  app.get("/api/papers/:paperId/preview", handlePublicPaperPreview);
   app.get("/api/papers/:paperId/download", (req, res) =>
     handleProtectedPaper(req, res, "attachment")
   );
