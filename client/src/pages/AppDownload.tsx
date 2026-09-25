@@ -3,7 +3,7 @@ import { ArrowLeft, CheckCircle2, Download, ExternalLink, HelpCircle, Smartphone
 
 const androidDownloadUrl =
   (import.meta.env.VITE_ANDROID_APP_DOWNLOAD_URL as string | undefined)?.trim() ||
-  "https://expo.dev/artifacts/eas/PkZ-KS7LyPuIO7WdQSurW_mVGQCjswv4ctytUsay3BE.apk";
+  "/api/app-download";
 
 const steps = [
   {
@@ -51,9 +51,7 @@ export default function AppDownload() {
           {androidDownloadUrl ? (
             <a
               href={androidDownloadUrl}
-              target="_blank"
-              rel="noreferrer"
-              download
+              download="ScholarShelf.apk"
               className="mt-8 inline-flex items-center gap-2 rounded-full bg-[#e8c979] px-5 py-3 text-sm font-bold text-[#19312c] transition hover:bg-[#f1d995] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e8c979] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1d5146]"
             >
               <Download size={17} /> Download APK <ExternalLink size={15} />

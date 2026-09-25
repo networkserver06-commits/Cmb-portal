@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
+import { Readable } from "node:stream";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
@@ -55,6 +56,8 @@ export async function createApp() {
   app.use(express.json({ limit: "1mb" }));
   const requestUser = async (req: express.Request, res: express.Response) =>
     (await createContext({ req, res } as any)).user;
+  const scholarshelfApkUrl =
+    "https://expo.dev/artifacts/eas/PkZ-KS7LyPuIO7WdQSurW_mVGQCjswv4ctytUsay3BE.apk";
   app.get("/api/health", (_req, res) =>
     res.status(200).json({
       status: "ok",
@@ -62,6 +65,26 @@ export async function createApp() {
       paymentCollection: "leetec-stkpush",
     })
   );
+  app.get("/api/app-download", async (_req, res) => {
+    try {
+      const upstream = await fetch(scholarshelfApkUrl);
+      if (!upstream.ok || !upstream.body)
+        return res.status(502).json({ error: "The ScholarShelf APK is temporarily unavailable." });
+
+      res.status(200);
+      res.setHeader("Content-Type", "application/vnd.android.package-archive");
+      res.setHeader("Content-Disposition", 'attachment; filename="ScholarShelf.apk"');
+      res.setHeader("Cache-Control", "public, max-age=300");
+      const contentLength = upstream.headers.get("content-length");
+      if (contentLength) res.setHeader("Content-Length", contentLength);
+      Readable.fromWeb(
+        upstream.body as unknown as import("node:stream/web").ReadableStream
+      ).pipe(res);
+      return undefined;
+    } catch {
+      return res.status(502).json({ error: "The ScholarShelf APK is temporarily unavailable." });
+    }
+  });
 
   app.post("/api/scheduled/retentionCleanup", async (req, res) => {
     try {

@@ -40,7 +40,7 @@ The Home page and signed-in student dashboard include ScholarShelf Assistant. St
 | `GROQ_FALLBACK_MODEL`       | Server-only | Optional additional Groq model tried before the built-in fallbacks.                                                   |
 | `RESEND_API_KEY`            | Server-only | Account verification and password-reset emails.                                                                        |
 | `PASSWORD_RESET_FROM_EMAIL` | Server-only | Verified Resend sender identity.                                                                                       |
-| `VITE_ANDROID_APP_DOWNLOAD_URL` | Client-safe | Optional override for the Android app URL; defaults to `https://portal.leetec.online/app`. |
+| `VITE_ANDROID_APP_DOWNLOAD_URL` | Client-safe | Optional override for the Android app URL; defaults to the same-origin `/api/app-download` endpoint, which downloads the package as `ScholarShelf.apk`. |
 
 Never commit `.env` files, payment secrets, database credentials, or user-uploaded documents.
 
