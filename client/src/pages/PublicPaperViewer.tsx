@@ -565,15 +565,11 @@ function PublicDocumentPreview({
       <div className="mb-3 rounded-xl border border-[#cfe0d9] bg-[#f7fbf8] px-4 py-3 text-xs text-[#58766b]">
         Full resource viewer · {title}
       </div>
-      <object
-        data={href}
-        aria-label={`Full resource viewer: ${title}`}
+      <iframe
+        title={`Full resource viewer: ${title}`}
+        src={href}
         className="h-[760px] w-full rounded-xl border border-[#c9ddd4] bg-white shadow-sm"
-      >
-        <a href={href} target="_blank" rel="noreferrer">
-          Open the full resource
-        </a>
-      </object>
+      />
     </div>
   );
 }

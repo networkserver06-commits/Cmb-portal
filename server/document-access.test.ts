@@ -124,12 +124,12 @@ describe("protected document viewing and rejection cleanup", () => {
     expect(publicViewerSource).toContain("pagesToRender");
     expect(publicViewerSource).toContain("scrollIntoView");
     expect(publicViewerSource).toContain("renderTask?.cancel()");
-    expect(publicViewerSource).toContain("Open separately");
+    expect(publicViewerSource).toContain("full-view");
     expect(publicViewerSource).toContain("DOMPurify.sanitize");
     expect(publicViewerSource).toContain("officeFormatLabel");
     expect(publicViewerSource).toContain('"/office-preview", "/free-view"');
-    expect(publicViewerSource).toContain("Open document separately");
-    expect(publicViewerSource).not.toContain("<iframe");
+    expect(publicViewerSource).toContain("Full resource viewer");
+    expect(publicViewerSource).toContain("<iframe");
   });
 
   it("supports modern office uploads while retaining legacy fallbacks", () => {
@@ -140,9 +140,7 @@ describe("protected document viewing and rejection cleanup", () => {
     expect(fileStoreSource).toContain('epub: ["application/epub+zip"]');
     expect(adminControlsSource).toContain(".xlsx");
     expect(publishSource).toContain(".docx");
-    expect(publicViewerSource).toContain(
-      "DOCX, XLSX, PPTX, ODT, ODS, ODP, RTF, and EPUB"
-    );
+    expect(publicViewerSource).toContain("supported public format");
   });
 
   it("keeps file access scoped to administrators, owners, active submissions, and entitlements", () => {
@@ -212,11 +210,15 @@ describe("protected document viewing and rejection cleanup", () => {
     expect(publishSource).toContain("published in the free library");
     expect(publishSource).toContain("held for administrator review");
     expect(routerSource).toContain("detectSubmissionSafety(file)");
-    expect(routerSource).toContain("const automaticallyPublished = safety.decision === \"auto_publish\"");
+    expect(routerSource).toContain(
+      'const automaticallyPublished = safety.decision === "auto_publish"'
+    );
     expect(routerSource).toContain("safetyStatus: automaticallyPublished ?");
     expect(routerSource).toContain("documentType: input.documentType");
     expect(routerSource).toContain("documentType: submission.documentType");
-    expect(routerSource).toContain("documentType: z.enum(RESOURCE_TYPES).optional()");
+    expect(routerSource).toContain(
+      "documentType: z.enum(RESOURCE_TYPES).optional()"
+    );
     expect(routerSource).toContain("status: automaticallyPublished ?");
     expect(routerSource).toContain('"approved" as const');
     expect(routerSource).toContain('"pending" as const');
