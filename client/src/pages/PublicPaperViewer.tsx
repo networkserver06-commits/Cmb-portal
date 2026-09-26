@@ -584,6 +584,8 @@ function LimitedPaidPreview({
   const [state, setState] = useState<DocumentStatus>("loading");
   const [scope, setScope] = useState("");
   const [excerpt, setExcerpt] = useState("");
+  const [previewKind, setPreviewKind] = useState<"pdf" | "text">("text");
+  const [previewFileUrl, setPreviewFileUrl] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -592,12 +594,19 @@ function LimitedPaidPreview({
     fetch(`/api/papers/${paperId}/preview`, { credentials: "include" })
       .then(response => {
         if (!response.ok) throw new Error("The limited preview could not be loaded.");
-        return response.json() as Promise<{ scope?: string; excerpt?: string }>;
+        return response.json() as Promise<{
+          scope?: string;
+          excerpt?: string;
+          kind?: "pdf" | "text";
+          previewFileUrl?: string | null;
+        }>;
       })
       .then(result => {
         if (cancelled) return;
         setScope(result.scope ?? "Limited preview");
         setExcerpt(result.excerpt ?? "Preview unavailable.");
+        setPreviewKind(result.kind ?? "text");
+        setPreviewFileUrl(result.previewFileUrl ?? null);
         setState("ready");
       })
       .catch(previewError => {
@@ -631,7 +640,13 @@ function LimitedPaidPreview({
         <div className="mt-6 rounded-2xl border border-[#dfe9e3] bg-white p-5 shadow-sm md:p-7">
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#78938a]">{scope}</p>
           <h2 className="mt-2 font-serif text-2xl font-semibold text-[#173e35]">See what you’ll receive</h2>
-          <pre className="mt-5 max-h-[360px] overflow-hidden whitespace-pre-wrap font-sans text-sm leading-7 text-[#294d42]">{excerpt}</pre>
+          {previewKind === "pdf" && previewFileUrl ? (
+            <div className="mt-5 overflow-hidden rounded-2xl border border-[#dfe9e3]">
+              <PdfDocumentPreview href={previewFileUrl} title={title} />
+            </div>
+          ) : (
+            <pre className="mt-5 max-h-[360px] overflow-hidden whitespace-pre-wrap font-sans text-sm leading-7 text-[#294d42]">{excerpt}</pre>
+          )}
           <div className="mt-6 flex flex-col gap-3 border-t border-[#edf1ee] pt-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="font-semibold text-[#274d43]">Unlock {title}</p>

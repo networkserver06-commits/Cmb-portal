@@ -2,6 +2,23 @@ import { officePreviewFileType, renderOfficePreview } from "./officePreview";
 
 export const PUBLIC_PREVIEW_CHARACTERS = 2400;
 
+export function isPdfDocument(mimeType: string, fileName: string) {
+  const normalizedMime = mimeType.split(";", 1)[0].trim().toLowerCase();
+  return normalizedMime === "application/pdf" ||
+    normalizedMime.endsWith("+pdf") ||
+    fileName.toLowerCase().endsWith(".pdf");
+}
+
+export async function createFirstPagePdf(bytes: Buffer) {
+  const { PDFDocument } = await import("pdf-lib");
+  const source = await PDFDocument.load(bytes, { ignoreEncryption: true });
+  if (source.getPageCount() < 1) throw new Error("The PDF has no pages");
+  const preview = await PDFDocument.create();
+  const [page] = await preview.copyPages(source, [0]);
+  preview.addPage(page);
+  return Buffer.from(await preview.save({ useObjectStreams: true }));
+}
+
 function decodeBasicEntities(value: string) {
   return value
     .replace(/&nbsp;/gi, " ")
@@ -60,7 +77,7 @@ export async function buildLimitedDocumentPreview(input: {
   mimeType: string;
 }) {
   const normalizedMime = input.mimeType.split(";", 1)[0].trim().toLowerCase();
-  if (normalizedMime === "application/pdf" || normalizedMime.endsWith("+pdf")) {
+  if (isPdfDocument(normalizedMime, input.fileName)) {
     try {
       const preview = await extractPdfFirstPage(input.bytes);
       return preview.excerpt

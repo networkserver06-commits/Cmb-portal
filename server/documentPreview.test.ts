@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   buildLimitedDocumentPreview,
+  createFirstPagePdf,
   htmlToPreviewText,
+  isPdfDocument,
   PUBLIC_PREVIEW_CHARACTERS,
 } from "./documentPreview";
 
@@ -25,5 +27,18 @@ describe("limited document previews", () => {
     expect(result.scope).toBe("Opening excerpt");
     expect(result.excerpt.length).toBeLessThanOrEqual(PUBLIC_PREVIEW_CHARACTERS + 1);
     expect(result.excerpt).not.toContain("opening ".repeat(400));
+  });
+
+  it("creates a one-page visual PDF preview", async () => {
+    const { PDFDocument } = await import("pdf-lib");
+    const source = await PDFDocument.create();
+    source.addPage([300, 400]);
+    source.addPage([300, 400]);
+    const firstPageOnly = await createFirstPagePdf(
+      Buffer.from(await source.save())
+    );
+    const preview = await PDFDocument.load(firstPageOnly);
+    expect(isPdfDocument("application/pdf", "paper.pdf")).toBe(true);
+    expect(preview.getPageCount()).toBe(1);
   });
 });

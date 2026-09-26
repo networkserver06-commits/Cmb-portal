@@ -28,7 +28,11 @@ import {
   uploadPortalFile,
 } from "../fileStore";
 import { officePreviewFileType, renderOfficePreview } from "../officePreview";
-import { buildLimitedDocumentPreview } from "../documentPreview";
+import {
+  buildLimitedDocumentPreview,
+  createFirstPagePdf,
+  isPdfDocument,
+} from "../documentPreview";
 import { runRetentionCleanup } from "../retentionCleanup";
 import { sdk } from "./sdk";
 import { ENV } from "./env";
@@ -479,6 +483,8 @@ export async function createApp() {
         fileName: String(paper.fileName ?? paper.fileKey ?? "document"),
         mimeType: String(paper.fileMimeType ?? "application/octet-stream"),
       });
+      const fileName = String(paper.fileName ?? paper.fileKey ?? "document");
+      const mimeType = String(paper.fileMimeType ?? "application/octet-stream");
       res.setHeader("X-Content-Type-Options", "nosniff");
       res.setHeader("Cache-Control", "private, no-store");
       return res.json({
@@ -487,6 +493,10 @@ export async function createApp() {
         excerpt: preview.excerpt,
         isPaid: paper.accessMode === "purchase" || Number(paper.priceKes) > 0,
         priceKes: Number(paper.priceKes),
+        kind: isPdfDocument(mimeType, fileName) ? "pdf" : "text",
+        previewFileUrl: isPdfDocument(mimeType, fileName)
+          ? `/api/papers/${paperId}/preview-file`
+          : null,
       });
     } catch (error) {
       console.error("Public paper preview error", error);
@@ -504,9 +514,54 @@ export async function createApp() {
       }
     }
   };
+  const handlePublicPaperPreviewFile = async (
+    req: express.Request,
+    res: express.Response
+  ) => {
+    try {
+      const paperId = Number(req.params.paperId);
+      if (!Number.isInteger(paperId))
+        return res.status(404).json({ error: "Paper not found" });
+      const paper = await paperById(paperId);
+      if (!paper?.isAvailable || (!paper.fileId && !paper.fileKey))
+        return res.status(404).json({ error: "Paper preview unavailable" });
+      const fileName = String(paper.fileName ?? paper.fileKey ?? "document.pdf");
+      const mimeType = String(paper.fileMimeType ?? "application/octet-stream");
+      if (!isPdfDocument(mimeType, fileName))
+        return res.status(415).json({ error: "Visual preview is available for PDF documents only." });
+
+      let bytes: Buffer;
+      if (paper.fileId) {
+        if (!(await portalFileById(paper.fileId)))
+          return res.status(404).json({ error: "Paper document not found" });
+        bytes = await readPortalFileBytes(paper.fileId);
+      } else {
+        const signedUrl = await storageGetSignedUrl(paper.fileKey!);
+        const response = await fetch(signedUrl);
+        if (!response.ok)
+          return res.status(404).json({ error: "Paper document not found" });
+        const arrayBuffer = await response.arrayBuffer();
+        if (arrayBuffer.byteLength > MAX_UPLOAD_BYTES)
+          return res.status(413).json({ error: "The selected file is too large" });
+        bytes = Buffer.from(arrayBuffer);
+      }
+      const firstPage = await createFirstPagePdf(bytes);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", 'inline; filename="ScholarShelf-preview.pdf"');
+      res.setHeader("Content-Length", firstPage.byteLength);
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader("Cache-Control", "private, no-store");
+      return res.send(firstPage);
+    } catch (error) {
+      console.error("Public paper visual preview error", error);
+      if (!res.headersSent)
+        return res.status(422).json({ error: "The visual preview could not be prepared." });
+    }
+  };
   app.get("/api/papers/:paperId/free-view", handlePublicFreePaper);
   app.get("/api/papers/:paperId/office-preview", handlePublicOfficePreview);
   app.get("/api/papers/:paperId/preview", handlePublicPaperPreview);
+  app.get("/api/papers/:paperId/preview-file", handlePublicPaperPreviewFile);
   app.get("/api/papers/:paperId/download", (req, res) =>
     handleProtectedPaper(req, res, "attachment")
   );
