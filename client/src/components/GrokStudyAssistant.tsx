@@ -109,24 +109,64 @@ export default function GrokStudyAssistant({
 
   const readReferenceFile = async (file?: File) => {
     if (!file) return;
+    const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+    const isDocx =
+      file.type ===
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+      /\.docx$/i.test(file.name);
     const textLike =
       file.type.startsWith("text/") ||
       /\.(txt|md|csv|json|html?)$/i.test(file.name);
-    if (!textLike) {
+    if (!textLike && !isPdf && !isDocx) {
+      setError("Upload a PDF, DOCX, TXT, MD, CSV, JSON, or HTML document.");
+      return;
+    }
+    if (file.size > 12_000_000) {
       setError(
-        "For an uploaded reference, choose a TXT, MD, CSV, JSON, or HTML file. For PDF/DOCX, select the document above instead."
+        "Keep an uploaded document under 12 MB so it can be prepared safely in your browser."
       );
       return;
     }
-    if (file.size > 120_000) {
+    try {
+      let extracted = "";
+      if (isPdf) {
+        const pdfjsLib = await import("pdfjs-dist");
+        const pdfjsWorker = await import(
+          "pdfjs-dist/build/pdf.worker.min.mjs?url"
+        );
+        pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker.default;
+        const pdf = await pdfjsLib.getDocument({
+          data: await file.arrayBuffer(),
+        }).promise;
+        const pages = Math.min(pdf.numPages, 30);
+        for (let pageNumber = 1; pageNumber <= pages; pageNumber += 1) {
+          const page = await pdf.getPage(pageNumber);
+          const content = await page.getTextContent();
+          extracted += `\n\nPage ${pageNumber}\n${content.items.map(item => ("str" in item ? item.str : "")).join(" ")}`;
+          if (extracted.length >= 16_000) break;
+        }
+      } else if (isDocx) {
+        const mammoth = await import("mammoth");
+        const result = await mammoth.default.extractRawText({
+          arrayBuffer: await file.arrayBuffer(),
+        });
+        extracted = result.value;
+      } else {
+        extracted = await file.text();
+      }
+      const trimmed = extracted.trim().slice(0, 16_000);
+      if (!trimmed)
+        throw new Error("No readable text was found in this document.");
+      setReferenceText(trimmed);
+      setReferenceFile(file.name);
+      setError("");
+    } catch (uploadError) {
       setError(
-        "Keep the reference file under 120 KB, or paste only the passage you want to study."
+        uploadError instanceof Error
+          ? uploadError.message
+          : "This document could not be read in the browser."
       );
-      return;
     }
-    setReferenceText((await file.text()).slice(0, 16000));
-    setReferenceFile(file.name);
-    setError("");
   };
 
   const copyAnswer = async () => {
@@ -345,50 +385,10 @@ export default function GrokStudyAssistant({
             </div>
           )}
 
-          <div className="grid gap-2 rounded-2xl border border-[#c8d9d2] bg-white/70 p-3">
-            <label
-              htmlFor="assistant-reference"
-              className="text-sm font-semibold text-[#274d43]"
-            >
-              Add text or upload a reference (optional)
-            </label>
-            <textarea
-              id="assistant-reference"
-              value={referenceText}
-              onChange={event =>
-                setReferenceText(event.target.value.slice(0, 16000))
-              }
-              rows={3}
-              placeholder="Paste a paragraph, page, or your lecturer's notes here…"
-              className="rounded-xl border border-[#c8d9d2] bg-white px-3 py-2.5 text-sm font-normal outline-none focus:border-[#4b8876] focus:ring-2 focus:ring-[#4b8876]/25"
-            />
-            <div className="flex flex-wrap items-center gap-2">
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-[#c8d9d2] px-3 py-1.5 text-xs font-semibold text-[#34745f] hover:bg-[#eaf5ef]">
-                <FileUp size={14} /> Upload text file
-                <input
-                  type="file"
-                  accept=".txt,.md,.csv,.json,.html,.htm,text/*"
-                  className="sr-only"
-                  onChange={event =>
-                    void readReferenceFile(event.target.files?.[0])
-                  }
-                />
-              </label>
-              {referenceFile && (
-                <span className="text-xs text-[#648078]">
-                  Loaded: {referenceFile}
-                </span>
-              )}
-              <span className="text-xs text-[#718780]">
-                TXT, MD, CSV, JSON, or HTML · up to 120 KB
-              </span>
-            </div>
-          </div>
-
           <label className="grid gap-2 text-sm font-semibold text-[#274d43]">
             {mode === "summarize"
               ? "Summary instructions (optional)"
-              : "Your question"}
+              : "Your prompt"}
             <textarea
               value={prompt}
               onChange={event => setPrompt(event.target.value)}
@@ -398,10 +398,35 @@ export default function GrokStudyAssistant({
               placeholder={
                 mode === "summarize"
                   ? "Focus on exam points, definitions, or revision questions…"
-                  : "Explain this topic in simple terms, or ask a question about your document…"
+                  : "Ask anything, paste notes, or tell me what you want to learn…"
               }
-              className="rounded-2xl border border-[#c8d9d2] bg-white px-3 py-3 font-normal outline-none focus:border-[#4b8876] focus:ring-2 focus:ring-[#4b8876]/25"
+              className="min-h-28 rounded-2xl border border-[#c8d9d2] bg-white px-3 py-3 font-normal outline-none focus:border-[#4b8876] focus:ring-2 focus:ring-[#4b8876]/25"
             />
+            <span className="text-xs font-normal text-[#718780]">
+              Paste a passage here or attach a document below. The Assistant
+              will use both as context.
+            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-[#c8d9d2] px-3 py-1.5 text-xs font-semibold text-[#34745f] hover:bg-[#eaf5ef]">
+                <FileUp size={14} /> Attach document
+                <input
+                  type="file"
+                  accept=".pdf,.docx,.txt,.md,.csv,.json,.html,.htm,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/*"
+                  className="sr-only"
+                  onChange={event =>
+                    void readReferenceFile(event.target.files?.[0])
+                  }
+                />
+              </label>
+              {referenceFile && (
+                <span className="rounded-full bg-[#e5f2eb] px-3 py-1.5 text-xs font-semibold text-[#34745f]">
+                  Attached: {referenceFile}
+                </span>
+              )}
+              <span className="text-xs font-normal text-[#718780]">
+                PDF, Word, TXT, MD, CSV, JSON, HTML · up to 12 MB
+              </span>
+            </div>
           </label>
 
           <div className="flex flex-wrap items-center gap-3">
