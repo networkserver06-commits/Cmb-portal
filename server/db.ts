@@ -12,7 +12,13 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     updatedAt: now,
     lastSignedIn: user.lastSignedIn ?? now,
   };
-  if (user.role) set.role = user.role;
+  const isPrimaryAdmin = user.openId === process.env.OWNER_OPEN_ID;
+  if (isPrimaryAdmin) {
+    set.role = "admin";
+    set.isPrimaryAdmin = true;
+  } else if (user.role) {
+    set.role = user.role;
+  }
   await users.updateOne(
     { openId: user.openId },
     {
@@ -21,7 +27,8 @@ export async function upsertUser(user: InsertUser): Promise<void> {
         legacyId: await nextId("users"),
         openId: user.openId,
         createdAt: user.createdAt ?? now,
-        role: user.openId === process.env.OWNER_OPEN_ID ? "admin" : "user",
+        role: isPrimaryAdmin ? "admin" : "user",
+        isPrimaryAdmin,
       },
     },
     { upsert: true }

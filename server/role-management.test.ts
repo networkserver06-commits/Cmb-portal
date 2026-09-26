@@ -15,6 +15,7 @@ describe("administrator role management", () => {
     expect(router).toContain('message: "User not found."');
     expect(router).toContain("ctx.user.id === input.userId");
     expect(router).toContain("OWNER_OPEN_ID");
+    expect(router).toContain("target.isPrimaryAdmin === true");
     expect(router).toContain("adminCount <= 1");
     expect(router).toContain("At least one administrator account must remain.");
     expect(auth).toContain('ctx.user.role !== "admin"');
@@ -28,5 +29,7 @@ describe("administrator role management", () => {
     expect(ui).toContain('value="admin">Administrator</option>');
     expect(ui).not.toContain("users.data?.slice(0, 6)");
     expect(ui).toContain("owner account");
+    expect(ui).toContain("user.isPrimaryAdmin");
+    expect(ui).toContain("Primary administrator");
   });
 });

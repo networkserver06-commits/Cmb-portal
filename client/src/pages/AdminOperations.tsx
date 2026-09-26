@@ -348,11 +348,12 @@ export default function AdminOperations() {
                     </div>
                     <div className="truncate pl-5 text-xs text-[#82958e]">
                       {user.email || "No email"} · ID {user.legacyId}
+                      {user.isPrimaryAdmin && " · Primary administrator"}
                     </div>
                   </div>
                   <select
                     value={user.role === "admin" ? "admin" : "user"}
-                    disabled={setRole.isPending}
+                    disabled={setRole.isPending || user.isPrimaryAdmin}
                     aria-label={`Set role for ${user.name || user.email || `user ${user.legacyId}`}`}
                     onChange={event =>
                       setRole.mutate({

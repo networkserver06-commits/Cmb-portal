@@ -1075,6 +1075,7 @@ export const appRouter = router({
                 name: 1,
                 email: 1,
                 role: 1,
+                isPrimaryAdmin: 1,
                 createdAt: 1,
               },
             }
@@ -1097,8 +1098,8 @@ export const appRouter = router({
           throw new TRPCError({ code: "NOT_FOUND", message: "User not found." });
         if (
           input.role === "user" &&
-          target.openId &&
-          target.openId === process.env.OWNER_OPEN_ID
+          (target.isPrimaryAdmin === true ||
+            (target.openId && target.openId === process.env.OWNER_OPEN_ID))
         )
           throw new TRPCError({
             code: "FORBIDDEN",
@@ -1119,7 +1120,12 @@ export const appRouter = router({
         }
         await users.updateOne(
           { legacyId: input.userId },
-          { $set: { role: input.role, updatedAt: new Date() } }
+          {
+            $set: {
+              role: input.role,
+              updatedAt: new Date(),
+            },
+          }
         );
         return { success: true, userId: input.userId, role: input.role };
       }),
