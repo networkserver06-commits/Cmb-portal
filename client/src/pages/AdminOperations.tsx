@@ -16,6 +16,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import RouteProgress from "@/components/RouteProgress";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   Check,
@@ -37,7 +44,7 @@ const submissionStatusStyles: Record<string, string> = {
   approved: "border-[#b9ddc7] bg-[#eef9f1] text-[#327452]",
   rejected: "border-[#efc8c5] bg-[#fff4f3] text-[#a44e49]",
 };
-
+// Protected review files use /api/files/${encodeURIComponent(submission.fileId)}/view.
 function PaperReplacement({ paper }: { paper: any }) {
   const utils = trpc.useUtils();
   const replace = trpc.admin.uploadPaper.useMutation({
@@ -176,7 +183,13 @@ export default function AdminOperations() {
         utils.admin.listSubmissions.invalidate(),
         utils.admin.listPapers.invalidate(),
       ]);
+      setSelectedSubmission(null);
+      toast.success("Submission decision saved", {
+        description: "The shared-file queue and catalogue have been refreshed.",
+      });
     },
+    onError: error =>
+      toast.error("Submission decision failed", { description: error.message }),
   });
   const deletePaper = trpc.admin.deletePaper.useMutation({
     onSuccess: async () => {
@@ -198,6 +211,9 @@ export default function AdminOperations() {
   const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "user">("all");
   const [accessMessage, setAccessMessage] = useState("");
   const [deleteConfirmation, setDeleteConfirmation] = useState<number | null>(
+    null
+  );
+  const [selectedSubmission, setSelectedSubmission] = useState<any | null>(
     null
   );
   const [submissionFilter, setSubmissionFilter] = useState<
@@ -245,6 +261,9 @@ export default function AdminOperations() {
     papers.isLoading ||
     payments.isLoading ||
     submissions.isLoading;
+  const selectedFileUrl = selectedSubmission?.fileId
+    ? `/api/files/${encodeURIComponent(selectedSubmission.fileId)}/view`
+    : null;
 
   return (
     <div className="mt-8">
@@ -581,7 +600,7 @@ export default function AdminOperations() {
             {visibleSubmissions.map((submission: any) => (
               <div
                 key={submission.legacyId}
-                className="flex flex-col gap-4 rounded-2xl border border-[#e1ebe5] bg-[#f7fbf8] p-4 md:flex-row md:items-center md:justify-between"
+                className={`flex flex-col gap-4 rounded-2xl border p-4 shadow-sm transition ${submission.status === "pending" ? "border-[#ead79b] bg-[#fffdf4]" : "border-[#e1ebe5] bg-[#f7fbf8]"} md:flex-row md:items-center md:justify-between`}
               >
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
@@ -618,6 +637,21 @@ export default function AdminOperations() {
                           ? "Held by the safety detector · administrator decision required"
                           : "Awaiting administrator decision"}
                   </div>
+                  <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-[#718780]">
+                    <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-[#dfe9e3]">
+                      {submission.fileName}
+                    </span>
+                    <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-[#dfe9e3]">
+                      {submission.mimeType || "Document"}
+                    </span>
+                    <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-[#dfe9e3]">
+                      {submission.approvalMode === "automatic"
+                        ? "Automated safety pass"
+                        : submission.safetyStatus === "held"
+                          ? "Safety review required"
+                          : "Manual decision"}
+                    </span>
+                  </div>
                   {submission.safetyReasons?.length > 0 &&
                     submission.status === "pending" && (
                       <p className="mt-1 text-xs text-[#80631a]">
@@ -633,18 +667,12 @@ export default function AdminOperations() {
                 <div className="flex shrink-0 flex-wrap gap-2">
                   {submission.fileId && !submission.storagePurged && (
                     <Button
-                      asChild
                       size="sm"
                       variant="outline"
                       className="rounded-full border-[#c8d9d2] bg-white text-[#1d5146]"
+                      onClick={() => setSelectedSubmission(submission)}
                     >
-                      <a
-                        href={`/api/files/${encodeURIComponent(submission.fileId)}/view`}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        <Eye size={14} /> View document
-                      </a>
+                      <Eye size={14} /> View document for review
                     </Button>
                   )}
                   {submission.status === "pending" && (
@@ -696,6 +724,101 @@ export default function AdminOperations() {
           </div>
         </section>
       </div>
+      <Dialog
+        open={selectedSubmission !== null}
+        onOpenChange={open => !open && setSelectedSubmission(null)}
+      >
+        <DialogContent className="max-h-[92vh] max-w-5xl overflow-hidden border-[#dfe9e3] bg-white p-0 text-[#173e35]">
+          <DialogHeader className="border-b border-[#e5eee9] bg-[#f5faf7] px-6 py-5 pr-12">
+            <DialogTitle className="font-serif text-2xl text-[#173e35]">
+              Review shared document
+            </DialogTitle>
+            <DialogDescription className="text-xs leading-5 text-[#718780]">
+              Inspect the submitted file before approving it for the free
+              catalogue. The preview is protected by administrator access.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedSubmission && (
+            <div className="grid min-h-0 gap-0 lg:grid-cols-[minmax(0,1fr)_18rem]">
+              <div className="min-h-[22rem] bg-[#eef5f1] p-4 lg:min-h-[34rem]">
+                {selectedFileUrl ? (
+                  <iframe
+                    title={`Preview of ${selectedSubmission.fileName}`}
+                    src={selectedFileUrl}
+                    className="h-[28rem] w-full rounded-xl border border-[#cdded7] bg-white lg:h-[34rem]"
+                  />
+                ) : (
+                  <div className="grid h-full min-h-[20rem] place-items-center rounded-xl border border-dashed border-[#cdded7] bg-white p-6 text-center text-sm text-[#82958e]">
+                    The document bytes are no longer available.
+                  </div>
+                )}
+              </div>
+              <aside className="border-t border-[#e5eee9] bg-white p-5 lg:border-l lg:border-t-0">
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#78938a]">
+                  Submission details
+                </p>
+                <h3 className="mt-2 break-words font-semibold text-[#274d43]">
+                  {selectedSubmission.title}
+                </h3>
+                <dl className="mt-5 space-y-3 text-xs">
+                  <div>
+                    <dt className="text-[#94aaa2]">Submitted by</dt>
+                    <dd className="font-medium text-[#506c63]">
+                      Student {selectedSubmission.userId}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-[#94aaa2]">File</dt>
+                    <dd className="break-all font-medium text-[#506c63]">
+                      {selectedSubmission.fileName}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-[#94aaa2]">Format</dt>
+                    <dd className="break-all font-medium text-[#506c63]">
+                      {selectedSubmission.mimeType || "Unknown"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-[#94aaa2]">Safety result</dt>
+                    <dd className="font-medium text-[#80631a]">
+                      {selectedSubmission.safetyStatus === "held"
+                        ? "Held for review"
+                        : "Passed"}
+                    </dd>
+                  </div>
+                </dl>
+                {!!selectedSubmission.safetyReasons?.length && (
+                  <div className="mt-5 rounded-xl border border-[#ead79b] bg-[#fff9e8] p-3 text-xs leading-5 text-[#80631a]">
+                    <p className="font-bold">Detector findings</p>
+                    <ul className="mt-1 list-disc space-y-1 pl-4">
+                      {selectedSubmission.safetyReasons.map(
+                        (reason: string) => (
+                          <li key={reason}>{reason}</li>
+                        )
+                      )}
+                    </ul>
+                  </div>
+                )}
+                {selectedSubmission.fileId &&
+                  !selectedSubmission.storagePurged && (
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="mt-5 w-full rounded-full border-[#c8d9d2] text-[#1d5146]"
+                    >
+                      <a
+                        href={`/api/files/${encodeURIComponent(selectedSubmission.fileId)}/download`}
+                      >
+                        <FileUp size={14} /> Download for inspection
+                      </a>
+                    </Button>
+                  )}
+              </aside>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
       <AlertDialog
         open={deleteConfirmation !== null}
         onOpenChange={open => {
