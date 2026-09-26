@@ -46,6 +46,7 @@ import {
   Moon,
   KeyRound,
   Mail,
+  PhoneCall,
   UserCircle2,
   LayoutDashboard,
   LifeBuoy,
@@ -1527,15 +1528,24 @@ function AccountDashboard({
                 contact support with your payment reference or the email used
                 for your account.
               </p>
-              <a
-                href="https://wa.me/254116553618?text=Hello%20ScholarShelf%20support%2C%20I%20need%20help%20with%20my%20account."
-                target="_blank"
-                rel="noreferrer"
-                className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#1d5146] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#153c34]"
-                aria-label="Contact ScholarShelf support on WhatsApp at plus 254 116 553 618"
-              >
-                <LifeBuoy size={16} /> Contact WhatsApp support
-              </a>
+              <div className="mt-5 flex flex-wrap gap-2">
+                <a
+                  href="tel:+254723617436"
+                  className="inline-flex items-center gap-2 rounded-full border border-[#b8d1c5] bg-white px-5 py-2.5 text-sm font-semibold text-[#1d5146] transition hover:bg-[#f5faf7]"
+                  aria-label="Call ScholarShelf support at 0723 617 436"
+                >
+                  <PhoneCall size={16} /> Call 0723 617 436
+                </a>
+                <a
+                  href="https://wa.me/254723617436?text=Hello%20ScholarShelf%20support%2C%20I%20need%20help%20with%20my%20account."
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-full bg-[#1d5146] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#153c34]"
+                  aria-label="Contact ScholarShelf support on WhatsApp at 0723 617 436"
+                >
+                  <LifeBuoy size={16} /> WhatsApp support
+                </a>
+              </div>
             </div>
           </section>
         </div>

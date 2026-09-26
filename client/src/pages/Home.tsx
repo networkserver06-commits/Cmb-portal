@@ -19,6 +19,7 @@ import {
   Loader2,
   Menu,
   MessageCircle,
+  PhoneCall,
   Search,
   ShieldCheck,
   Sparkles,
@@ -1225,15 +1226,24 @@ export default function Home() {
                 your payment reference.
               </p>
             </div>
-            <a
-              href="https://wa.me/254116553618?text=Hello%20ScholarShelf%20support%2C%20I%20need%20help%20with%20the%20portal."
-              target="_blank"
-              rel="noreferrer"
-              aria-label="Contact ScholarShelf support on WhatsApp at plus 254 116 553 618"
-              className="inline-flex w-fit items-center gap-2 rounded-full border border-[#b8d1c5] px-5 py-2.5 text-sm font-semibold text-[#1d5146] transition hover:-translate-y-0.5 hover:bg-white hover:shadow-sm"
-            >
-              <MessageCircle size={17} /> WhatsApp support
-            </a>
+            <div className="flex flex-wrap gap-2">
+              <a
+                href="tel:+254723617436"
+                aria-label="Call ScholarShelf support at 0723 617 436"
+                className="inline-flex w-fit items-center gap-2 rounded-full border border-[#b8d1c5] px-5 py-2.5 text-sm font-semibold text-[#1d5146] transition hover:-translate-y-0.5 hover:bg-white hover:shadow-sm"
+              >
+                <PhoneCall size={17} /> Call 0723 617 436
+              </a>
+              <a
+                href="https://wa.me/254723617436?text=Hello%20ScholarShelf%20support%2C%20I%20need%20help%20with%20the%20portal."
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Contact ScholarShelf support on WhatsApp at 0723 617 436"
+                className="inline-flex w-fit items-center gap-2 rounded-full bg-[#1d5146] px-5 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#153c34]"
+              >
+                <MessageCircle size={17} /> WhatsApp
+              </a>
+            </div>
           </div>
         </section>
       </main>
