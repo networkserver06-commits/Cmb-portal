@@ -1,4 +1,8 @@
-import { officePreviewFileType, renderOfficePreview } from "./officePreview";
+import {
+  officePreviewFileType,
+  renderLegacyOfficeText,
+  renderOfficePreview,
+} from "./officePreview";
 
 export const PUBLIC_PREVIEW_CHARACTERS = 2400;
 export const MAX_PREVIEW_SOURCE_BYTES = 128 * 1024 * 1024;
@@ -166,6 +170,22 @@ export async function buildLimitedDocumentPreview(input: {
           "This document’s opening excerpt could not be rendered safely. Unlock the resource to read the complete document.",
         scope: "Limited preview",
       };
+    }
+  }
+
+  if (["doc", "xls", "ppt"].includes(extension)) {
+    try {
+      const text = await renderLegacyOfficeText({
+        bytes: input.bytes,
+        fileName: input.fileName,
+      });
+      if (text)
+        return {
+          excerpt: limitPreview(text),
+          scope: "Opening excerpt from legacy Office document",
+        };
+    } catch {
+      // Keep the secure generic fallback when LibreOffice is unavailable.
     }
   }
 

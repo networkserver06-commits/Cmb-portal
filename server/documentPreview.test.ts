@@ -25,8 +25,28 @@ describe("limited document previews", () => {
       mimeType: "text/plain",
     });
     expect(result.scope).toBe("Opening excerpt");
-    expect(result.excerpt.length).toBeLessThanOrEqual(PUBLIC_PREVIEW_CHARACTERS + 1);
+    expect(result.excerpt.length).toBeLessThanOrEqual(
+      PUBLIC_PREVIEW_CHARACTERS + 1
+    );
     expect(result.excerpt).not.toContain("opening ".repeat(400));
+  });
+
+  it("previews JSON and gives legacy Office files a conversion path", async () => {
+    const json = await buildLimitedDocumentPreview({
+      bytes: Buffer.from('{"course":"Biology","topic":"Cells"}'),
+      fileName: "notes.json",
+      mimeType: "application/json",
+    });
+    expect(json.scope).toBe("Opening excerpt");
+    expect(json.excerpt).toContain('"course"');
+
+    const legacy = await buildLimitedDocumentPreview({
+      bytes: Buffer.from("not-a-real-doc"),
+      fileName: "notes.doc",
+      mimeType: "application/msword",
+    });
+    expect(legacy.scope).toMatch(/Limited preview|legacy Office/);
+    expect(legacy.excerpt).toBeTruthy();
   });
 
   it("creates a one-page visual PDF preview", async () => {

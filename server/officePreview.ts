@@ -1,3 +1,7 @@
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { spawn } from "node:child_process";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { SupportedFileType } from "officeparser";
 
 const officeMimeTypes: Record<string, SupportedFileType> = {
@@ -24,6 +28,7 @@ const officeExtensions: Record<string, SupportedFileType> = {
   rtf: "rtf",
   epub: "epub",
 };
+const legacyOfficeExtensions = new Set(["doc", "xls", "ppt"]);
 
 export function officePreviewFileType(
   mimeType: string,
@@ -55,4 +60,58 @@ export async function renderOfficePreview(input: {
     htmlConfig: { containerWidth: "100%" },
   });
   return { fileType, html: String(html.value) };
+}
+
+/** Convert legacy binary Office files to a bounded plain-text preview. */
+export async function renderLegacyOfficeText(input: {
+  bytes: Buffer;
+  fileName: string;
+}) {
+  const extension = input.fileName.toLowerCase().split(".").pop() ?? "";
+  if (!legacyOfficeExtensions.has(extension)) return null;
+  const directory = await mkdtemp(join(tmpdir(), "scholarshelf-preview-"));
+  const sourcePath = join(directory, `document.${extension}`);
+  const outputPath = join(directory, "document.txt");
+  try {
+    await writeFile(sourcePath, input.bytes, { mode: 0o600 });
+    await new Promise<void>((resolve, reject) => {
+      const child = spawn(
+        "libreoffice",
+        [
+          "--headless",
+          "--nologo",
+          "--nodefault",
+          "--nofirststartwizard",
+          "--convert-to",
+          "txt:Text",
+          "--outdir",
+          directory,
+          sourcePath,
+        ],
+        {
+          env: { ...process.env, HOME: directory },
+          stdio: ["ignore", "ignore", "ignore"],
+        }
+      );
+      const timeout = setTimeout(() => {
+        child.kill("SIGKILL");
+        reject(new Error("Legacy Office preview timed out."));
+      }, 15_000);
+      child.once("error", error => {
+        clearTimeout(timeout);
+        reject(error);
+      });
+      child.once("exit", code => {
+        clearTimeout(timeout);
+        code === 0
+          ? resolve()
+          : reject(new Error("Legacy Office preview conversion failed."));
+      });
+    });
+    return (await readFile(outputPath, "utf8")).trim();
+  } finally {
+    await rm(directory, { recursive: true, force: true }).catch(
+      () => undefined
+    );
+  }
 }
