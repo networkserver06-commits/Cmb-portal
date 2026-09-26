@@ -1,8 +1,17 @@
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { SupportedFileType } from "officeparser";
+
+const require = createRequire(import.meta.url);
+const WordExtractor = require("word-extractor") as new () => {
+  extract(source: Buffer): Promise<{
+    getBody(options?: { filterUnicode?: boolean }): string;
+    getHeaders(options?: { includeFooters?: boolean }): string;
+  }>;
+};
 
 const officeMimeTypes: Record<string, SupportedFileType> = {
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
@@ -48,18 +57,22 @@ export async function renderOfficePreview(input: {
 }) {
   const fileType = officePreviewFileType(input.mimeType, input.fileName);
   if (!fileType) return null;
-  const { OfficeParser } = await import("officeparser");
-  const ast = await OfficeParser.parseOffice(input.bytes, {
-    fileType,
-    extractAttachments: false,
-    ignoreComments: true,
-    ignoreNotes: true,
-  });
-  const html = await ast.to("html", {
-    includeFormatting: true,
-    htmlConfig: { containerWidth: "100%" },
-  });
-  return { fileType, html: String(html.value) };
+  try {
+    const { OfficeParser } = await import("officeparser");
+    const ast = await OfficeParser.parseOffice(input.bytes, {
+      fileType,
+      extractAttachments: false,
+      ignoreComments: true,
+      ignoreNotes: true,
+    });
+    const html = await ast.to("html", {
+      includeFormatting: true,
+      htmlConfig: { containerWidth: "100%" },
+    });
+    return { fileType, html: String(html.value) };
+  } catch {
+    return null;
+  }
 }
 
 /** Convert legacy binary Office files to a bounded plain-text preview. */
@@ -69,6 +82,20 @@ export async function renderLegacyOfficeText(input: {
 }) {
   const extension = input.fileName.toLowerCase().split(".").pop() ?? "";
   if (!legacyOfficeExtensions.has(extension)) return null;
+  if (extension === "doc") {
+    try {
+      const document = await new WordExtractor().extract(input.bytes);
+      return [
+        document.getHeaders({ includeFooters: true }),
+        document.getBody({ filterUnicode: true }),
+      ]
+        .filter(Boolean)
+        .join("\n\n")
+        .trim();
+    } catch {
+      // Encrypted/corrupt DOC files can still use the optional LibreOffice path.
+    }
+  }
   const directory = await mkdtemp(join(tmpdir(), "scholarshelf-preview-"));
   const sourcePath = join(directory, `document.${extension}`);
   const outputPath = join(directory, "document.txt");
@@ -109,6 +136,10 @@ export async function renderLegacyOfficeText(input: {
       });
     });
     return (await readFile(outputPath, "utf8")).trim();
+  } catch {
+    // Serverless deployments may not include LibreOffice. Return null so the
+    // protected original can be streamed instead of returning a JSON error.
+    return null;
   } finally {
     await rm(directory, { recursive: true, force: true }).catch(
       () => undefined
