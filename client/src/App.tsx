@@ -8,15 +8,61 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import NetworkStatus from "./components/NetworkStatus";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { useAuth } from "@/_core/hooks/useAuth";
-const Home = lazy(() => import("./pages/Home"));
-const AppDownload = lazy(() => import("./pages/AppDownload"));
-const Admin = lazy(() => import("./pages/Admin"));
-const Library = lazy(() => import("./pages/Library"));
-const PaymentResult = lazy(() => import("./pages/PaymentResult"));
-const PublicPaperViewer = lazy(() => import("./pages/PublicPaperViewer"));
-const Account = lazy(() => import("./pages/Account"));
-const PasswordReset = lazy(() => import("./pages/PasswordReset"));
-const EmailVerification = lazy(() => import("./pages/EmailVerification"));
+const routeLoaders = {
+  "/": () => import("./pages/Home"),
+  "/app": () => import("./pages/AppDownload"),
+  "/admin": () => import("./pages/Admin"),
+  "/library": () => import("./pages/Library"),
+  "/payment-result": () => import("./pages/PaymentResult"),
+  "/paper": () => import("./pages/PublicPaperViewer"),
+  "/account": () => import("./pages/Account"),
+  "/login": () => import("./pages/Account"),
+  "/create-account": () => import("./pages/Account"),
+  "/reset-password": () => import("./pages/PasswordReset"),
+  "/verify-email": () => import("./pages/EmailVerification"),
+  "/ai": () => import("./pages/AI"),
+} as const;
+const preloadRoute = (pathname: string) => {
+  const key = pathname.startsWith("/paper/") ? "/paper" : pathname;
+  const loader = routeLoaders[key as keyof typeof routeLoaders];
+  if (loader) void loader();
+};
+const Home = lazy(routeLoaders["/"]);
+const AppDownload = lazy(routeLoaders["/app"]);
+const Admin = lazy(routeLoaders["/admin"]);
+const Library = lazy(routeLoaders["/library"]);
+const PaymentResult = lazy(routeLoaders["/payment-result"]);
+const PublicPaperViewer = lazy(routeLoaders["/paper"]);
+const Account = lazy(routeLoaders["/account"]);
+const PasswordReset = lazy(routeLoaders["/reset-password"]);
+const EmailVerification = lazy(routeLoaders["/verify-email"]);
+
+function NavigationPreloader() {
+  useEffect(() => {
+    let timer: number | undefined;
+    const preload = (event: Event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const link = target.closest<HTMLAnchorElement>("a[href]");
+      if (!link || link.target === "_blank" || link.hasAttribute("download"))
+        return;
+      const url = new URL(link.href, window.location.origin);
+      if (url.origin !== window.location.origin) return;
+      preloadRoute(url.pathname);
+    };
+    document.addEventListener("pointerover", preload, { passive: true });
+    document.addEventListener("focusin", preload, { passive: true });
+    document.addEventListener("touchstart", preload, { passive: true });
+    timer = window.setTimeout(() => preloadRoute("/login"), 1500);
+    return () => {
+      document.removeEventListener("pointerover", preload);
+      document.removeEventListener("focusin", preload);
+      document.removeEventListener("touchstart", preload);
+      if (timer) window.clearTimeout(timer);
+    };
+  }, []);
+  return null;
+}
 
 function LoginRoute() {
   return <Account initialMode="login" />;
@@ -125,6 +171,7 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <NetworkStatus />
+          <NavigationPreloader />
           <AnalyticsTracker />
           <Router />
         </TooltipProvider>

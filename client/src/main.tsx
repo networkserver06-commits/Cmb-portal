@@ -9,7 +9,17 @@ import { startLogin } from "./const";
 import { installStaleAssetRecovery } from "./lib/staleAssetRecovery";
 import "./index.css";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      gcTime: 5 * 60_000,
+      retry: 1,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
+    },
+  },
+});
 installStaleAssetRecovery();
 
 function installOptionalAnalytics() {
@@ -96,35 +106,37 @@ const trpcClient = trpc.createClient({
         return {};
       },
       fetch(input, init) {
-        return globalThis.fetch(input, {
-          ...(init ?? {}),
-          credentials: "include",
-        }).then(async response => {
-          const contentType = response.headers.get("content-type") ?? "";
-          if (contentType.toLowerCase().includes("application/json"))
-            return response;
-          return new Response(
-            JSON.stringify([
-              {
-                error: {
-                  json: {
-                    message:
-                      "The server returned an invalid response. Please try again.",
-                    code: -32603,
-                    data: {
-                      code: "INTERNAL_SERVER_ERROR",
-                      httpStatus: response.status || 500,
+        return globalThis
+          .fetch(input, {
+            ...(init ?? {}),
+            credentials: "include",
+          })
+          .then(async response => {
+            const contentType = response.headers.get("content-type") ?? "";
+            if (contentType.toLowerCase().includes("application/json"))
+              return response;
+            return new Response(
+              JSON.stringify([
+                {
+                  error: {
+                    json: {
+                      message:
+                        "The server returned an invalid response. Please try again.",
+                      code: -32603,
+                      data: {
+                        code: "INTERNAL_SERVER_ERROR",
+                        httpStatus: response.status || 500,
+                      },
                     },
                   },
                 },
-              },
-            ]),
-            {
-              status: response.status || 500,
-              headers: { "content-type": "application/json" },
-            }
-          );
-        });
+              ]),
+              {
+                status: response.status || 500,
+                headers: { "content-type": "application/json" },
+              }
+            );
+          });
       },
     }),
   ],
@@ -132,8 +144,8 @@ const trpcClient = trpc.createClient({
 
 createRoot(document.getElementById("root")!).render(
   <trpc.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>
-        <App />
-      </QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      <App />
+    </QueryClientProvider>
   </trpc.Provider>
 );
