@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
+import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { filterAndSortLibrary, type LibrarySort } from "@/lib/libraryFilters";
 import { educationLevelLabel } from "@shared/educationLevels";
@@ -241,27 +242,49 @@ function AccountDashboard({
       setWalletNotice(
         "LeeTec sent an M-Pesa payment prompt to your phone. Approve it to complete the top-up."
       );
+      toast.info("Payment prompt sent", {
+        description:
+          "Approve the LeeTec prompt on your phone to top up your wallet.",
+      });
     },
-    onError: error => setWalletNotice(error.message),
+    onError: error => {
+      setWalletNotice(error.message);
+      toast.error("Wallet top-up could not start", {
+        description: error.message,
+      });
+    },
   });
   const updateProfile = trpc.student.updateProfile.useMutation({
     onSuccess: async data => {
       setProfileName(data.name);
       setProfileNotice("Profile name updated securely.");
+      toast.success("Profile updated", {
+        description: "Your account name was saved.",
+      });
       await utils.auth.me.invalidate();
     },
-    onError: error => setProfileNotice(error.message),
+    onError: error => {
+      setProfileNotice(error.message);
+      toast.error("Profile update failed", { description: error.message });
+    },
   });
   useEffect(() => {
     if (walletTopUpStatus.data?.status === "paid") {
       setWalletNotice(
         "Top-up confirmed. Your wallet balance has been updated."
       );
+      toast.success("Wallet top-up confirmed", {
+        description: "Your updated balance is now available for checkout.",
+      });
       void wallet.refetch();
       void utils.student.wallet.invalidate();
     }
-    if (walletTopUpStatus.data?.status === "failed")
+    if (walletTopUpStatus.data?.status === "failed") {
       setWalletNotice("The top-up was not completed. You can try again.");
+      toast.error("Wallet top-up was not completed", {
+        description: "No balance was added. You can safely try again.",
+      });
+    }
   }, [walletTopUpStatus.data?.status, wallet]);
 
   return (
@@ -279,7 +302,9 @@ function AccountDashboard({
               href="/account?tab=assistant"
               className="inline-flex items-center gap-1.5 rounded-full border border-[#c8d9d2] px-3 py-2 text-sm font-semibold text-[#1d604f] transition hover:bg-[#e8f1ed]"
             >
-              <Sparkles size={15} /> <span className="hidden sm:inline">AI Assistant</span><span className="sm:hidden">AI</span>
+              <Sparkles size={15} />{" "}
+              <span className="hidden sm:inline">AI Assistant</span>
+              <span className="sm:hidden">AI</span>
             </Link>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
@@ -374,7 +399,10 @@ function AccountDashboard({
             className="account-ai-dock fixed bottom-4 left-4 z-30 hidden max-h-[min(34rem,calc(100vh-2rem))] w-[min(22rem,calc(100vw-2rem))] overflow-y-auto lg:block"
             aria-label="Quick AI study assistant"
           >
-            <GrokStudyAssistant compact onClose={() => setQuickAssistantOpen(false)} />
+            <GrokStudyAssistant
+              compact
+              onClose={() => setQuickAssistantOpen(false)}
+            />
           </aside>
         )}
         {activeTab !== "assistant" && !quickAssistantOpen && (
@@ -441,7 +469,7 @@ function AccountDashboard({
                 Dashboard menu
               </span>
               <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+                <DropdownMenuTrigger asChild>
                   <button
                     type="button"
                     className="group flex h-14 w-full items-center justify-between gap-3 rounded-2xl border border-[#c8d9d2] bg-[#fbfdfb] px-4 text-left text-sm font-semibold text-[#274d43] shadow-sm outline-none transition duration-200 hover:-translate-y-0.5 hover:border-[#4b8876] hover:bg-white hover:shadow-md focus-visible:ring-4 focus-visible:ring-[#4b8876]/15 data-[state=open]:border-[#4b8876] data-[state=open]:bg-white data-[state=open]:shadow-md"
@@ -451,7 +479,9 @@ function AccountDashboard({
                       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#e8f1ed] text-[#2d7965]">
                         <activeTabDetails.icon size={15} />
                       </span>
-                      <span className="min-w-0 truncate text-[15px]">{activeTabDetails.label}</span>
+                      <span className="min-w-0 truncate text-[15px]">
+                        {activeTabDetails.label}
+                      </span>
                     </span>
                     <ChevronDown
                       size={16}
@@ -481,7 +511,9 @@ function AccountDashboard({
                         <tab.icon size={16} />
                       </span>
                       <span className="min-w-0">
-                        <span className="block text-[14px] font-bold leading-5 text-[#274d43]">{tab.label}</span>
+                        <span className="block text-[14px] font-bold leading-5 text-[#274d43]">
+                          {tab.label}
+                        </span>
                         <span className="mt-0.5 block truncate text-xs leading-4 text-[#82958e]">
                           {tab.description}
                         </span>
@@ -511,7 +543,8 @@ function AccountDashboard({
                   Your dedicated study desk
                 </h1>
                 <p className="mt-3 max-w-xl text-[#718780]">
-                  Ask, learn, and revise with ScholarShelf Assistant without leaving your private student dashboard.
+                  Ask, learn, and revise with ScholarShelf Assistant without
+                  leaving your private student dashboard.
                 </p>
               </div>
               <GrokStudyAssistant />
@@ -532,7 +565,8 @@ function AccountDashboard({
                     Install the ScholarShelf app
                   </h1>
                   <p className="mt-3 max-w-2xl text-sm leading-6 text-[#718780]">
-                    Keep your library, dashboard, and ScholarShelf Assistant close at hand with the Android app installation guide.
+                    Keep your library, dashboard, and ScholarShelf Assistant
+                    close at hand with the Android app installation guide.
                   </p>
                 </div>
               </div>
@@ -545,24 +579,48 @@ function AccountDashboard({
             </div>
             <div className="mt-8 grid gap-3 sm:grid-cols-3">
               <div className="rounded-2xl border border-[#dfe9e3] bg-[#f7fbf8] p-4">
-                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#94aaa2]">Platform</p>
-                <p className="mt-2 font-semibold text-[#274d43]">Android 7.0+</p>
-                <p className="mt-1 text-xs leading-5 text-[#82958e]">Designed for phones and tablets.</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#94aaa2]">
+                  Platform
+                </p>
+                <p className="mt-2 font-semibold text-[#274d43]">
+                  Android 7.0+
+                </p>
+                <p className="mt-1 text-xs leading-5 text-[#82958e]">
+                  Designed for phones and tablets.
+                </p>
               </div>
               <div className="rounded-2xl border border-[#dfe9e3] bg-[#f7fbf8] p-4">
-                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#94aaa2]">Includes</p>
-                <p className="mt-2 font-semibold text-[#274d43]">Library + AI Assistant</p>
-                <p className="mt-1 text-xs leading-5 text-[#82958e]">Your study tools in one focused app.</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#94aaa2]">
+                  Includes
+                </p>
+                <p className="mt-2 font-semibold text-[#274d43]">
+                  Library + AI Assistant
+                </p>
+                <p className="mt-1 text-xs leading-5 text-[#82958e]">
+                  Your study tools in one focused app.
+                </p>
               </div>
               <div className="rounded-2xl border border-[#dfe9e3] bg-[#f7fbf8] p-4">
-                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#94aaa2]">Install help</p>
-                <p className="mt-2 font-semibold text-[#274d43]">Step-by-step guide</p>
-                <p className="mt-1 text-xs leading-5 text-[#82958e]">Permission and troubleshooting steps included.</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#94aaa2]">
+                  Install help
+                </p>
+                <p className="mt-2 font-semibold text-[#274d43]">
+                  Step-by-step guide
+                </p>
+                <p className="mt-1 text-xs leading-5 text-[#82958e]">
+                  Permission and troubleshooting steps included.
+                </p>
               </div>
             </div>
             <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-[#e6d49c] bg-[#fff9e8] p-4 text-sm text-[#7a5b16] sm:flex-row sm:items-center sm:justify-between">
-              <p className="leading-6"><strong>Ready to install?</strong> Open the guide to download the published Android package and follow the four steps.</p>
-              <Link href="/app" className="inline-flex shrink-0 items-center justify-center rounded-full border border-[#d6b95e] px-4 py-2 text-xs font-bold text-[#7a5b16] transition hover:bg-[#fff3c9]">
+              <p className="leading-6">
+                <strong>Ready to install?</strong> Open the guide to download
+                the published Android package and follow the four steps.
+              </p>
+              <Link
+                href="/app"
+                className="inline-flex shrink-0 items-center justify-center rounded-full border border-[#d6b95e] px-4 py-2 text-xs font-bold text-[#7a5b16] transition hover:bg-[#fff3c9]"
+              >
                 View instructions
               </Link>
             </div>
@@ -1068,7 +1126,10 @@ function AccountDashboard({
                       "Enter an amount between KES 10 and KES 150,000."
                     );
                   setTopupInputError("");
-                  initializeWalletTopUp.mutate({ amountKes: amount, phoneNumber });
+                  initializeWalletTopUp.mutate({
+                    amountKes: amount,
+                    phoneNumber,
+                  });
                 }}
               >
                 <label className="block text-sm font-semibold text-[#274d43]">
@@ -1607,18 +1668,30 @@ export default function Account({
       );
     } catch (transitionError) {
       setDashboardTransition(null);
-      setError(
+      const message =
         transitionError instanceof Error
           ? transitionError.message
-          : "We could not open your dashboard. Please try again."
-      );
+          : "We could not open your dashboard. Please try again.";
+      setError(message);
+      toast.error("Could not open your dashboard", { description: message });
     }
   };
-  const login = trpc.auth.login.useMutation({ onSuccess: onAuthenticated });
+  const login = trpc.auth.login.useMutation({
+    onSuccess: data => {
+      toast.success("Signed in securely", {
+        description: "Opening your resource library…",
+      });
+      void onAuthenticated(data);
+    },
+  });
   const create = trpc.auth.createAccount.useMutation({
     onSuccess: data => {
       setVerificationEmail(data.email);
       setVerificationUrl(data.previewVerificationUrl ?? "");
+      toast.success("Account created", {
+        description:
+          "Check your email to verify your account before signing in.",
+      });
     },
   });
   const resendVerification = trpc.auth.requestEmailVerification.useMutation({
@@ -1631,6 +1704,9 @@ export default function Account({
         "A fresh verification link has been sent if this address is registered."
       );
       setResendCooldown(RESEND_COOLDOWN_SECONDS);
+      toast.success("Verification email sent", {
+        description: "Check your inbox for the fresh verification link.",
+      });
     },
   });
   const pending =
@@ -1650,13 +1726,29 @@ export default function Account({
     setError("");
     setLoginNotice("");
     setUnverifiedLogin(false);
-    if (mode === "create" && name.trim().length < 2)
-      return setError("Please enter your full name.");
-    if (password.length < 8)
-      return setError("Use a password with at least 8 characters.");
+    if (mode === "create" && name.trim().length < 2) {
+      const message = "Please enter your full name.";
+      setError(message);
+      toast.error("Name required", { description: message });
+      return;
+    }
+    if (password.length < 8) {
+      const message = "Use a password with at least 8 characters.";
+      setError(message);
+      toast.error("Password is too short", {
+        description: "Use at least 8 characters.",
+      });
+      return;
+    }
     const onError = (value: { message: string }) => {
       setError(value.message);
       setUnverifiedLogin(value.message.includes("verify your email"));
+      toast.error(
+        mode === "login" ? "Sign-in failed" : "Account creation failed",
+        {
+          description: value.message,
+        }
+      );
     };
     if (mode === "login") login.mutate({ email, password }, { onError });
     else create.mutate({ name, email, password }, { onError });

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
+import { toast } from "sonner";
 import {
   CheckCircle2,
   Link2,
@@ -26,8 +27,24 @@ export default function EmailVerification() {
       new URLSearchParams(window.location.search).get("token")?.trim() ?? "",
     [location]
   );
-  const verify = trpc.auth.verifyEmail.useMutation();
-  const resend = trpc.auth.requestEmailVerification.useMutation();
+  const verify = trpc.auth.verifyEmail.useMutation({
+    onSuccess: () =>
+      toast.success("Email verified", {
+        description: "Your account is ready. You can sign in securely.",
+      }),
+    onError: error =>
+      toast.error("Email verification failed", { description: error.message }),
+  });
+  const resend = trpc.auth.requestEmailVerification.useMutation({
+    onSuccess: () =>
+      toast.success("Verification email sent", {
+        description: "Check your inbox for a fresh verification link.",
+      }),
+    onError: error =>
+      toast.error("Could not resend verification email", {
+        description: error.message,
+      }),
+  });
   const [resendEmail, setResendEmail] = useState("");
   const [resendCooldown, setResendCooldown] = useState(0);
   const [resendNotice, setResendNotice] = useState("");

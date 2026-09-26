@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
+import { toast } from "sonner";
 import {
   AlertCircle,
   ArrowLeft,
@@ -93,12 +94,30 @@ export default function PasswordReset() {
     onSuccess: data => {
       setPreviewResetUrl(data.previewResetUrl ?? "");
       setRequested(true);
+      toast.success("Reset link requested", {
+        description:
+          "If the address is registered, check your inbox for the secure link.",
+      });
     },
-    onError: value => setError(value.message),
+    onError: value => {
+      setError(value.message);
+      toast.error("Could not request a reset link", {
+        description: value.message,
+      });
+    },
   });
   const complete = trpc.auth.resetPassword.useMutation({
-    onSuccess: () => setCompleted(true),
-    onError: value => setError(value.message),
+    onSuccess: () => {
+      setCompleted(true);
+      toast.success("Password updated", {
+        description:
+          "Your previous sessions were signed out. You can sign in now.",
+      });
+    },
+    onError: value => {
+      setError(value.message);
+      toast.error("Could not update password", { description: value.message });
+    },
   });
   const tokenValidation = trpc.auth.resetPasswordTokenValid.useQuery(
     { token },
@@ -114,10 +133,22 @@ export default function PasswordReset() {
   const submitCompletion = (event: React.FormEvent) => {
     event.preventDefault();
     setError("");
-    if (password.length < 8)
-      return setError("Use a password with at least 8 characters.");
-    if (password !== confirmPassword)
-      return setError("Your passwords do not match.");
+    if (password.length < 8) {
+      const message = "Use a password with at least 8 characters.";
+      setError(message);
+      toast.error("Password is too short", {
+        description: "Use at least 8 characters.",
+      });
+      return;
+    }
+    if (password !== confirmPassword) {
+      const message = "Your passwords do not match.";
+      setError(message);
+      toast.error("Passwords do not match", {
+        description: "Enter the same password twice.",
+      });
+      return;
+    }
     complete.mutate({ token, password });
   };
 

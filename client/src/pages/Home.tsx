@@ -1,5 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Link } from "wouter";
+import { toast } from "sonner";
 import { startLogin } from "@/const";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -137,6 +138,9 @@ export default function Home() {
         message:
           "Payment confirmed. Your paper is now available in My Library.",
       }));
+      toast.success("Payment confirmed", {
+        description: "Your paper is now available in My Library.",
+      });
     }
     if (
       ["failed", "cancelled"].includes(paymentCheck.data?.status ?? "") &&
@@ -145,9 +149,11 @@ export default function Home() {
       setPaymentStatus(current => ({
         ...current,
         state: "error",
-        message:
-          "LeeTec did not confirm this payment. You can retry safely.",
+        message: "LeeTec did not confirm this payment. You can retry safely.",
       }));
+    toast.error("Payment was not confirmed", {
+      description: "You can safely retry the checkout.",
+    });
   }, [paymentCheck.data?.status, paymentStatus.state]);
   const filteredPapers = useMemo(() => {
     const live = catalogue.data ?? [];
@@ -192,6 +198,9 @@ export default function Home() {
         message:
           "Enter a valid Kenyan mobile number before starting LeeTec checkout.",
       });
+      toast.error("Valid phone number required", {
+        description: "Enter a Kenyan mobile number to continue with LeeTec.",
+      });
       return;
     }
     setPaymentStatus({
@@ -209,13 +218,16 @@ export default function Home() {
               "Approve the LeeTec payment prompt on your phone. This page will check the payment status automatically.",
             reference: result.reference,
           });
+          toast.info("Payment prompt sent", {
+            description: "Approve the LeeTec prompt on your phone to continue.",
+          });
         },
-        onError: error =>
-          setPaymentStatus({
-            state: "error",
-            message:
-              error.message || "We could not start checkout. Please try again.",
-          }),
+        onError: error => {
+          const message =
+            error.message || "We could not start checkout. Please try again.";
+          setPaymentStatus({ state: "error", message });
+          toast.error("Checkout could not start", { description: message });
+        },
       }
     );
   };
@@ -241,6 +253,9 @@ export default function Home() {
               message:
                 "Payment completed from your wallet. You can view or download the resource below.",
             });
+            toast.success("Resource unlocked", {
+              description: "You can now view or download the resource.",
+            });
             return;
           }
           setPaymentStatus({
@@ -250,13 +265,13 @@ export default function Home() {
           });
           startLeetecPayment(paperId, intent);
         },
-        onError: error =>
-          setPaymentStatus({
-            state: "error",
-            message:
-              error.message ||
-              "We could not charge your wallet. No funds were charged.",
-          }),
+        onError: error => {
+          const message =
+            error.message ||
+            "We could not charge your wallet. No funds were charged.";
+          setPaymentStatus({ state: "error", message });
+          toast.error("Wallet payment failed", { description: message });
+        },
       }
     );
   };
@@ -287,14 +302,19 @@ export default function Home() {
               message:
                 "Free resource added to your library. Open your account to download it.",
             });
+            toast.success("Free resource added", {
+              description: "Open your account to view or download it.",
+            });
           },
-          onError: error =>
-            setPaymentStatus({
-              state: "error",
-              message:
-                error.message ||
-                "We could not add this free resource. Please try again.",
-            }),
+          onError: error => {
+            const message =
+              error.message ||
+              "We could not add this free resource. Please try again.";
+            setPaymentStatus({ state: "error", message });
+            toast.error("Resource could not be added", {
+              description: message,
+            });
+          },
         }
       );
     }
@@ -328,15 +348,14 @@ export default function Home() {
         setPaymentStatus({ state: "idle", message: "" });
         setWalletConfirmation({ paperId, amountKes, balanceKes });
       })
-      .catch(error =>
-        setPaymentStatus({
-          state: "error",
-          message:
-            error instanceof Error
-              ? error.message
-              : "We could not check your wallet. Please try again.",
-        })
-      );
+      .catch(error => {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "We could not check your wallet. Please try again.";
+        setPaymentStatus({ state: "error", message });
+        toast.error("Wallet check failed", { description: message });
+      });
   };
 
   return (
@@ -360,7 +379,10 @@ export default function Home() {
             <a className="text-[#153c34]" href="#catalogue">
               Catalogue
             </a>
-            <Link className="inline-flex items-center gap-1.5 text-[#1d604f] transition hover:text-[#153c34]" href="/ai">
+            <Link
+              className="inline-flex items-center gap-1.5 text-[#1d604f] transition hover:text-[#153c34]"
+              href="/ai"
+            >
               <Sparkles size={14} /> AI study desk
             </Link>
             <a href="#how-it-works">How it works</a>
@@ -415,7 +437,11 @@ export default function Home() {
               <a href="#catalogue" onClick={() => setMobileOpen(false)}>
                 Catalogue
               </a>
-              <Link href="/ai" onClick={() => setMobileOpen(false)} className="inline-flex items-center gap-2 font-semibold text-[#1d604f]">
+              <Link
+                href="/ai"
+                onClick={() => setMobileOpen(false)}
+                className="inline-flex items-center gap-2 font-semibold text-[#1d604f]"
+              >
                 <Sparkles size={15} /> AI study desk
               </Link>
               <a href="#how-it-works" onClick={() => setMobileOpen(false)}>
@@ -500,7 +526,10 @@ export default function Home() {
                     How it works
                   </Button>
                 </a>
-                <Link href="/ai" className="inline-flex h-11 items-center gap-2 rounded-full border border-[#bcd2c8] bg-white/60 px-5 text-sm font-semibold text-[#1d5146] transition hover:bg-white">
+                <Link
+                  href="/ai"
+                  className="inline-flex h-11 items-center gap-2 rounded-full border border-[#bcd2c8] bg-white/60 px-5 text-sm font-semibold text-[#1d5146] transition hover:bg-white"
+                >
                   <Sparkles size={16} /> Open AI study desk
                 </Link>
               </div>
@@ -792,23 +821,24 @@ export default function Home() {
                 {selectedPaper &&
                   isAuthenticated &&
                   walletCheckState === "insufficient" && (
-                  <label className="block rounded-2xl border border-[#d8e8df] bg-white/75 p-4 text-sm font-semibold text-[#274d43]">
-                    Kenyan phone number for LeeTec STK Push
-                    <input
-                      type="tel"
-                      inputMode="tel"
-                      autoComplete="tel"
-                      value={phoneNumber}
-                      onChange={event => setPhoneNumber(event.target.value)}
-                      placeholder="0712 345 678"
-                      aria-label="Kenyan phone number for LeeTec payment"
-                      className="mt-2 h-11 w-full rounded-xl border border-[#c8d9d2] bg-white px-3 text-sm font-normal outline-none focus:border-[#4b8876] focus:ring-2 focus:ring-[#4b8876]/25"
-                    />
-                    <span className="mt-2 block text-xs font-normal leading-5 text-[#718780]">
-                      LeeTec will send an M-Pesa payment prompt to this number.
-                    </span>
-                  </label>
-                )}
+                    <label className="block rounded-2xl border border-[#d8e8df] bg-white/75 p-4 text-sm font-semibold text-[#274d43]">
+                      Kenyan phone number for LeeTec STK Push
+                      <input
+                        type="tel"
+                        inputMode="tel"
+                        autoComplete="tel"
+                        value={phoneNumber}
+                        onChange={event => setPhoneNumber(event.target.value)}
+                        placeholder="0712 345 678"
+                        aria-label="Kenyan phone number for LeeTec payment"
+                        className="mt-2 h-11 w-full rounded-xl border border-[#c8d9d2] bg-white px-3 text-sm font-normal outline-none focus:border-[#4b8876] focus:ring-2 focus:ring-[#4b8876]/25"
+                      />
+                      <span className="mt-2 block text-xs font-normal leading-5 text-[#718780]">
+                        LeeTec will send an M-Pesa payment prompt to this
+                        number.
+                      </span>
+                    </label>
+                  )}
                 {walletConfirmation && selectedPaper && (
                   <div className="rounded-2xl border border-[#d8c47d] bg-[#fff9e8] p-4 text-sm text-[#6f5517]">
                     <div className="flex items-start gap-3">
