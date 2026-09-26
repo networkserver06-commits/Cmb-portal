@@ -83,6 +83,7 @@ export default function Home() {
   >("");
   const [mobileOpen, setMobileOpen] = useState(false);
   const checkoutIntent = useRef(0);
+  const activePaymentReference = useRef<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<{
     state: "idle" | "processing" | "authorizing" | "success" | "error";
     message: string;
@@ -130,7 +131,8 @@ export default function Home() {
   useEffect(() => {
     if (
       paymentCheck.data?.status === "paid" &&
-      paymentStatus.state === "authorizing"
+      paymentStatus.state === "authorizing" &&
+      activePaymentReference.current === paymentStatus.reference
     ) {
       setPaymentStatus(current => ({
         ...current,
@@ -144,7 +146,8 @@ export default function Home() {
     }
     if (
       ["failed", "cancelled"].includes(paymentCheck.data?.status ?? "") &&
-      paymentStatus.state === "authorizing"
+      paymentStatus.state === "authorizing" &&
+      activePaymentReference.current === paymentStatus.reference
     )
       setPaymentStatus(current => ({
         ...current,
@@ -181,6 +184,7 @@ export default function Home() {
   }, [filteredPapers, selectedPaper, selectedPaperId]);
   const cancelCheckout = () => {
     checkoutIntent.current += 1;
+    activePaymentReference.current = null;
     setWalletConfirmation(null);
     setWalletCheckState("idle");
     setSelectedPaperId(null);
@@ -218,6 +222,7 @@ export default function Home() {
               "Approve the LeeTec payment prompt on your phone. This page will check the payment status automatically.",
             reference: result.reference,
           });
+          activePaymentReference.current = result.reference;
           toast.info("Payment prompt sent", {
             description: "Approve the LeeTec prompt on your phone to continue.",
           });
