@@ -575,7 +575,7 @@ export async function createApp() {
   app.use(
     (
       error: { type?: string; status?: number; statusCode?: number },
-      _req: express.Request,
+      req: express.Request,
       res: express.Response,
       next: express.NextFunction
     ) => {
@@ -587,6 +587,12 @@ export async function createApp() {
         return res.status(413).json({
           error: "Files must be 250 MiB or smaller for reliable chunked uploads.",
         });
+      if (req.path.startsWith("/api/")) {
+        console.error("[API error]", error);
+        return res.status(error.status ?? error.statusCode ?? 500).json({
+          error: "A server error occurred while processing your request.",
+        });
+      }
       return next(error);
     }
   );

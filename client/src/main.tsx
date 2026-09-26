@@ -99,6 +99,31 @@ const trpcClient = trpc.createClient({
         return globalThis.fetch(input, {
           ...(init ?? {}),
           credentials: "include",
+        }).then(async response => {
+          const contentType = response.headers.get("content-type") ?? "";
+          if (contentType.toLowerCase().includes("application/json"))
+            return response;
+          return new Response(
+            JSON.stringify([
+              {
+                error: {
+                  json: {
+                    message:
+                      "The server returned an invalid response. Please try again.",
+                    code: -32603,
+                    data: {
+                      code: "INTERNAL_SERVER_ERROR",
+                      httpStatus: response.status || 500,
+                    },
+                  },
+                },
+              },
+            ]),
+            {
+              status: response.status || 500,
+              headers: { "content-type": "application/json" },
+            }
+          );
         });
       },
     }),
