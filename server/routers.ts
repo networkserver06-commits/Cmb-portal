@@ -68,6 +68,7 @@ import {
   MIN_LEETEC_AMOUNT_KES,
 } from "./leetec";
 import { askGrok, grokUsageForUser } from "./grok";
+import { ENV } from "./_core/env";
 
 const educationLevelInput = z.enum(EDUCATION_LEVELS);
 const resourceTypeInput = z.enum(RESOURCE_TYPES).default("examination-paper");
@@ -1099,7 +1100,7 @@ export const appRouter = router({
         if (
           input.role === "user" &&
           (target.isPrimaryAdmin === true ||
-            (target.openId && target.openId === process.env.OWNER_OPEN_ID))
+            (target.openId && target.openId === ENV.ownerOpenId))
         )
           throw new TRPCError({
             code: "FORBIDDEN",

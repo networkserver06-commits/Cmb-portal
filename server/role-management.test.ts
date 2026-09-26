@@ -8,13 +8,15 @@ describe("administrator role management", () => {
   const router = source("server/routers.ts");
   const ui = source("client/src/pages/AdminOperations.tsx");
   const auth = source("server/_core/trpc.ts");
+  const env = source("server/_core/env.ts");
+  const db = source("server/db.ts");
 
   it("keeps role mutation administrator-only and validates the target", () => {
     expect(router).toMatch(/setUserRole:\s*adminProcedure/);
     expect(router).toContain('role: z.enum(["user", "admin"])');
     expect(router).toContain('message: "User not found."');
     expect(router).toContain("ctx.user.id === input.userId");
-    expect(router).toContain("OWNER_OPEN_ID");
+    expect(router).toContain("ENV.ownerOpenId");
     expect(router).toContain("target.isPrimaryAdmin === true");
     expect(router).toContain("adminCount <= 1");
     expect(router).toContain("At least one administrator account must remain.");
@@ -31,5 +33,14 @@ describe("administrator role management", () => {
     expect(ui).toContain("owner account");
     expect(ui).toContain("user.isPrimaryAdmin");
     expect(ui).toContain("Primary administrator");
+  });
+
+  it("fails closed when the production owner identity is missing", () => {
+    expect(env).toContain(
+      'const ownerOpenId = process.env.OWNER_OPEN_ID?.trim() ?? "";'
+    );
+    expect(env).toContain("if (isProduction && !ownerOpenId)");
+    expect(env).toContain("Production requires OWNER_OPEN_ID");
+    expect(db).toContain("ENV.ownerOpenId");
   });
 });

@@ -1,5 +1,6 @@
 import { asUser, mongo, nextId } from "./mongoStore";
 import type { InsertUser, User } from "../drizzle/schema";
+import { ENV } from "./_core/env";
 
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) throw new Error("User openId is required for upsert");
@@ -12,7 +13,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     updatedAt: now,
     lastSignedIn: user.lastSignedIn ?? now,
   };
-  const isPrimaryAdmin = user.openId === process.env.OWNER_OPEN_ID;
+  const isPrimaryAdmin = Boolean(ENV.ownerOpenId) && user.openId === ENV.ownerOpenId;
   if (isPrimaryAdmin) {
     set.role = "admin";
     set.isPrimaryAdmin = true;

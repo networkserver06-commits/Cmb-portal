@@ -1,6 +1,7 @@
 const jwtSecret = process.env.JWT_SECRET ?? "";
 const appId = process.env.VITE_APP_ID ?? "";
 const isProduction = process.env.NODE_ENV === "production";
+const ownerOpenId = process.env.OWNER_OPEN_ID?.trim() ?? "";
 
 const oAuthServerUrl = process.env.OAUTH_SERVER_URL ?? "";
 
@@ -13,11 +14,17 @@ if (
   );
 }
 
+if (isProduction && !ownerOpenId) {
+  throw new Error(
+    "Production requires OWNER_OPEN_ID so the primary administrator cannot be demoted."
+  );
+}
+
 export const ENV = {
   appId,
   cookieSecret: jwtSecret,
   oAuthServerUrl,
-  ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
+  ownerOpenId,
   isProduction,
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
