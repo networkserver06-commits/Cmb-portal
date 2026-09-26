@@ -27,7 +27,11 @@ import {
   streamPortalFile,
   uploadPortalFile,
 } from "../fileStore";
-import { officePreviewFileType, renderOfficePreview } from "../officePreview";
+import {
+  officePreviewFileType,
+  renderLegacyOfficeText,
+  renderOfficePreview,
+} from "../officePreview";
 import {
   buildLimitedDocumentPreview,
   createFirstPagePdf,
@@ -76,11 +80,16 @@ export async function createApp() {
     try {
       const upstream = await fetch(scholarshelfApkUrl);
       if (!upstream.ok || !upstream.body)
-        return res.status(502).json({ error: "The ScholarShelf APK is temporarily unavailable." });
+        return res
+          .status(502)
+          .json({ error: "The ScholarShelf APK is temporarily unavailable." });
 
       res.status(200);
       res.setHeader("Content-Type", "application/vnd.android.package-archive");
-      res.setHeader("Content-Disposition", 'attachment; filename="ScholarShelf.apk"');
+      res.setHeader(
+        "Content-Disposition",
+        'attachment; filename="ScholarShelf.apk"'
+      );
       res.setHeader("Cache-Control", "public, max-age=300");
       const contentLength = upstream.headers.get("content-length");
       if (contentLength) res.setHeader("Content-Length", contentLength);
@@ -89,7 +98,9 @@ export async function createApp() {
       ).pipe(res);
       return undefined;
     } catch {
-      return res.status(502).json({ error: "The ScholarShelf APK is temporarily unavailable." });
+      return res
+        .status(502)
+        .json({ error: "The ScholarShelf APK is temporarily unavailable." });
     }
   });
 
@@ -113,7 +124,10 @@ export async function createApp() {
   });
   app.post(
     "/api/files/upload",
-    express.raw({ type: "application/octet-stream", limit: CHUNK_UPLOAD_BYTES }),
+    express.raw({
+      type: "application/octet-stream",
+      limit: CHUNK_UPLOAD_BYTES,
+    }),
     async (req, res) => {
       try {
         const user = await requestUser(req, res);
@@ -156,7 +170,9 @@ export async function createApp() {
             : "The file could not be uploaded.";
         return res
           .status(
-            message.includes("250 MiB") || message.includes("larger") ? 413 : 400
+            message.includes("250 MiB") || message.includes("larger")
+              ? 413
+              : 400
           )
           .json({ error: message });
       }
@@ -165,12 +181,17 @@ export async function createApp() {
   app.post("/api/files/upload/init", async (req, res) => {
     try {
       const user = await requestUser(req, res);
-      if (!user) return res.status(401).json({ error: "Authentication required" });
+      if (!user)
+        return res.status(401).json({ error: "Authentication required" });
       const purpose = req.body?.purpose;
       if (purpose !== "submission" && purpose !== "paper")
-        return res.status(400).json({ error: "Use a supported upload purpose." });
+        return res
+          .status(400)
+          .json({ error: "Use a supported upload purpose." });
       if (purpose === "paper" && user.role !== "admin")
-        return res.status(403).json({ error: "Administrator access is required for publication files." });
+        return res.status(403).json({
+          error: "Administrator access is required for publication files.",
+        });
       const result = await beginChunkedPortalUpload({
         ownerId: user.id,
         purpose,
@@ -180,18 +201,27 @@ export async function createApp() {
       });
       return res.status(201).json(result);
     } catch (error) {
-      return res.status(400).json({ error: error instanceof Error ? error.message : "Unable to start upload." });
+      return res.status(400).json({
+        error:
+          error instanceof Error ? error.message : "Unable to start upload.",
+      });
     }
   });
   app.post(
     "/api/files/upload/chunk",
-    express.raw({ type: "application/octet-stream", limit: CHUNK_UPLOAD_BYTES }),
+    express.raw({
+      type: "application/octet-stream",
+      limit: CHUNK_UPLOAD_BYTES,
+    }),
     async (req, res) => {
       try {
         const user = await requestUser(req, res);
-        if (!user) return res.status(401).json({ error: "Authentication required" });
+        if (!user)
+          return res.status(401).json({ error: "Authentication required" });
         if (!Buffer.isBuffer(req.body))
-          return res.status(400).json({ error: "Send the upload chunk as binary data." });
+          return res
+            .status(400)
+            .json({ error: "Send the upload chunk as binary data." });
         const result = await storePortalUploadChunk({
           uploadId: String(req.header("x-upload-id") ?? ""),
           ownerId: user.id,
@@ -200,14 +230,20 @@ export async function createApp() {
         });
         return res.status(200).json(result);
       } catch (error) {
-        return res.status(400).json({ error: error instanceof Error ? error.message : "Unable to store upload chunk." });
+        return res.status(400).json({
+          error:
+            error instanceof Error
+              ? error.message
+              : "Unable to store upload chunk.",
+        });
       }
     }
   );
   app.post("/api/files/upload/complete", async (req, res) => {
     try {
       const user = await requestUser(req, res);
-      if (!user) return res.status(401).json({ error: "Authentication required" });
+      if (!user)
+        return res.status(401).json({ error: "Authentication required" });
       const file = await completeChunkedPortalUpload({
         uploadId: String(req.body?.uploadId ?? ""),
         ownerId: user.id,
@@ -220,7 +256,10 @@ export async function createApp() {
         status: "uploaded",
       });
     } catch (error) {
-      return res.status(400).json({ error: error instanceof Error ? error.message : "Unable to complete upload." });
+      return res.status(400).json({
+        error:
+          error instanceof Error ? error.message : "Unable to complete upload.",
+      });
     }
   });
   const handleProtectedFile = async (
@@ -278,6 +317,98 @@ export async function createApp() {
   app.get("/api/files/:fileId/view", (req, res) =>
     handleProtectedFile(req, res, "inline")
   );
+  const escapeReviewHtml = (value: string) =>
+    value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  app.get("/api/files/:fileId/review-preview", async (req, res) => {
+    try {
+      const user = await requestUser(req, res);
+      if (!user)
+        return res.status(401).json({ error: "Authentication required" });
+      if (user.role !== "admin")
+        return res
+          .status(403)
+          .json({ error: "Administrator access is required" });
+      const file = await portalFileById(req.params.fileId);
+      if (!file) return res.status(404).json({ error: "File not found" });
+      const fileName = file.fileName.toLowerCase();
+      const normalizedMime = file.mimeType
+        .split(";", 1)[0]
+        .trim()
+        .toLowerCase();
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader(
+        "Content-Security-Policy",
+        "sandbox; default-src 'none'; style-src 'unsafe-inline'"
+      );
+      res.setHeader("Cache-Control", "private, no-store");
+      if (isPdfDocument(normalizedMime, file.fileName))
+        return streamPortalFile(file.gridFsId, res, { disposition: "inline" });
+      const bytes = await readPortalFileBytes(
+        file.gridFsId,
+        MAX_PREVIEW_SOURCE_BYTES
+      );
+      const office = officePreviewFileType(normalizedMime, file.fileName);
+      if (office) {
+        const rendered = await renderOfficePreview({
+          bytes,
+          fileName: file.fileName,
+          mimeType: file.mimeType,
+        });
+        if (rendered)
+          return res
+            .type("html")
+            .send(
+              `<!doctype html><html><head><meta charset="utf-8"><title>${escapeReviewHtml(file.fileName)}</title><style>body{margin:0;padding:28px;color:#243f37;font:15px/1.7 system-ui,sans-serif}table{border-collapse:collapse;max-width:100%}td,th{border:1px solid #cdded7;padding:6px 9px}img{max-width:100%;height:auto}</style></head><body>${rendered.html}</body></html>`
+            );
+      }
+      if (["doc", "xls", "ppt"].includes(fileName.split(".").pop() ?? "")) {
+        const text = await renderLegacyOfficeText({
+          bytes,
+          fileName: file.fileName,
+        });
+        if (text)
+          return res
+            .type("html")
+            .send(
+              `<!doctype html><html><head><meta charset="utf-8"><title>${escapeReviewHtml(file.fileName)}</title><style>body{margin:0;padding:28px;color:#243f37;font:15px/1.7 system-ui,sans-serif;white-space:pre-wrap}</style></head><body>${escapeReviewHtml(text)}</body></html>`
+            );
+      }
+      const textLike =
+        normalizedMime.startsWith("text/") ||
+        [
+          "csv",
+          "json",
+          "xml",
+          "yaml",
+          "yml",
+          "md",
+          "html",
+          "htm",
+          "txt",
+          "log",
+          "ini",
+          "tex",
+        ].includes(fileName.split(".").pop() ?? "");
+      if (textLike)
+        return res
+          .type("html")
+          .send(
+            `<!doctype html><html><head><meta charset="utf-8"><title>${escapeReviewHtml(file.fileName)}</title><style>body{margin:0;padding:28px;color:#243f37;font:15px/1.7 system-ui,sans-serif;white-space:pre-wrap}</style></head><body>${escapeReviewHtml(bytes.toString("utf8"))}</body></html>`
+          );
+      return streamPortalFile(file.gridFsId, res, { disposition: "inline" });
+    } catch (error) {
+      console.error("Admin document review preview error", error);
+      if (!res.headersSent)
+        return res.status(422).json({
+          error: "The complete document preview could not be prepared.",
+        });
+    }
+  });
   app.use(express.urlencoded({ limit: "1mb", extended: true }));
   registerOAuthRoutes(app);
   const handleProtectedPaper = async (
@@ -468,7 +599,10 @@ export async function createApp() {
       if (paper.fileId) {
         if (!(await portalFileById(paper.fileId)))
           return res.status(404).json({ error: "Paper document not found" });
-        bytes = await readPortalFileBytes(paper.fileId, MAX_PREVIEW_SOURCE_BYTES);
+        bytes = await readPortalFileBytes(
+          paper.fileId,
+          MAX_PREVIEW_SOURCE_BYTES
+        );
       } else {
         const signedUrl = await storageGetSignedUrl(paper.fileKey!);
         const response = await fetch(signedUrl);
@@ -524,16 +658,23 @@ export async function createApp() {
       const paper = await paperById(paperId);
       if (!paper?.isAvailable || (!paper.fileId && !paper.fileKey))
         return res.status(404).json({ error: "Paper preview unavailable" });
-      const fileName = String(paper.fileName ?? paper.fileKey ?? "document.pdf");
+      const fileName = String(
+        paper.fileName ?? paper.fileKey ?? "document.pdf"
+      );
       const mimeType = String(paper.fileMimeType ?? "application/octet-stream");
       if (!isPdfDocument(mimeType, fileName))
-        return res.status(415).json({ error: "Visual preview is available for PDF documents only." });
+        return res.status(415).json({
+          error: "Visual preview is available for PDF documents only.",
+        });
 
       let bytes: Buffer;
       if (paper.fileId) {
         if (!(await portalFileById(paper.fileId)))
           return res.status(404).json({ error: "Paper document not found" });
-        bytes = await readPortalFileBytes(paper.fileId, MAX_PREVIEW_SOURCE_BYTES);
+        bytes = await readPortalFileBytes(
+          paper.fileId,
+          MAX_PREVIEW_SOURCE_BYTES
+        );
       } else {
         const signedUrl = await storageGetSignedUrl(paper.fileKey!);
         const response = await fetch(signedUrl);
@@ -543,7 +684,10 @@ export async function createApp() {
       }
       const firstPage = await createFirstPagePdf(bytes);
       res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", 'inline; filename="ScholarShelf-preview.pdf"');
+      res.setHeader(
+        "Content-Disposition",
+        'inline; filename="ScholarShelf-preview.pdf"'
+      );
       res.setHeader("Content-Length", firstPage.byteLength);
       res.setHeader("X-Content-Type-Options", "nosniff");
       res.setHeader("Cache-Control", "private, no-store");
@@ -551,7 +695,9 @@ export async function createApp() {
     } catch (error) {
       console.error("Public paper visual preview error", error);
       if (!res.headersSent)
-        return res.status(422).json({ error: "The visual preview could not be prepared." });
+        return res
+          .status(422)
+          .json({ error: "The visual preview could not be prepared." });
     }
   };
   app.get("/api/papers/:paperId/free-view", handlePublicFreePaper);
@@ -564,6 +710,124 @@ export async function createApp() {
   app.get("/api/papers/:paperId/view", (req, res) =>
     handleProtectedPaper(req, res, "inline")
   );
+  app.get("/api/papers/:paperId/full-view", async (req, res) => {
+    try {
+      let user = null;
+      try {
+        user = await sdk.authenticateRequest(req);
+      } catch {
+        user = null;
+      }
+      if (!user) {
+        try {
+          user =
+            (await authenticateAccount(
+              parse(req.headers.cookie ?? "")[ACCOUNT_COOKIE]
+            )) ?? null;
+        } catch {
+          user = null;
+        }
+      }
+      const paperId = Number(req.params.paperId);
+      const paper = Number.isInteger(paperId) ? await paperById(paperId) : null;
+      if (!paper?.isAvailable || (!paper.fileId && !paper.fileKey))
+        return res.status(404).json({ error: "Paper not found" });
+      const publicFree =
+        paper.accessMode === "free" && Number(paper.priceKes) === 0;
+      const unlocked = user
+        ? Boolean(await entitlementFor(user.id, paperId))
+        : false;
+      if (!publicFree && !unlocked && user?.role !== "admin")
+        return res.status(user ? 403 : 401).json({
+          error: user
+            ? "This paper is not unlocked for your account"
+            : "Authentication required",
+        });
+      const fileName = String(paper.fileName ?? paper.fileKey ?? "document");
+      const mimeType = String(paper.fileMimeType ?? "application/octet-stream");
+      let bytes: Buffer;
+      if (paper.fileId) {
+        if (!(await portalFileById(paper.fileId)))
+          return res.status(404).json({ error: "Paper document not found" });
+        bytes = await readPortalFileBytes(
+          paper.fileId,
+          MAX_PREVIEW_SOURCE_BYTES
+        );
+      } else {
+        const response = await fetch(await storageGetSignedUrl(paper.fileKey!));
+        if (!response.ok)
+          return res.status(404).json({ error: "Paper document not found" });
+        bytes = await readPreviewResponse(response);
+      }
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader("Cache-Control", "private, no-store");
+      if (isPdfDocument(mimeType, fileName)) {
+        res.type("application/pdf");
+        return res.send(bytes);
+      }
+      const office = officePreviewFileType(mimeType, fileName);
+      if (office) {
+        const rendered = await renderOfficePreview({
+          bytes,
+          fileName,
+          mimeType,
+        });
+        if (rendered)
+          return res
+            .type("html")
+            .send(
+              `<!doctype html><html><head><meta charset="utf-8"><title>${escapeReviewHtml(fileName)}</title><style>body{margin:0;padding:28px;color:#243f37;font:15px/1.7 system-ui,sans-serif}table{border-collapse:collapse;max-width:100%}td,th{border:1px solid #cdded7;padding:6px 9px}img{max-width:100%;height:auto}</style></head><body>${rendered.html}</body></html>`
+            );
+      }
+      if (
+        ["doc", "xls", "ppt"].includes(
+          fileName.toLowerCase().split(".").pop() ?? ""
+        )
+      ) {
+        const text = await renderLegacyOfficeText({ bytes, fileName });
+        if (text)
+          return res
+            .type("html")
+            .send(
+              `<!doctype html><html><head><meta charset="utf-8"><title>${escapeReviewHtml(fileName)}</title><style>body{margin:0;padding:28px;color:#243f37;font:15px/1.7 system-ui,sans-serif;white-space:pre-wrap}</style></head><body>${escapeReviewHtml(text)}</body></html>`
+            );
+      }
+      const extension = fileName.toLowerCase().split(".").pop() ?? "";
+      const textLike =
+        mimeType.toLowerCase().startsWith("text/") ||
+        [
+          "csv",
+          "json",
+          "xml",
+          "yaml",
+          "yml",
+          "md",
+          "html",
+          "htm",
+          "txt",
+          "log",
+          "ini",
+          "tex",
+        ].includes(extension);
+      if (textLike)
+        return res
+          .type("html")
+          .send(
+            `<!doctype html><html><head><meta charset="utf-8"><title>${escapeReviewHtml(fileName)}</title><style>body{margin:0;padding:28px;color:#243f37;font:15px/1.7 system-ui,sans-serif;white-space:pre-wrap}</style></head><body>${escapeReviewHtml(bytes.toString("utf8"))}</body></html>`
+          );
+      res.setHeader(
+        "Content-Disposition",
+        `inline; filename*=UTF-8''${encodeURIComponent(fileName)}`
+      );
+      return res.type(mimeType).send(bytes);
+    } catch (error) {
+      console.error("Full document view error", error);
+      if (!res.headersSent)
+        return res
+          .status(422)
+          .json({ error: "The full document view could not be prepared." });
+    }
+  });
   // tRPC API
   app.use(
     "/api/trpc",
@@ -585,7 +849,8 @@ export async function createApp() {
         error.statusCode === 413
       )
         return res.status(413).json({
-          error: "Files must be 250 MiB or smaller for reliable chunked uploads.",
+          error:
+            "Files must be 250 MiB or smaller for reliable chunked uploads.",
         });
       if (req.path.startsWith("/api/")) {
         console.error("[API error]", error);

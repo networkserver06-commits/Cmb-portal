@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   Clock3,
   Download,
+  Eye,
   FileText,
   Loader2,
   LockKeyhole,
@@ -95,8 +96,7 @@ export default function PaymentResult() {
             Payment reference required
           </h1>
           <p className="mt-2 text-sm text-[#718780]">
-            Open this page from a LeeTec payment result or your account
-            history.
+            Open this page from a LeeTec payment result or your account history.
           </p>
           <a href="/library">
             <Button className="mt-6 rounded-full bg-[#1d5146]">
@@ -257,12 +257,22 @@ export default function PaymentResult() {
             </div>
           </div>
           {paid ? (
-            <a
-              href={`/api/papers/${paper.legacyId}/download`}
-              className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#1d5146] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#153c34]"
-            >
-              <Download size={17} /> Download exam paper
-            </a>
+            <div className="mt-7 grid gap-3 sm:grid-cols-2">
+              <a
+                href={`/api/papers/${paper.legacyId}/full-view`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#bfd5c9] px-5 py-3 text-sm font-semibold text-[#1d5146] transition hover:bg-[#e8f1ed]"
+              >
+                <Eye size={17} /> View full document
+              </a>
+              <a
+                href={`/api/papers/${paper.legacyId}/download`}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#1d5146] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#153c34]"
+              >
+                <Download size={17} /> Download exam paper
+              </a>
+            </div>
           ) : (
             <a
               href="/"

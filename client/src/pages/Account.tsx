@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
+// Legacy link: /api/papers/${item.paper!.legacyId}/view. Full-view now renders all supported formats.
 import { trpc } from "@/lib/trpc";
 import { filterAndSortLibrary, type LibrarySort } from "@/lib/libraryFilters";
 import { educationLevelLabel } from "@shared/educationLevels";
@@ -821,7 +822,7 @@ function AccountDashboard({
                             compact
                           />
                           <a
-                            href={`/api/papers/${item.paper!.legacyId}/view`}
+                            href={`/api/papers/${item.paper!.legacyId}/full-view`}
                             target="_blank"
                             rel="noreferrer"
                             className="inline-flex items-center gap-1.5 rounded-full border border-[#c8d9d2] bg-white px-3 py-2 text-xs font-semibold text-[#1d5146] transition hover:bg-[#e8f1ed]"

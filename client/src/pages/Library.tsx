@@ -17,6 +17,7 @@ import {
   Receipt,
   UserRound,
 } from "lucide-react";
+// Legacy link: /api/papers/${item.paper!.legacyId}/view. Full-view now renders all supported formats.
 
 function LibraryLoading({ label }: { label: string }) {
   return (
@@ -107,7 +108,8 @@ export default function Library() {
             My library
           </h1>
           <p className="mt-3 text-[#718780]">
-            Your purchased resources, available only to this authenticated account.
+            Your purchased resources, available only to this authenticated
+            account.
           </p>
         </div>
         <section className="mt-10 account-reveal account-reveal-delay-1">
@@ -145,20 +147,24 @@ export default function Library() {
                         <h3 className="truncate font-medium text-[#274d43]">
                           {item.paper!.title}
                         </h3>
-                          <p className="mt-1 text-xs text-[#82958e]">
-                            {resourceTypeLabel(item.paper!.documentType)} · {item.paper!.unit} ·{" "}
-                            {educationLevelLabel(item.paper!.level)}
-                          </p>
+                        <p className="mt-1 text-xs text-[#82958e]">
+                          {resourceTypeLabel(item.paper!.documentType)} ·{" "}
+                          {item.paper!.unit} ·{" "}
+                          {educationLevelLabel(item.paper!.level)}
+                        </p>
                       </div>
                     </div>
                     <div className="ml-3 flex shrink-0 items-center gap-2">
                       <ShareDocumentButton
                         title={item.paper!.title}
-                        url={new URL(`/?paper=${item.paper!.legacyId}#catalogue`, window.location.origin).toString()}
+                        url={new URL(
+                          `/?paper=${item.paper!.legacyId}#catalogue`,
+                          window.location.origin
+                        ).toString()}
                         compact
                       />
                       <a
-                        href={`/api/papers/${item.paper!.legacyId}/view`}
+                        href={`/api/papers/${item.paper!.legacyId}/full-view`}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-1.5 rounded-full border border-[#c8d9d2] bg-white px-3 py-2 text-xs font-semibold text-[#1d5146] transition hover:bg-[#e8f1ed]"

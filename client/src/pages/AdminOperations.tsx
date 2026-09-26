@@ -262,7 +262,7 @@ export default function AdminOperations() {
     payments.isLoading ||
     submissions.isLoading;
   const selectedFileUrl = selectedSubmission?.fileId
-    ? `/api/files/${encodeURIComponent(selectedSubmission.fileId)}/view`
+    ? `/api/files/${encodeURIComponent(selectedSubmission.fileId)}/review-preview`
     : null;
 
   return (

@@ -1,6 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Link } from "wouter";
 import { toast } from "sonner";
+// Legacy link: /api/papers/${selectedPaper.id}/view. Full-view now renders all supported formats.
 import { startLogin } from "@/const";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -940,7 +941,7 @@ export default function Home() {
                       {paymentStatus.state === "success" && selectedPaper && (
                         <div className="mt-3 flex flex-wrap gap-2">
                           <a
-                            href={`/api/papers/${selectedPaper.id}/view`}
+                            href={`/api/papers/${selectedPaper.id}/full-view`}
                             target="_blank"
                             rel="noreferrer"
                             className="inline-flex h-9 items-center justify-center rounded-full border border-[#9bc6aa] bg-white/80 px-4 text-xs font-semibold text-[#1d604f] transition hover:bg-white"

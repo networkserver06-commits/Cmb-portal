@@ -22,6 +22,7 @@ import { resourceTypeLabel } from "@shared/resourceTypes";
 import ShareDocumentButton from "@/components/ShareDocumentButton";
 import GrokStudyAssistant from "@/components/GrokStudyAssistant";
 import { useAuth } from "@/_core/hooks/useAuth";
+// Legacy free-view endpoint remains available: /api/papers/${publicPaper.legacyId}/free-view. Full-view now renders every supported public format.
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
@@ -747,7 +748,7 @@ export default function PublicPaperViewer() {
   const isPaidPaper = Boolean(publicPaper && !isFreePaper(publicPaper));
   const documentHref =
     publicPaper && !isPaidPaper
-      ? `/api/papers/${publicPaper.legacyId}/free-view`
+      ? `/api/papers/${publicPaper.legacyId}/full-view`
       : "";
   const officePreviewHref =
     publicPaper && !isPaidPaper
