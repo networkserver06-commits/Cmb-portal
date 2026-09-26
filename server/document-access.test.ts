@@ -104,9 +104,7 @@ describe("protected document viewing and rejection cleanup", () => {
     expect(resourceTypesSource).toContain('"study-notes"');
     expect(resourceTypesSource).toContain('"other-document"');
     expect(appSource).toContain('path={"/paper/:paperId"}');
-    expect(publicViewerSource).toContain(
-      "No account required to read this resource."
-    );
+    expect(publicViewerSource).toContain("Read the complete document here.");
     expect(publicViewerSource).toContain(
       "/api/papers/${publicPaper.legacyId}/free-view"
     );

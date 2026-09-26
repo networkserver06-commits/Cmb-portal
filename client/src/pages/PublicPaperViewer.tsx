@@ -122,20 +122,16 @@ function DocumentFallback({
   return (
     <div className="grid min-h-[420px] place-items-center bg-[#fbfcfb] p-6 text-center">
       <div className="max-w-md">
-        <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#fff5df] text-[#9a721c]">
-          <FileText size={25} />
-        </div>
+        <FileText className="mx-auto text-[#9a721c]" size={25} />
         <h2 className="mt-5 font-serif text-2xl font-semibold text-[#173e35]">
-          This format needs a separate viewer.
+          Preview temporarily unavailable
         </h2>
         <p className="mt-2 text-sm leading-6 text-[#718780]">{message}</p>
         <a
           href={href}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#1d5146] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#153c34]"
+          className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#1d5146] px-4 py-2.5 text-sm font-semibold text-white"
         >
-          <Download size={15} /> Open document separately
+          Return to document
         </a>
       </div>
     </div>
@@ -841,16 +837,6 @@ export default function PublicPaperViewer() {
                 ).toString()}
                 compact
               />
-              {!isPaidPaper && (
-                <a
-                  href={documentHref}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-full border border-[#b8d1c5] bg-white px-4 py-2.5 text-sm font-semibold text-[#1d5146] transition hover:bg-[#e8f1ed]"
-                >
-                  <Download size={15} /> Open separately
-                </a>
-              )}
             </div>
           </div>
 
@@ -861,12 +847,12 @@ export default function PublicPaperViewer() {
                   <FileText size={15} />
                   {isPaidPaper
                     ? "Secure document preview"
-                    : "Full resource preview"}
+                    : "Read full resource"}
                 </div>
                 <span>
                   {isPaidPaper
                     ? "Opening excerpt only · full paper protected"
-                    : "No account required to read this resource."}
+                    : "Read the complete document here."}
                 </span>
               </div>
               {isPaidPaper ? (
