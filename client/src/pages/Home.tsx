@@ -76,6 +76,11 @@ function resourceShareHref(paper: {
 
 export default function Home() {
   const { user, isAuthenticated, logout } = useAuth();
+  useEffect(() => {
+    // A payment failure is shown inline in the checkout panel. Dismiss any
+    // toast left over from a previous checkout when the catalogue mounts.
+    toast.dismiss();
+  }, []);
   const [query, setQuery] = useState("");
   const [levelFilter, setLevelFilter] = useState<EducationLevel | "">("");
   const [documentTypeFilter, setDocumentTypeFilter] = useState<
@@ -154,9 +159,6 @@ export default function Home() {
         state: "error",
         message: "LeeTec did not confirm this payment. You can retry safely.",
       }));
-    toast.error("Payment was not confirmed", {
-      description: "You can safely retry the checkout.",
-    });
   }, [paymentCheck.data?.status, paymentStatus.state]);
   const filteredPapers = useMemo(() => {
     const live = catalogue.data ?? [];
