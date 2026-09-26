@@ -551,11 +551,21 @@ function PdfDocumentPreview({ href, title }: { href: string; title: string }) {
 
 function PublicDocumentPreview({
   href,
+  fileName,
+  mimeType,
   title,
 }: {
   href: string;
+  fileName: string;
+  mimeType: string;
   title: string;
 }) {
+  if (
+    mimeType === "application/pdf" ||
+    mimeType.endsWith("+pdf") ||
+    fileName.toLowerCase().endsWith(".pdf")
+  )
+    return <PdfDocumentPreview href={href} title={title} />;
   return (
     <div className="min-h-[680px] bg-[#edf2ef] p-3 md:p-5">
       <div className="mb-3 rounded-xl border border-[#cfe0d9] bg-[#f7fbf8] px-4 py-3 text-xs text-[#58766b]">
@@ -864,6 +874,8 @@ export default function PublicPaperViewer() {
               ) : (
                 <PublicDocumentPreview
                   href={documentHref}
+                  fileName={String(publicPaper.fileName ?? "")}
+                  mimeType={mimeType}
                   title={publicPaper.title}
                 />
               )}

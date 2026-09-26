@@ -72,8 +72,9 @@ function resourceShareHref(paper: {
   accessMode?: string;
   price?: number;
 }) {
-  const isFree = paper.accessMode === "free" || Number(paper.price) === 0;
-  return isFree ? publicPaperHref(paper.id) : checkoutReturnPath(paper.id);
+  // A shared resource always opens its canonical reader. Paid resources show
+  // the protected excerpt and checkout UI there instead of a blank catalogue.
+  return publicPaperHref(paper.id);
 }
 
 export default function Home() {

@@ -62,10 +62,9 @@ function resourceSharePath(paper: {
   accessMode?: string;
   priceKes?: number;
 }) {
-  const isFree = paper.accessMode === "free" || Number(paper.priceKes) === 0;
-  return isFree
-    ? `/paper/${encodeURIComponent(paper.legacyId)}`
-    : `/?paper=${encodeURIComponent(paper.legacyId)}#catalogue`;
+  // Shared links always open the reader; paid resources show their protected
+  // preview and checkout state instead of redirecting to a catalogue fragment.
+  return `/paper/${encodeURIComponent(paper.legacyId)}`;
 }
 
 function LoadingLine({ className = "" }: { className?: string }) {

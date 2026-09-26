@@ -745,6 +745,25 @@ export async function createApp() {
         });
       const fileName = String(paper.fileName ?? paper.fileKey ?? "document");
       const mimeType = String(paper.fileMimeType ?? "application/octet-stream");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader("Cache-Control", "private, no-store");
+      if (isPdfDocument(mimeType, fileName)) {
+        if (paper.fileId) {
+          await recordOperationalEvent({
+            eventType: "paper.viewed",
+            actorId: user?.id ?? 0,
+            subjectType: "paper",
+            subjectId: String(paperId),
+            detail: { fileId: paper.fileId, shared: true },
+          });
+          return streamPortalFile(paper.fileId, res, { disposition: "inline" });
+        }
+        res.setHeader(
+          "Content-Disposition",
+          `inline; filename*=UTF-8''${encodeURIComponent(fileName)}`
+        );
+        return res.redirect(307, await storageGetSignedUrl(paper.fileKey!));
+      }
       let bytes: Buffer;
       if (paper.fileId) {
         if (!(await portalFileById(paper.fileId)))
@@ -758,12 +777,6 @@ export async function createApp() {
         if (!response.ok)
           return res.status(404).json({ error: "Paper document not found" });
         bytes = await readPreviewResponse(response);
-      }
-      res.setHeader("X-Content-Type-Options", "nosniff");
-      res.setHeader("Cache-Control", "private, no-store");
-      if (isPdfDocument(mimeType, fileName)) {
-        res.type("application/pdf");
-        return res.send(bytes);
       }
       const office = officePreviewFileType(mimeType, fileName);
       if (office) {
