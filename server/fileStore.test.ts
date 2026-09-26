@@ -92,6 +92,13 @@ describe("GridFS upload validation", () => {
       ["revision.doc", "application/msword"],
       ["revision.xls", "application/vnd.ms-excel"],
       ["revision.ppt", "application/vnd.ms-powerpoint"],
+      ["revision.json", "application/json"],
+      ["revision.xml", "application/xml"],
+      ["revision.yaml", "application/yaml"],
+      ["revision.yml", "text/yaml"],
+      ["revision.tex", "application/x-tex"],
+      ["revision.log", "text/plain"],
+      ["revision.ini", "text/plain"],
     ] as const;
 
     for (const [fileName, mimeType] of cases) {

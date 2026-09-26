@@ -56,6 +56,13 @@ const fileTypes = {
   html: ["text/html", "application/xhtml+xml"],
   txt: ["text/plain"],
   csv: ["text/csv", "application/csv"],
+  json: ["application/json", "text/json"],
+  xml: ["application/xml", "text/xml"],
+  yaml: ["application/yaml", "text/yaml", "application/x-yaml"],
+  yml: ["application/yaml", "text/yaml", "application/x-yaml"],
+  tex: ["application/x-tex", "text/plain"],
+  log: ["text/plain", "text/log"],
+  ini: ["text/plain"],
 } as const;
 
 export type FilePurpose = "submission" | "paper" | "migration";
@@ -115,14 +122,12 @@ export function validateUpload(input: {
   const extension = extensionOf(fileName) as keyof typeof fileTypes;
   if (!(extension in fileTypes))
     throw new Error(
-      "Supported files include PDF, Word, Excel, PowerPoint, OpenDocument, RTF, EPUB, Markdown, HTML, TXT, and CSV."
+      "Supported files include PDF, Word, Excel, PowerPoint, OpenDocument, RTF, EPUB, Markdown, HTML, TXT, CSV, JSON, XML, YAML, TeX, LOG, and INI documents."
     );
   if (!Number.isInteger(input.byteLength) || input.byteLength < 1)
     throw new Error("Select a non-empty document to upload.");
   if (input.byteLength > MAX_UPLOAD_BYTES)
-    throw new Error(
-      "Files must be 250 MiB or smaller."
-    );
+    throw new Error("Files must be 250 MiB or smaller.");
   const supplied =
     input.mimeType.trim().toLowerCase() || "application/octet-stream";
   const allowed = fileTypes[extension] as readonly string[];
@@ -444,7 +449,6 @@ export async function streamPortalFile(
   return metadata;
 }
 
-
 type ChunkUploadSession = {
   _id: string;
   ownerId: number;
@@ -470,20 +474,25 @@ export async function beginChunkedPortalUpload(input: {
     byteLength: input.totalBytes,
   });
   const totalChunks = chunkCountForBytes(input.totalBytes);
-  if (totalChunks < 1 || totalChunks > Math.ceil(MAX_UPLOAD_BYTES / CHUNK_UPLOAD_BYTES))
+  if (
+    totalChunks < 1 ||
+    totalChunks > Math.ceil(MAX_UPLOAD_BYTES / CHUNK_UPLOAD_BYTES)
+  )
     throw new Error("The upload contains an invalid number of chunks.");
   const uploadId = randomUUID();
-  await (await mongo()).collection<ChunkUploadSession>("upload_sessions").insertOne({
-    _id: uploadId,
-    ownerId: input.ownerId,
-    purpose: input.purpose,
-    fileName: input.fileName,
-    mimeType: input.mimeType,
-    totalBytes: input.totalBytes,
-    totalChunks,
-    createdAt: new Date(),
-    expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000),
-  });
+  await (await mongo())
+    .collection<ChunkUploadSession>("upload_sessions")
+    .insertOne({
+      _id: uploadId,
+      ownerId: input.ownerId,
+      purpose: input.purpose,
+      fileName: input.fileName,
+      mimeType: input.mimeType,
+      totalBytes: input.totalBytes,
+      totalChunks,
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000),
+    });
   return { uploadId, chunkSize: CHUNK_UPLOAD_BYTES };
 }
 
@@ -550,9 +559,14 @@ export async function completeChunkedPortalUpload(input: {
   )
     throw new Error("Some upload chunks are missing. Please retry the upload.");
   const chunkBytes = chunks.map(chunk => bufferFromStoredChunk(chunk.bytes));
-  const totalBytes = chunkBytes.reduce((sum, bytes) => sum + bytes.byteLength, 0);
+  const totalBytes = chunkBytes.reduce(
+    (sum, bytes) => sum + bytes.byteLength,
+    0
+  );
   if (totalBytes !== session.totalBytes)
-    throw new Error("The uploaded file size does not match its upload manifest.");
+    throw new Error(
+      "The uploaded file size does not match its upload manifest."
+    );
   const firstChunk = chunkBytes[0] ?? Buffer.alloc(0);
   const validated = validateUpload({
     fileName: session.fileName,
@@ -618,7 +632,9 @@ export async function completeChunkedPortalUpload(input: {
         chunked: true,
       },
     });
-    await database.collection("upload_chunks").deleteMany({ uploadId: input.uploadId });
+    await database
+      .collection("upload_chunks")
+      .deleteMany({ uploadId: input.uploadId });
     await sessions.deleteOne({ _id: input.uploadId });
     return metadata;
   } catch (error) {

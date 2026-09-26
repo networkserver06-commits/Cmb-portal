@@ -137,25 +137,28 @@ describe("paper submission ownership and moderation", () => {
         ])
       );
 
-      const held = await caller.student.submitPaper({
-        title: `${runId}-held-paper`,
+      const office = await caller.student.submitPaper({
+        title: `${runId}-office-paper`,
         course: "ScholarShelf Studies",
         level: "university",
         cycle: "June 2026",
         unit: "Communication Skills",
         paperType: "Theory",
-        description: "Held office document",
+        description: "Safe office document",
         fileId: heldFile.gridFsId,
         authorized: true,
       });
-      expect(held.publication.status).toBe("held_for_review");
-      expect(held.submission.status).toBe("pending");
-      expect(held.submission.safetyStatus).toBe("held");
+      expect(office.publication.status).toBe("published");
+      expect(office.submission.status).toBe("approved");
+      expect(office.submission.approvalMode).toBe("automatic");
       expect(
         await db.collection("papers").findOne({
-          submissionId: held.submission.legacyId,
+          submissionId: office.submission.legacyId,
         })
-      ).toBeNull();
+      ).toMatchObject({
+        fileId: heldFile.gridFsId,
+        publicationMode: "automatic",
+      });
 
       const suspicious = await caller.student.submitPaper({
         title: `${runId}-suspicious-paper`,
@@ -176,20 +179,20 @@ describe("paper submission ownership and moderation", () => {
       const rejected = await appRouter
         .createCaller(context(user(adminId, "admin")))
         .admin.reviewSubmission({
-          submissionId: held.submission.legacyId,
+          submissionId: suspicious.submission.legacyId,
           status: "rejected",
-          reviewNote: "Unsafe format for automatic publication",
+          reviewNote: "Active content requires rejection",
         });
       expect(rejected).toMatchObject({ success: true, storagePurged: true });
-      expect(await portalFileById(heldFile.gridFsId)).toBeNull();
+      expect(await portalFileById(suspiciousFile.gridFsId)).toBeNull();
       expect(
         await (await portalFiles())
-          .find({ _id: new ObjectId(heldFile.gridFsId) })
+          .find({ _id: new ObjectId(suspiciousFile.gridFsId) })
           .hasNext()
       ).toBe(false);
       expect(
         await db.collection<any>("submissions").findOne({
-          legacyId: held.submission.legacyId,
+          legacyId: suspicious.submission.legacyId,
         })
       ).toMatchObject({ status: "rejected", storagePurged: true });
     } finally {

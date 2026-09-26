@@ -68,7 +68,8 @@ export default function PublishPaper({
         "Confirm that you own or are authorized to share this document."
       );
     if (!form.title.trim()) return setError("Add a clear document title.");
-    if (!form.course.trim()) return setError("Add the subject, course, or collection name.");
+    if (!form.course.trim())
+      return setError("Add the subject, course, or collection name.");
     if (!form.level) return setError("Choose the closest education level.");
     const level = form.level as EducationLevel;
     setUploading(true);
@@ -110,14 +111,15 @@ export default function PublishPaper({
     >
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="section-eyebrow">            Share for free</p>
+          <p className="section-eyebrow"> Share for free</p>
           <h2 className="mt-1 font-serif text-2xl font-semibold text-[#173e35]">
             Submit a document
           </h2>
           <p className="mt-2 max-w-xl text-sm leading-6 text-[#718780]">
-            Share an authorized learning document. Safe PDFs, text, CSV, and
-            supported office files can publish immediately; formats or content
-            that need a closer look are held securely for administrator review.
+            Share an authorized learning document. Safe PDFs, Word, Excel,
+            PowerPoint, OpenDocument, text, data, and markup files can publish
+            immediately; active or uncertain content is held securely for
+            review.
           </p>
         </div>
         <div className="hidden rounded-xl bg-[#e5f2eb] p-3 text-[#34745f] sm:block">
@@ -159,7 +161,8 @@ export default function PublishPaper({
             ))}
           </select>
           <span className="mt-1 block text-xs font-normal text-[#82958e]">
-            Choose the closest description; it helps learners find your document.
+            Choose the closest description; it helps learners find your
+            document.
           </span>
         </label>
         <label className="text-sm font-medium text-[#3c5d53]">
@@ -179,12 +182,12 @@ export default function PublishPaper({
         <span className="min-w-0 flex-1 truncate">
           {file
             ? `${file.name} · ${(file.size / 1024 / 1024).toFixed(2)} MiB`
-            : "Select a PDF, Word, Excel, PowerPoint, or supported document (maximum 250 MiB)"}
+            : "Select PDF, Word, Excel, PowerPoint, OpenDocument, text, data, or markup (maximum 250 MiB)"}
         </span>
         <input
           className="sr-only"
           type="file"
-          accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.odt,.odp,.ods,.rtf,.epub,.md,.html,.txt,.csv"
+          accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.odt,.odp,.ods,.rtf,.epub,.md,.html,.txt,.csv,.json,.xml,.yaml,.yml,.tex,.log,.ini"
           disabled={busy}
           onChange={event => {
             const next = event.target.files?.[0] ?? null;

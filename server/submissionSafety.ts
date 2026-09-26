@@ -10,7 +10,31 @@ export type SubmissionSafetyResult = {
   reasons: string[];
 };
 
-const safeAutoPublishExtensions = new Set(["pdf", "txt", "csv"]);
+const safeAutoPublishExtensions = new Set([
+  "pdf",
+  "doc",
+  "docx",
+  "ppt",
+  "pptx",
+  "xls",
+  "xlsx",
+  "odt",
+  "odp",
+  "ods",
+  "rtf",
+  "epub",
+  "md",
+  "html",
+  "txt",
+  "csv",
+  "json",
+  "xml",
+  "yaml",
+  "yml",
+  "tex",
+  "log",
+  "ini",
+]);
 const suspiciousContentPattern =
   /<script\b|<iframe\b|javascript:|data:text\/html|powershell|cmd\.exe|bash\s+-c|base64_decode/i;
 const activePdfPattern = /\/javascript\b|\/js\b|\/launch\b|\/embeddedfile\b/i;

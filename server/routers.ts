@@ -588,6 +588,7 @@ export const appRouter = router({
           fileId: file.gridFsId,
           fileName: file.fileName,
           mimeType: file.mimeType,
+          // safetyStatus: automaticallyPublished ? passed : held
           status: automaticallyPublished
             ? ("approved" as const)
             : ("pending" as const),

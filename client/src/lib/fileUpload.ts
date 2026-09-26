@@ -18,6 +18,13 @@ const extensions = new Set([
   "html",
   "txt",
   "csv",
+  "json",
+  "xml",
+  "yaml",
+  "yml",
+  "tex",
+  "log",
+  "ini",
 ]);
 
 function extensionOf(fileName: string) {
@@ -68,7 +75,8 @@ async function sendChunkWithRetry(
       onProgress(chunk.size);
       return;
     } catch (error) {
-      lastError = error instanceof Error ? error : new Error("Chunk upload failed.");
+      lastError =
+        error instanceof Error ? error : new Error("Chunk upload failed.");
       if (attempt < 3)
         await new Promise(resolve => setTimeout(resolve, 500 * 2 ** attempt));
     }
@@ -81,7 +89,7 @@ export function validatePortalDocument(
   _purpose: "submission" | "paper"
 ) {
   if (!extensions.has(extensionOf(file.name)))
-    return "Use a PDF, Word, Excel, PowerPoint, OpenDocument, RTF, EPUB, Markdown, HTML, TXT, or CSV document.";
+    return "Use a PDF, Word, Excel, PowerPoint, OpenDocument, RTF, EPUB, Markdown, HTML, TXT, CSV, JSON, XML, YAML, TeX, LOG, or INI document.";
   if (file.size < 1) return "Select a non-empty document.";
   if (file.size > MAX_PORTAL_UPLOAD_BYTES)
     return "Files must be 250 MiB or smaller.";

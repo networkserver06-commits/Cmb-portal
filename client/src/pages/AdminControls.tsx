@@ -44,7 +44,7 @@ const emptyPaper = {
   description: "",
 };
 const acceptedDocuments =
-  ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.odt,.odp,.ods,.rtf,.epub,.md,.html,.txt,.csv";
+  ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.odt,.odp,.ods,.rtf,.epub,.md,.html,.txt,.csv,.json,.xml,.yaml,.yml,.tex,.log,.ini";
 
 function friendlyAdminResourceError(message: string) {
   const normalized = message.toLowerCase();
@@ -52,7 +52,8 @@ function friendlyAdminResourceError(message: string) {
     return "Check the access choice and enter a positive KES price for paid resources, or choose Free access for a zero price.";
   if (normalized.includes("file") || normalized.includes("document"))
     return "Choose a supported document up to 250 MiB, then try again. Your selected file was not published.";
-  if (normalized.includes("title")) return "Add a clear title with at least two characters.";
+  if (normalized.includes("title"))
+    return "Add a clear title with at least two characters.";
   if (normalized.includes("course"))
     return "Add the subject, course, or collection name so learners can find this resource.";
   if (normalized.includes("level"))
@@ -217,10 +218,14 @@ export default function AdminControls() {
       }
     } catch (error) {
       if (uploadedFileId) {
-        await discardUploadedFile.mutateAsync({ fileId: uploadedFileId }).catch(() => undefined);
+        await discardUploadedFile
+          .mutateAsync({ fileId: uploadedFileId })
+          .catch(() => undefined);
       }
       const message = friendlyAdminResourceError(
-        error instanceof Error ? error.message : "The document could not be uploaded."
+        error instanceof Error
+          ? error.message
+          : "The document could not be uploaded."
       );
       setPaperFeedback({ tone: "error", text: message });
       setPaperProgress(0);
@@ -286,7 +291,9 @@ export default function AdminControls() {
             </label>
             <select
               value={paper.documentType}
-              onChange={event => setPaperField("documentType", event.target.value)}
+              onChange={event =>
+                setPaperField("documentType", event.target.value)
+              }
               className="h-10 w-full rounded-xl border border-[#d9e6df] bg-white px-3 text-sm outline-none focus:border-[#4d8978] focus:ring-4 focus:ring-[#4d8978]/10"
             >
               {RESOURCE_TYPES.map(type => (
@@ -348,7 +355,9 @@ export default function AdminControls() {
               <label className="mb-2 block text-xs font-semibold text-[#58766b]">
                 {resourceFieldLabels[key]}
                 {key !== "title" && key !== "course" && (
-                  <span className="ml-1 font-normal text-[#9aaca5]">(optional)</span>
+                  <span className="ml-1 font-normal text-[#9aaca5]">
+                    (optional)
+                  </span>
                 )}
               </label>
               <Input
@@ -514,9 +523,10 @@ export default function AdminControls() {
                       {item.title}
                     </div>
                     <div className="mt-0.5 text-xs text-[#82958e]">
-                      {resourceTypeLabel(item.documentType)} · {item.accessMode === "free"
+                      {resourceTypeLabel(item.documentType)} ·{" "}
+                      {item.accessMode === "free"
                         ? "Free access"
-                        : "LeeTec payment"} {" "}
+                        : "LeeTec payment"}{" "}
                       · KES {Number(item.priceKes).toLocaleString()}
                     </div>
                   </div>

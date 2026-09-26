@@ -564,7 +564,31 @@ function PublicDocumentPreview({
 }) {
   if (mimeType === "application/pdf" || mimeType.endsWith("+pdf"))
     return <PdfDocumentPreview href={href} title={title} />;
-  if (mimeType.startsWith("text/") || mimeType === "application/csv")
+  const extension = fileName.toLowerCase().split(".").pop() ?? "";
+  if (
+    mimeType.startsWith("text/") ||
+    [
+      "application/csv",
+      "application/json",
+      "application/xml",
+      "application/yaml",
+      "application/x-yaml",
+    ].includes(mimeType) ||
+    [
+      "txt",
+      "md",
+      "csv",
+      "json",
+      "xml",
+      "yaml",
+      "yml",
+      "html",
+      "htm",
+      "log",
+      "ini",
+      "tex",
+    ].includes(extension)
+  )
     return <TextDocumentPreview href={href} title={title} />;
   const format = officeFormatLabel(mimeType, fileName);
   if (format)
@@ -579,7 +603,7 @@ function PublicDocumentPreview({
   return (
     <DocumentFallback
       href={href}
-      message="This file format is not supported for automatic in-page reading yet. DOCX, XLSX, PPTX, ODT, ODS, ODP, RTF, and EPUB files are supported."
+      message="This file can be opened securely with the download button. DOCX, XLSX, PPTX, ODT, ODS, ODP, RTF, and EPUB files are supported. Common text/data formats support in-page previews too."
     />
   );
 }

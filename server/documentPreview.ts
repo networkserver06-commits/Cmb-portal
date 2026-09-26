@@ -16,7 +16,9 @@ export async function readPreviewResponse(response: Response) {
       total += chunk.byteLength;
       if (total > MAX_PREVIEW_SOURCE_BYTES) {
         await reader.cancel();
-        throw new Error("The preview source exceeds the 128 MiB preview limit.");
+        throw new Error(
+          "The preview source exceeds the 128 MiB preview limit."
+        );
       }
       chunks.push(chunk);
     }
@@ -28,9 +30,11 @@ export async function readPreviewResponse(response: Response) {
 
 export function isPdfDocument(mimeType: string, fileName: string) {
   const normalizedMime = mimeType.split(";", 1)[0].trim().toLowerCase();
-  return normalizedMime === "application/pdf" ||
+  return (
+    normalizedMime === "application/pdf" ||
     normalizedMime.endsWith("+pdf") ||
-    fileName.toLowerCase().endsWith(".pdf");
+    fileName.toLowerCase().endsWith(".pdf")
+  );
 }
 
 export async function createFirstPagePdf(bytes: Buffer) {
@@ -125,7 +129,20 @@ export async function buildLimitedDocumentPreview(input: {
     normalizedMime.startsWith("text/") ||
     normalizedMime === "application/csv" ||
     normalizedMime === "application/json" ||
-    ["txt", "md", "csv", "json", "xml", "html", "htm", "log"].includes(extension)
+    [
+      "txt",
+      "md",
+      "csv",
+      "json",
+      "xml",
+      "yaml",
+      "yml",
+      "html",
+      "htm",
+      "log",
+      "ini",
+      "tex",
+    ].includes(extension)
   ) {
     return {
       excerpt: limitPreview(input.bytes.toString("utf8")),
@@ -138,7 +155,9 @@ export async function buildLimitedDocumentPreview(input: {
       const rendered = await renderOfficePreview(input);
       const text = rendered ? htmlToPreviewText(rendered.html) : "";
       return {
-        excerpt: limitPreview(text) || "The opening excerpt is available after purchase.",
+        excerpt:
+          limitPreview(text) ||
+          "The opening excerpt is available after purchase.",
         scope: "Opening excerpt",
       };
     } catch {

@@ -111,7 +111,7 @@ function PaperReplacement({ paper }: { paper: any }) {
             <input
               type="file"
               className="sr-only"
-              accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.csv"
+              accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.odt,.odp,.ods,.rtf,.epub,.md,.html,.txt,.csv,.json,.xml,.yaml,.yml,.tex,.log,.ini"
               disabled={busy}
               onChange={event => {
                 void upload(event.target.files?.[0]);
@@ -161,9 +161,14 @@ export default function AdminOperations() {
   const setRole = trpc.admin.setUserRole.useMutation({
     onSuccess: async result => {
       await utils.admin.listUsers.invalidate();
-      toast.success(result.role === "admin" ? "Administrator access granted" : "Administrator access removed");
+      toast.success(
+        result.role === "admin"
+          ? "Administrator access granted"
+          : "Administrator access removed"
+      );
     },
-    onError: error => toast.error("Role change blocked", { description: error.message }),
+    onError: error =>
+      toast.error("Role change blocked", { description: error.message }),
   });
   const reviewSubmission = trpc.admin.reviewSubmission.useMutation({
     onSuccess: async () => {
@@ -310,7 +315,10 @@ export default function AdminOperations() {
           <div className="mt-6 border-t border-[#edf2ef] pt-5">
             <div className="flex flex-col gap-2 sm:flex-row">
               <div className="relative min-w-0 flex-1">
-                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9aaca6]" />
+                <Search
+                  size={15}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9aaca6]"
+                />
                 <Input
                   value={userFilter}
                   onChange={event => setUserFilter(event.target.value)}
@@ -321,7 +329,9 @@ export default function AdminOperations() {
               </div>
               <select
                 value={roleFilter}
-                onChange={event => setRoleFilter(event.target.value as typeof roleFilter)}
+                onChange={event =>
+                  setRoleFilter(event.target.value as typeof roleFilter)
+                }
                 aria-label="Filter users by role"
                 className="h-10 rounded-xl border border-[#d9e6df] bg-white px-3 text-sm"
               >
@@ -331,9 +341,23 @@ export default function AdminOperations() {
               </select>
             </div>
             <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-[#6f887f]">
-              <span className="rounded-full bg-[#eef9f1] px-3 py-1.5">{(users.data ?? []).filter(user => user.role === "admin").length} administrators</span>
-              <span className="rounded-full bg-[#f5f9f6] px-3 py-1.5">{(users.data ?? []).filter(user => user.role !== "admin").length} students</span>
-              <span className="rounded-full bg-[#f5f9f6] px-3 py-1.5">{visibleUsers.length} shown</span>
+              <span className="rounded-full bg-[#eef9f1] px-3 py-1.5">
+                {
+                  (users.data ?? []).filter(user => user.role === "admin")
+                    .length
+                }{" "}
+                administrators
+              </span>
+              <span className="rounded-full bg-[#f5f9f6] px-3 py-1.5">
+                {
+                  (users.data ?? []).filter(user => user.role !== "admin")
+                    .length
+                }{" "}
+                students
+              </span>
+              <span className="rounded-full bg-[#f5f9f6] px-3 py-1.5">
+                {visibleUsers.length} shown
+              </span>
             </div>
             <div className="mt-3 max-h-[28rem] space-y-2 overflow-y-auto pr-1">
               {visibleUsers.map(user => (
@@ -343,8 +367,20 @@ export default function AdminOperations() {
                 >
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 truncate text-sm font-medium text-[#274d43]">
-                      {user.role === "admin" ? <ShieldCheck size={15} className="shrink-0 text-[#2d7965]" /> : <ShieldOff size={15} className="shrink-0 text-[#94aaa2]" />}
-                      <span className="truncate">{user.name || user.email || `User ${user.legacyId}`}</span>
+                      {user.role === "admin" ? (
+                        <ShieldCheck
+                          size={15}
+                          className="shrink-0 text-[#2d7965]"
+                        />
+                      ) : (
+                        <ShieldOff
+                          size={15}
+                          className="shrink-0 text-[#94aaa2]"
+                        />
+                      )}
+                      <span className="truncate">
+                        {user.name || user.email || `User ${user.legacyId}`}
+                      </span>
                     </div>
                     <div className="truncate pl-5 text-xs text-[#82958e]">
                       {user.email || "No email"} · ID {user.legacyId}
@@ -375,7 +411,9 @@ export default function AdminOperations() {
               )}
             </div>
             <p className="mt-3 text-[11px] leading-5 text-[#82958e]">
-              Administrators can access the management workspace. The owner account, your current administrator session, and the last remaining administrator cannot be demoted.
+              Administrators can access the management workspace. The owner
+              account, your current administrator session, and the last
+              remaining administrator cannot be demoted.
             </p>
           </div>
         </section>
