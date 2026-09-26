@@ -4,10 +4,12 @@ import { toast } from "sonner";
 export default function ShareDocumentButton({
   title,
   url,
+  sharedBy,
   compact = false,
 }: {
   title: string;
   url?: string;
+  sharedBy?: string;
   compact?: boolean;
 }) {
   const share = async () => {
@@ -16,7 +18,7 @@ export default function ShareDocumentButton({
       if (navigator.share) {
         await navigator.share({
           title,
-          text: `Open ${title} on ScholarShelf`,
+          text: `Open ${title} on ScholarShelf${sharedBy ? ` · Shared by ${sharedBy}` : ""}`,
           url: target,
         });
         return;
@@ -35,7 +37,8 @@ export default function ShareDocumentButton({
         input.remove();
       }
       toast.success("Share link copied", {
-        description: "Anyone with access can open this ScholarShelf document link.",
+        description:
+          "Anyone with access can open this ScholarShelf document link.",
       });
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;

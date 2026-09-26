@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertCircle,
+  AtSign,
   ArrowLeft,
   ArrowUpDown,
   BadgeCheck,
@@ -205,6 +206,7 @@ function AccountDashboard({
   const [activeTab, setActiveTab] = useState<DashboardTab>(initialTab);
   const [quickAssistantOpen, setQuickAssistantOpen] = useState(true);
   const [profileName, setProfileName] = useState(user.name ?? "");
+  const [profileUsername, setProfileUsername] = useState(user.username ?? "");
   const [profileNotice, setProfileNotice] = useState("");
   const [topupAmount, setTopupAmount] = useState<number | "">("");
   const [phoneNumber, setPhoneNumber] = useState(user.phone ?? "");
@@ -257,9 +259,10 @@ function AccountDashboard({
   const updateProfile = trpc.student.updateProfile.useMutation({
     onSuccess: async data => {
       setProfileName(data.name);
-      setProfileNotice("Profile name updated securely.");
+      setProfileUsername(data.username);
+      setProfileNotice("Profile name and username updated securely.");
       toast.success("Profile updated", {
-        description: "Your account name was saved.",
+        description: "Your public sharing identity was saved.",
       });
       await utils.auth.me.invalidate();
     },
@@ -1287,6 +1290,9 @@ function AccountDashboard({
                     <p className="mt-1 truncate text-sm text-[#718780]">
                       {user.email}
                     </p>
+                    <p className="mt-1 truncate text-xs font-semibold text-[#4b8876]">
+                      @{user.username || "set-your-username"}
+                    </p>
                   </div>
                 </div>
                 <div className="mt-7 grid gap-4 border-t border-[#edf2ef] pt-5 sm:grid-cols-2">
@@ -1426,7 +1432,18 @@ function AccountDashboard({
                     return setProfileNotice(
                       "Use a display name with at least 2 characters."
                     );
-                  updateProfile.mutate({ name: profileName.trim() });
+                  if (
+                    !/^[a-z0-9_]{3,24}$/i.test(
+                      profileUsername.trim().replace(/^@+/, "")
+                    )
+                  )
+                    return setProfileNotice(
+                      "Use a username with 3–24 letters, numbers, or underscores."
+                    );
+                  updateProfile.mutate({
+                    name: profileName.trim(),
+                    username: profileUsername.trim().replace(/^@+/, ""),
+                  });
                 }}
               >
                 <label className="block min-w-0 flex-1 text-sm font-semibold text-[#274d43]">
@@ -1439,11 +1456,35 @@ function AccountDashboard({
                     className="mt-2 h-11 rounded-2xl border-[#c8d9d2] bg-white"
                   />
                 </label>
+                <label className="block min-w-0 flex-1 text-sm font-semibold text-[#274d43]">
+                  Username
+                  <div className="relative mt-2">
+                    <AtSign
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-[#789087]"
+                      size={16}
+                    />
+                    <Input
+                      value={profileUsername}
+                      maxLength={24}
+                      disabled={updateProfile.isPending}
+                      onChange={event =>
+                        setProfileUsername(
+                          event.target.value
+                            .toLowerCase()
+                            .replace(/[^a-z0-9_]/g, "")
+                        )
+                      }
+                      placeholder="your_username"
+                      className="h-11 rounded-2xl border-[#c8d9d2] bg-white pl-9"
+                    />
+                  </div>
+                </label>
                 <Button
                   type="submit"
                   disabled={
                     updateProfile.isPending ||
-                    profileName.trim() === (user.name ?? "").trim()
+                    (profileName.trim() === (user.name ?? "").trim() &&
+                      profileUsername.trim() === (user.username ?? "").trim())
                   }
                   className="h-11 rounded-full bg-[#1d5146] px-5 hover:bg-[#153c34]"
                 >
@@ -1459,14 +1500,14 @@ function AccountDashboard({
                 <p
                   role="status"
                   aria-live="polite"
-                  className={`mt-3 text-sm ${profileNotice === "Profile name updated securely." ? "text-[#34745f]" : "text-[#a44e49]"}`}
+                  className={`mt-3 text-sm ${profileNotice.includes("updated securely") ? "text-[#34745f]" : "text-[#a44e49]"}`}
                 >
                   {profileNotice}
                 </p>
               )}
               <p className="mt-3 text-xs leading-5 text-[#82958e]">
-                Your email remains the verified sign-in address and cannot be
-                changed from this screen.
+                Your username is shown on documents you share. Email remains the
+                verified sign-in address and cannot be changed here.
               </p>
             </div>
           </section>
@@ -1622,6 +1663,7 @@ export default function Account({
   const utils = trpc.useUtils();
   const [mode, setMode] = useState<AccountMode>(initialMode);
   const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -1732,6 +1774,16 @@ export default function Account({
       toast.error("Name required", { description: message });
       return;
     }
+    if (
+      mode === "create" &&
+      !/^[a-z0-9_]{3,24}$/i.test(username.trim().replace(/^@+/, ""))
+    ) {
+      const message =
+        "Choose a username with 3–24 letters, numbers, or underscores.";
+      setError(message);
+      toast.error("Username required", { description: message });
+      return;
+    }
     if (password.length < 8) {
       const message = "Use a password with at least 8 characters.";
       setError(message);
@@ -1751,7 +1803,7 @@ export default function Account({
       );
     };
     if (mode === "login") login.mutate({ email, password }, { onError });
-    else create.mutate({ name, email, password }, { onError });
+    else create.mutate({ name, username, email, password }, { onError });
   };
 
   if (dashboardTransition)
@@ -1920,6 +1972,34 @@ export default function Account({
                     placeholder="Your full name"
                     className="mt-2 h-11 rounded-xl border-[#d9e6df]"
                   />
+                </label>
+              )}
+              {mode === "create" && (
+                <label className="block text-sm font-medium text-[#3c5d53]">
+                  Username
+                  <div className="relative mt-2">
+                    <AtSign
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-[#789087]"
+                      size={16}
+                    />
+                    <Input
+                      value={username}
+                      onChange={event =>
+                        setUsername(
+                          event.target.value
+                            .toLowerCase()
+                            .replace(/[^a-z0-9_]/g, "")
+                        )
+                      }
+                      autoComplete="username"
+                      maxLength={24}
+                      placeholder="your_username"
+                      className="h-11 rounded-xl border-[#d9e6df] pl-9"
+                    />
+                  </div>
+                  <span className="mt-1 block text-xs text-[#82958e]">
+                    This name appears when you share a document.
+                  </span>
                 </label>
               )}
               <label className="block text-sm font-medium text-[#3c5d53]">

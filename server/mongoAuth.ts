@@ -20,6 +20,7 @@ const AUTOMATED_EMAIL_FOOTER_HTML = `<hr style="border:0;border-top:1px solid #d
 type AccountRecord = {
   email: string;
   name: string;
+  username?: string;
   passwordHash: string;
   passwordSalt: string;
   sessionTokenHash?: string;
@@ -182,6 +183,27 @@ function issueToken() {
   return randomBytes(32).toString("base64url");
 }
 
+export function normalizeUsername(value: string) {
+  const username = value.trim().replace(/^@+/, "").toLowerCase();
+  if (!/^[a-z0-9_]{3,24}$/.test(username)) {
+    throw new Error(
+      "Username must be 3–24 characters using only letters, numbers, and underscores."
+    );
+  }
+  return username;
+}
+
+function fallbackUsername(name: string, email: string) {
+  const base = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 16);
+  return normalizeUsername(
+    base.length >= 3 ? base : `student_${hashToken(email).slice(0, 8)}`
+  );
+}
+
 function validPassword(password: string, stored: string, salt: string) {
   const actual = Buffer.from(hashPassword(password, salt), "hex");
   const expected = Buffer.from(stored, "hex");
@@ -211,7 +233,8 @@ export async function createAccount(
   password: string,
   name: string,
   req: any,
-  res: any
+  res: any,
+  requestedUsername?: string
 ) {
   const normalizedEmail = email.trim().toLowerCase();
   if (password.length < 8)
@@ -219,11 +242,18 @@ export async function createAccount(
   const accounts = await collection();
   const existing = await accounts.findOne({ email: normalizedEmail });
   if (existing) throw new Error("An account with this email already exists");
+  const username = requestedUsername
+    ? normalizeUsername(requestedUsername)
+    : fallbackUsername(name, normalizedEmail);
+  const users = (await database()).collection("users");
+  if (await users.findOne({ username }))
+    throw new Error("That username is already taken. Choose another one.");
   const mysqlOpenId = `mongo:${hashToken(normalizedEmail).slice(0, 48)}`;
   const salt = randomBytes(16).toString("hex");
   const record: AccountRecord = {
     email: normalizedEmail,
     name: name.trim(),
+    username,
     passwordHash: hashPassword(password, salt),
     passwordSalt: salt,
     mysqlOpenId,
@@ -235,6 +265,7 @@ export async function createAccount(
     openId: mysqlOpenId,
     email: normalizedEmail,
     name: name.trim(),
+    username,
     loginMethod: "password",
   });
   try {
@@ -244,6 +275,7 @@ export async function createAccount(
     };
   } catch (error) {
     await accounts.deleteOne({ email: normalizedEmail });
+    await users.deleteOne({ openId: mysqlOpenId });
     throw error;
   }
 }

@@ -194,6 +194,9 @@ export async function mongo(): Promise<Db> {
         .collection("paper_views")
         .createIndex({ paperId: 1, createdAt: -1 }),
       database
+        .collection("users")
+        .createIndex({ username: 1 }, { unique: true, sparse: true }),
+      database
         .collection("grok_usage")
         .createIndex({ userId: 1, dayKey: 1 }, { unique: true }),
       database
@@ -286,6 +289,7 @@ export function asUser(doc: {
   legacyId?: number;
   openId: string;
   name?: string | null;
+  username?: string | null;
   email?: string | null;
   loginMethod?: string | null;
   role?: "user" | "admin";
@@ -298,6 +302,7 @@ export function asUser(doc: {
     id: doc.legacyId ?? 0,
     openId: doc.openId,
     name: doc.name ?? null,
+    username: doc.username ?? null,
     email: doc.email ?? null,
     phone: null,
     loginMethod: doc.loginMethod ?? null,
@@ -639,44 +644,44 @@ export async function fulfillPayment(
       { session }
     );
     await database.collection<PaymentDoc>("payments").updateOne(
-    { providerReference },
-    {
-      $setOnInsert: {
-        _id: new ObjectId(),
-        orderId: order.legacyId,
-        userId: order.userId,
-        providerReference,
-        channel: provider.channel ?? "leetec-stkpush",
-        amountKes: order.amountKes,
-        status: "success",
-        rawEvent,
-        createdAt: new Date(),
+      { providerReference },
+      {
+        $setOnInsert: {
+          _id: new ObjectId(),
+          orderId: order.legacyId,
+          userId: order.userId,
+          providerReference,
+          channel: provider.channel ?? "leetec-stkpush",
+          amountKes: order.amountKes,
+          status: "success",
+          rawEvent,
+          createdAt: new Date(),
+        },
       },
-    },
-    { upsert: true, session }
+      { upsert: true, session }
     );
     try {
       const result = await database
-      .collection<EntitlementDoc>("entitlements")
-      .updateOne(
-        { orderId: order.legacyId },
-        {
-          $setOnInsert: {
-            _id: new ObjectId(),
-            legacyId: entitlementId,
-            userId: order.userId,
-            paperId: order.paperId,
-            orderId: order.legacyId,
-            source: "purchase",
-            grantedAt: new Date(),
+        .collection<EntitlementDoc>("entitlements")
+        .updateOne(
+          { orderId: order.legacyId },
+          {
+            $setOnInsert: {
+              _id: new ObjectId(),
+              legacyId: entitlementId,
+              userId: order.userId,
+              paperId: order.paperId,
+              orderId: order.legacyId,
+              source: "purchase",
+              grantedAt: new Date(),
+            },
           },
-        },
-        { upsert: true, session }
-      );
+          { upsert: true, session }
+        );
       if (!result.upsertedCount) {
         const winner = await database
-        .collection<EntitlementDoc>("entitlements")
-        .findOne({ orderId: order.legacyId }, { session });
+          .collection<EntitlementDoc>("entitlements")
+          .findOne({ orderId: order.legacyId }, { session });
         return {
           fulfilled: false,
           entitlementId: winner?.legacyId ?? entitlementId,
@@ -686,8 +691,8 @@ export async function fulfillPayment(
     } catch (error: any) {
       if (error?.code === 11000) {
         const winner = await database
-        .collection<EntitlementDoc>("entitlements")
-        .findOne({ orderId: order.legacyId }, { session });
+          .collection<EntitlementDoc>("entitlements")
+          .findOne({ orderId: order.legacyId }, { session });
         return {
           fulfilled: false,
           entitlementId: winner?.legacyId ?? entitlementId,

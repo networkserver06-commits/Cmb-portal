@@ -20,6 +20,7 @@ import {
   createAccount,
   loginAccount,
   logoutAccount,
+  normalizeUsername,
   requestEmailVerification,
   requestPasswordReset,
   resetAccountPassword,
@@ -197,9 +198,7 @@ export async function reconcileWalletTopUp(userId: number, reference: string) {
       paymentMatchesOrder(data, reference, topUp.amountKes)
     ) {
       await fulfillWalletTopUp(reference, ledgerPaymentData(data!));
-    } else if (
-      paymentStatus(data) === "failed"
-    ) {
+    } else if (paymentStatus(data) === "failed") {
       await db
         .collection("wallet_topups")
         .updateOne(
@@ -242,12 +241,20 @@ export const appRouter = router({
       .input(
         z.object({
           name: z.string().min(2),
+          username: z.string().trim().min(3).max(24).optional(),
           email: z.string().email(),
           password: z.string().min(8),
         })
       )
       .mutation(({ ctx, input }) =>
-        createAccount(input.email, input.password, input.name, ctx.req, ctx.res)
+        createAccount(
+          input.email,
+          input.password,
+          input.name,
+          ctx.req,
+          ctx.res,
+          input.username
+        )
       ),
     requestEmailVerification: publicProcedure
       .input(z.object({ email: z.string().email() }))
@@ -313,22 +320,33 @@ export const appRouter = router({
         .sort({ createdAt: -1 })
         .toArray();
       const contributorIds = rows
-        .map((paper: any) => paper.submittedBy ?? paper.createdBy ?? paper.ownerId)
+        .map(
+          (paper: any) => paper.submittedBy ?? paper.createdBy ?? paper.ownerId
+        )
         .filter((id: unknown): id is number => Number.isInteger(id));
       const contributors = await database
         .collection<any>("users")
         .find(
           { legacyId: { $in: contributorIds } },
-          { projection: { legacyId: 1, name: 1 } }
+          { projection: { legacyId: 1, name: 1, username: 1 } }
         )
         .toArray();
       const contributorNames = new Map(
-        contributors.map(user => [user.legacyId, user.name || "ScholarShelf contributor"])
+        contributors.map(user => [
+          user.legacyId,
+          user.username
+            ? `@${user.username}`
+            : user.name || "ScholarShelf contributor",
+        ])
       );
       const viewTotals = await database
         .collection<any>("paper_views")
         .aggregate([
-          { $match: { paperId: { $in: rows.map((paper: any) => paper.legacyId) } } },
+          {
+            $match: {
+              paperId: { $in: rows.map((paper: any) => paper.legacyId) },
+            },
+          },
           { $group: { _id: "$paperId", views: { $sum: 1 } } },
         ])
         .toArray();
@@ -336,40 +354,41 @@ export const appRouter = router({
       const search = input?.search?.trim().toLowerCase();
       const level = input?.level;
       const documentType = input?.documentType;
-      return rows.filter((p: any) => {
-        const matchesLevel =
-          !level || normalizeEducationLevel(String(p.level)) === level;
-        const matchesDocumentType =
-          !documentType ||
-          (p.documentType ?? "examination-paper") === documentType;
-        const matchesSearch =
-          !search ||
-          [
-            p.title,
-            p.course,
-            p.unit,
-            p.level,
-            p.cycle,
-            p.paperType,
-            p.description,
-            p.documentType,
-          ].some(v =>
-            String(v ?? "")
-              .toLowerCase()
-              .includes(search)
-          );
-        return matchesLevel && matchesDocumentType && matchesSearch;
-      }).map((paper: any) => {
-        const { submittedBy, createdBy, ownerId, ...publicPaper } = paper;
-        return {
-        ...publicPaper,
-        contributorName:
-          contributorNames.get(
-            submittedBy ?? createdBy ?? ownerId
-          ) ?? "ScholarShelf contributor",
-        viewCount: viewsByPaper.get(paper.legacyId) ?? 0,
-        };
-      });
+      return rows
+        .filter((p: any) => {
+          const matchesLevel =
+            !level || normalizeEducationLevel(String(p.level)) === level;
+          const matchesDocumentType =
+            !documentType ||
+            (p.documentType ?? "examination-paper") === documentType;
+          const matchesSearch =
+            !search ||
+            [
+              p.title,
+              p.course,
+              p.unit,
+              p.level,
+              p.cycle,
+              p.paperType,
+              p.description,
+              p.documentType,
+            ].some(v =>
+              String(v ?? "")
+                .toLowerCase()
+                .includes(search)
+            );
+          return matchesLevel && matchesDocumentType && matchesSearch;
+        })
+        .map((paper: any) => {
+          const { submittedBy, createdBy, ownerId, ...publicPaper } = paper;
+          return {
+            ...publicPaper,
+            contributorName:
+              contributorNames.get(submittedBy ?? createdBy ?? ownerId) ??
+              "ScholarShelf contributor",
+            viewCount: viewsByPaper.get(paper.legacyId) ?? 0,
+          };
+        });
     }),
   announcements: publicProcedure.query(
     async () =>
@@ -491,15 +510,31 @@ export const appRouter = router({
       reconcilePendingWalletTopUps(ctx.user.id)
     ),
     updateProfile: protectedProcedure
-      .input(z.object({ name: z.string().trim().min(2).max(120) }))
+      .input(
+        z.object({
+          name: z.string().trim().min(2).max(120),
+          username: z.string().trim().min(3).max(24).optional(),
+        })
+      )
       .mutation(async ({ ctx, input }) => {
         const name = input.name.trim();
-        const result = await (await mongo())
-          .collection("users")
-          .updateOne(
-            { legacyId: ctx.user.id },
-            { $set: { name, updatedAt: new Date() } }
+        const username = normalizeUsername(
+          input.username ?? ctx.user.username ?? `student_${ctx.user.id}`
+        );
+        const users = (await mongo()).collection("users");
+        if (
+          await users.findOne({
+            username,
+            legacyId: { $ne: ctx.user.id },
+          })
+        )
+          throw new Error(
+            "That username is already taken. Choose another one."
           );
+        const result = await users.updateOne(
+          { legacyId: ctx.user.id },
+          { $set: { name, username, updatedAt: new Date() } }
+        );
         if (!result.matchedCount)
           throw new Error("Your profile could not be found.");
         await recordOperationalEvent({
@@ -507,9 +542,9 @@ export const appRouter = router({
           actorId: ctx.user.id,
           subjectType: "user",
           subjectId: String(ctx.user.id),
-          detail: { field: "name" },
+          detail: { fields: ["name", "username"] },
         });
-        return { success: true as const, name };
+        return { success: true as const, name, username };
       }),
     submitPaper: protectedProcedure
       .input(
@@ -553,8 +588,12 @@ export const appRouter = router({
           fileId: file.gridFsId,
           fileName: file.fileName,
           mimeType: file.mimeType,
-          status: automaticallyPublished ? ("approved" as const) : ("pending" as const),
-          safetyStatus: automaticallyPublished ? ("passed" as const) : ("held" as const),
+          status: automaticallyPublished
+            ? ("approved" as const)
+            : ("pending" as const),
+          safetyStatus: automaticallyPublished
+            ? ("passed" as const)
+            : ("held" as const),
           safetyReasons: safety.reasons,
           approvalMode: automaticallyPublished
             ? ("automatic" as const)
@@ -648,7 +687,9 @@ export const appRouter = router({
           try {
             const data = await verifyLeetecTransaction(input.reference);
             if (paymentStatus(data) === "paid") {
-              if (!paymentMatchesOrder(data, input.reference, order.amountKes)) {
+              if (
+                !paymentMatchesOrder(data, input.reference, order.amountKes)
+              ) {
                 await db
                   .collection("orders")
                   .updateOne(
@@ -656,7 +697,9 @@ export const appRouter = router({
                     { $set: { status: "failed" } }
                   );
               } else {
-                await (await import("./mongoStore")).fulfillPayment(
+                await (
+                  await import("./mongoStore")
+                ).fulfillPayment(
                   input.reference,
                   ledgerPaymentData(data!),
                   JSON.stringify(data)
@@ -839,7 +882,7 @@ export const appRouter = router({
         environment:
           process.env.NODE_ENV === "production" ? "production" : "development",
         database: "connected" as const,
-      leetec: await getLeetecReadiness(),
+        leetec: await getLeetecReadiness(),
         checkedAt: new Date().toISOString(),
       };
     }),
@@ -1096,7 +1139,10 @@ export const appRouter = router({
         const users = db.collection<any>("users");
         const target = await users.findOne({ legacyId: input.userId });
         if (!target)
-          throw new TRPCError({ code: "NOT_FOUND", message: "User not found." });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "User not found.",
+          });
         if (
           input.role === "user" &&
           (target.isPrimaryAdmin === true ||

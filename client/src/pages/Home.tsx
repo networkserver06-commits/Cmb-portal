@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Clock3,
   Download,
+  Eye,
   FileText,
   LayoutDashboard,
   LockKeyhole,
@@ -175,6 +176,8 @@ export default function Home() {
       accessMode: p.accessMode,
       accent: "sage",
       description: p.description ?? "A secure ScholarShelf learning resource.",
+      contributorName: p.contributorName ?? "ScholarShelf contributor",
+      viewCount: Number(p.viewCount ?? 0),
     }));
   }, [catalogue.data]);
   const selectedPaper = filteredPapers.find(
@@ -1062,10 +1065,18 @@ export default function Home() {
                   <p className="mt-4 text-sm leading-6 text-[#718780]">
                     {paper.description}
                   </p>
+                  <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-[#648078]">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Eye size={14} /> {paper.viewCount.toLocaleString()} views
+                    </span>
+                    <span aria-hidden="true">·</span>
+                    <span>Shared by {paper.contributorName}</span>
+                  </div>
                 </div>
                 <div className="mt-6 flex items-center justify-between gap-2 border-t border-[#e8efeb] pt-4">
                   <ShareDocumentButton
                     title={paper.title}
+                    sharedBy={paper.contributorName}
                     url={new URL(
                       resourceShareHref(paper),
                       window.location.origin

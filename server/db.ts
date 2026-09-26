@@ -13,7 +13,9 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     updatedAt: now,
     lastSignedIn: user.lastSignedIn ?? now,
   };
-  const isPrimaryAdmin = Boolean(ENV.ownerOpenId) && user.openId === ENV.ownerOpenId;
+  if (user.username !== undefined) set.username = user.username ?? null;
+  const isPrimaryAdmin =
+    Boolean(ENV.ownerOpenId) && user.openId === ENV.ownerOpenId;
   if (isPrimaryAdmin) {
     set.role = "admin";
     set.isPrimaryAdmin = true;

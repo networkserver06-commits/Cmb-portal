@@ -84,12 +84,23 @@ function ViewerShell({ children }: { children: React.ReactNode }) {
               </div>
             </div>
           </a>
-          <nav className="flex items-center gap-2" aria-label="Document navigation">
-            <Link href="/" className="inline-flex items-center gap-2 rounded-full border border-[#c8d9d2] px-3 py-2 text-sm font-semibold text-[#1d5146] transition hover:bg-[#e8f1ed]">
-              <ArrowLeft size={15} /> <span className="hidden sm:inline">Catalogue</span>
+          <nav
+            className="flex items-center gap-2"
+            aria-label="Document navigation"
+          >
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 rounded-full border border-[#c8d9d2] px-3 py-2 text-sm font-semibold text-[#1d5146] transition hover:bg-[#e8f1ed]"
+            >
+              <ArrowLeft size={15} />{" "}
+              <span className="hidden sm:inline">Catalogue</span>
             </Link>
-            <Link href="/ai" className="inline-flex items-center gap-2 rounded-full border border-[#c8d9d2] px-3 py-2 text-sm font-semibold text-[#1d5146] transition hover:bg-[#e8f1ed]">
-              <Sparkles size={15} /> <span className="hidden sm:inline">AI help</span>
+            <Link
+              href="/ai"
+              className="inline-flex items-center gap-2 rounded-full border border-[#c8d9d2] px-3 py-2 text-sm font-semibold text-[#1d5146] transition hover:bg-[#e8f1ed]"
+            >
+              <Sparkles size={15} />{" "}
+              <span className="hidden sm:inline">AI help</span>
             </Link>
           </nav>
         </div>
@@ -162,7 +173,8 @@ function TextDocumentPreview({ href, title }: { href: string; title: string }) {
         role="status"
       >
         <span className="flex items-center gap-3">
-          <Loader2 className="animate-spin" size={18} /> Opening the full resource…
+          <Loader2 className="animate-spin" size={18} /> Opening the full
+          resource…
         </span>
       </div>
     );
@@ -593,7 +605,8 @@ function LimitedPaidPreview({
     setState("loading");
     fetch(`/api/papers/${paperId}/preview`, { credentials: "include" })
       .then(response => {
-        if (!response.ok) throw new Error("The limited preview could not be loaded.");
+        if (!response.ok)
+          throw new Error("The limited preview could not be loaded.");
         return response.json() as Promise<{
           scope?: string;
           excerpt?: string;
@@ -611,7 +624,11 @@ function LimitedPaidPreview({
       })
       .catch(previewError => {
         if (cancelled) return;
-        setError(previewError instanceof Error ? previewError.message : "Preview unavailable.");
+        setError(
+          previewError instanceof Error
+            ? previewError.message
+            : "Preview unavailable."
+        );
         setState("error");
       });
     return () => {
@@ -625,34 +642,61 @@ function LimitedPaidPreview({
         <div className="flex items-start gap-3">
           <LockKeyhole size={18} className="mt-0.5 shrink-0" />
           <div>
-            <p className="font-bold">Limited preview — full document protected</p>
-            <p className="mt-1">You can inspect an opening excerpt before buying. The complete paper remains locked until checkout is confirmed.</p>
+            <p className="font-bold">
+              Limited preview — full document protected
+            </p>
+            <p className="mt-1">
+              You can inspect an opening excerpt before buying. The complete
+              paper remains locked until checkout is confirmed.
+            </p>
           </div>
         </div>
       </div>
       {state === "loading" && (
-        <div className="grid min-h-[260px] place-items-center text-sm text-[#58766b]" role="status">
-          <span className="flex items-center gap-3"><Loader2 className="animate-spin" size={18} /> Preparing the limited preview…</span>
+        <div
+          className="grid min-h-[260px] place-items-center text-sm text-[#58766b]"
+          role="status"
+        >
+          <span className="flex items-center gap-3">
+            <Loader2 className="animate-spin" size={18} /> Preparing the limited
+            preview…
+          </span>
         </div>
       )}
-      {state === "error" && <p className="mt-6 rounded-2xl bg-white p-5 text-sm text-[#a44e49]">{error}</p>}
+      {state === "error" && (
+        <p className="mt-6 rounded-2xl bg-white p-5 text-sm text-[#a44e49]">
+          {error}
+        </p>
+      )}
       {state === "ready" && (
         <div className="mt-6 rounded-2xl border border-[#dfe9e3] bg-white p-5 shadow-sm md:p-7">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#78938a]">{scope}</p>
-          <h2 className="mt-2 font-serif text-2xl font-semibold text-[#173e35]">See what you’ll receive</h2>
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#78938a]">
+            {scope}
+          </p>
+          <h2 className="mt-2 font-serif text-2xl font-semibold text-[#173e35]">
+            See what you’ll receive
+          </h2>
           {previewKind === "pdf" && previewFileUrl ? (
             <div className="mt-5 overflow-hidden rounded-2xl border border-[#dfe9e3]">
               <PdfDocumentPreview href={previewFileUrl} title={title} />
             </div>
           ) : (
-            <pre className="mt-5 max-h-[360px] overflow-hidden whitespace-pre-wrap font-sans text-sm leading-7 text-[#294d42]">{excerpt}</pre>
+            <pre className="mt-5 max-h-[360px] overflow-hidden whitespace-pre-wrap font-sans text-sm leading-7 text-[#294d42]">
+              {excerpt}
+            </pre>
           )}
           <div className="mt-6 flex flex-col gap-3 border-t border-[#edf1ee] pt-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="font-semibold text-[#274d43]">Unlock {title}</p>
-              <p className="mt-1 text-sm text-[#718780]">One secure purchase unlocks the complete resource in your library.</p>
+              <p className="mt-1 text-sm text-[#718780]">
+                One secure purchase unlocks the complete resource in your
+                library.
+              </p>
             </div>
-            <Link href={`/?paper=${encodeURIComponent(paperId)}#catalogue`} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-[#1d5146] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#153c34]">
+            <Link
+              href={`/?paper=${encodeURIComponent(paperId)}#catalogue`}
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-[#1d5146] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#153c34]"
+            >
               <ShoppingCart size={16} /> Buy for KES {priceKes.toLocaleString()}
             </Link>
           </div>
@@ -677,14 +721,21 @@ export default function PublicPaperViewer() {
   );
   const publicPaper = paper && paper.isAvailable ? paper : null;
   const isPaidPaper = Boolean(publicPaper && !isFreePaper(publicPaper));
-  const documentHref = publicPaper && !isPaidPaper
-    ? `/api/papers/${publicPaper.legacyId}/free-view`
-    : "";
-  const officePreviewHref = publicPaper && !isPaidPaper
-    ? `/api/papers/${publicPaper.legacyId}/office-preview`
-    : "";
+  const documentHref =
+    publicPaper && !isPaidPaper
+      ? `/api/papers/${publicPaper.legacyId}/free-view`
+      : "";
+  const officePreviewHref =
+    publicPaper && !isPaidPaper
+      ? `/api/papers/${publicPaper.legacyId}/office-preview`
+      : "";
   const mimeType = String(publicPaper?.fileMimeType ?? "").toLowerCase();
-  const recordPaperView = trpc.analytics.recordPaperView.useMutation();
+  const utils = trpc.useUtils();
+  const recordPaperView = trpc.analytics.recordPaperView.useMutation({
+    onSuccess: () => {
+      void utils.catalogue.invalidate();
+    },
+  });
 
   useEffect(() => {
     if (!publicPaper?.legacyId) return;
@@ -770,9 +821,15 @@ export default function PublicPaperViewer() {
                 {publicPaper.cycle}
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-3 text-xs font-medium text-[#648078]">
-                <span className="inline-flex items-center gap-1.5"><Eye size={14} /> {Number(publicPaper.viewCount ?? 0).toLocaleString()} views</span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Eye size={14} />{" "}
+                  {Number(publicPaper.viewCount ?? 0).toLocaleString()} views
+                </span>
                 <span aria-hidden="true">·</span>
-                <span>Shared by {publicPaper.contributorName ?? "ScholarShelf contributor"}</span>
+                <span>
+                  Shared by{" "}
+                  {publicPaper.contributorName ?? "ScholarShelf contributor"}
+                </span>
               </div>
               {publicPaper.description && (
                 <p className="mt-4 max-w-3xl text-sm leading-6 text-[#718780]">
@@ -781,12 +838,21 @@ export default function PublicPaperViewer() {
               )}
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-2">
-              <span className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold ${isPaidPaper ? "bg-[#fff3d4] text-[#8b6518]" : "bg-[#e5f2eb] text-[#34745f]"}`}>
-                {isPaidPaper ? <LockKeyhole size={14} /> : <Eye size={14} />} {isPaidPaper ? `Preview · KES ${Number(publicPaper.priceKes).toLocaleString()}` : "Free access"}
+              <span
+                className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold ${isPaidPaper ? "bg-[#fff3d4] text-[#8b6518]" : "bg-[#e5f2eb] text-[#34745f]"}`}
+              >
+                {isPaidPaper ? <LockKeyhole size={14} /> : <Eye size={14} />}{" "}
+                {isPaidPaper
+                  ? `Preview · KES ${Number(publicPaper.priceKes).toLocaleString()}`
+                  : "Free access"}
               </span>
               <ShareDocumentButton
                 title={publicPaper.title}
-                url={new URL(`/paper/${publicPaper.legacyId}`, window.location.origin).toString()}
+                sharedBy={publicPaper.contributorName}
+                url={new URL(
+                  `/paper/${publicPaper.legacyId}`,
+                  window.location.origin
+                ).toString()}
                 compact
               />
               {!isPaidPaper && (
@@ -804,34 +870,46 @@ export default function PublicPaperViewer() {
 
           <div className="mt-8 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)]">
             <section className="order-2 overflow-hidden rounded-[1.7rem] border border-[#c9ddd4] bg-white shadow-[0_18px_55px_rgba(29,81,70,0.08)] lg:order-1">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e4eee9] bg-[#edf6f1] px-4 py-3 text-xs text-[#648078] md:px-6">
-              <div className="flex items-center gap-2 font-semibold text-[#1d5146]">
-                <FileText size={15} />
-                {isPaidPaper ? "Secure document preview" : "Full resource preview"}
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e4eee9] bg-[#edf6f1] px-4 py-3 text-xs text-[#648078] md:px-6">
+                <div className="flex items-center gap-2 font-semibold text-[#1d5146]">
+                  <FileText size={15} />
+                  {isPaidPaper
+                    ? "Secure document preview"
+                    : "Full resource preview"}
+                </div>
+                <span>
+                  {isPaidPaper
+                    ? "Opening excerpt only · full paper protected"
+                    : "No account required to read this resource."}
+                </span>
               </div>
-              <span>{isPaidPaper ? "Opening excerpt only · full paper protected" : "No account required to read this resource."}</span>
-            </div>
-            {isPaidPaper ? (
-              <LimitedPaidPreview
-                paperId={publicPaper.legacyId}
-                title={publicPaper.title}
-                priceKes={Number(publicPaper.priceKes)}
-              />
-            ) : (
-              <PublicDocumentPreview
-                href={
-                  officeFormatLabel(mimeType, String(publicPaper.fileName ?? ""))
-                    ? officePreviewHref
-                    : documentHref
-                }
-                fileName={String(publicPaper.fileName ?? "")}
-                mimeType={mimeType}
-                title={publicPaper.title}
-              />
-            )}
+              {isPaidPaper ? (
+                <LimitedPaidPreview
+                  paperId={publicPaper.legacyId}
+                  title={publicPaper.title}
+                  priceKes={Number(publicPaper.priceKes)}
+                />
+              ) : (
+                <PublicDocumentPreview
+                  href={
+                    officeFormatLabel(
+                      mimeType,
+                      String(publicPaper.fileName ?? "")
+                    )
+                      ? officePreviewHref
+                      : documentHref
+                  }
+                  fileName={String(publicPaper.fileName ?? "")}
+                  mimeType={mimeType}
+                  title={publicPaper.title}
+                />
+              )}
             </section>
             {!isPaidPaper && (
-              <section className="order-1 lg:order-2 lg:sticky lg:top-24" aria-label="AI study help for this document">
+              <section
+                className="order-1 lg:order-2 lg:sticky lg:top-24"
+                aria-label="AI study help for this document"
+              >
                 <GrokStudyAssistant
                   isAuthenticated={isAuthenticated}
                   documentContext={{
