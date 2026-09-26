@@ -23,6 +23,8 @@ import {
   FileUp,
   KeyRound,
   Search,
+  ShieldCheck,
+  ShieldOff,
   UploadCloud,
   Trash2,
   Users,
@@ -157,7 +159,11 @@ export default function AdminOperations() {
     onError: error => setAccessMessage(error.message),
   });
   const setRole = trpc.admin.setUserRole.useMutation({
-    onSuccess: () => utils.admin.listUsers.invalidate(),
+    onSuccess: async result => {
+      await utils.admin.listUsers.invalidate();
+      toast.success(result.role === "admin" ? "Administrator access granted" : "Administrator access removed");
+    },
+    onError: error => toast.error("Role change blocked", { description: error.message }),
   });
   const reviewSubmission = trpc.admin.reviewSubmission.useMutation({
     onSuccess: async () => {
@@ -183,6 +189,8 @@ export default function AdminOperations() {
   const [paymentFilter, setPaymentFilter] = useState("");
   const [selectedUser, setSelectedUser] = useState("");
   const [selectedPaper, setSelectedPaper] = useState("");
+  const [userFilter, setUserFilter] = useState("");
+  const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "user">("all");
   const [accessMessage, setAccessMessage] = useState("");
   const [deleteConfirmation, setDeleteConfirmation] = useState<number | null>(
     null
@@ -204,6 +212,18 @@ export default function AdminOperations() {
     if (submissionFilter === "all") return rows;
     return rows.filter(item => item.status === submissionFilter);
   }, [submissionFilter, submissions.data]);
+  const visibleUsers = useMemo(() => {
+    const query = userFilter.trim().toLowerCase();
+    return (users.data ?? []).filter(user => {
+      const matchesRole = roleFilter === "all" || user.role === roleFilter;
+      const matchesQuery =
+        !query ||
+        [user.name, user.email, String(user.legacyId)]
+          .filter(Boolean)
+          .some(value => String(value).toLowerCase().includes(query));
+      return matchesRole && matchesQuery;
+    });
+  }, [roleFilter, userFilter, users.data]);
   const filteredPayments = useMemo(
     () =>
       payments.data?.filter(
@@ -287,35 +307,75 @@ export default function AdminOperations() {
               {accessMessage}
             </p>
           )}
-          <div className="mt-6 space-y-2">
-            {users.data?.slice(0, 6).map(user => (
-              <div
-                key={user.legacyId}
-                className="flex items-center justify-between rounded-xl bg-[#f5f9f6] px-3 py-2.5"
-              >
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-medium text-[#274d43]">
-                    {user.name || user.email || `Student ${user.legacyId}`}
-                  </div>
-                  <div className="truncate text-xs text-[#82958e]">
-                    {user.email || "No email"}
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="rounded-full text-[#3f806d]"
-                  onClick={() =>
-                    setRole.mutate({
-                      userId: user.legacyId,
-                      role: user.role === "admin" ? "user" : "admin",
-                    })
-                  }
-                >
-                  {user.role}
-                </Button>
+          <div className="mt-6 border-t border-[#edf2ef] pt-5">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="relative min-w-0 flex-1">
+                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9aaca6]" />
+                <Input
+                  value={userFilter}
+                  onChange={event => setUserFilter(event.target.value)}
+                  placeholder="Search name, email, or ID"
+                  aria-label="Search users for role management"
+                  className="h-10 rounded-xl pl-9"
+                />
               </div>
-            ))}
+              <select
+                value={roleFilter}
+                onChange={event => setRoleFilter(event.target.value as typeof roleFilter)}
+                aria-label="Filter users by role"
+                className="h-10 rounded-xl border border-[#d9e6df] bg-white px-3 text-sm"
+              >
+                <option value="all">All roles</option>
+                <option value="admin">Administrators</option>
+                <option value="user">Students</option>
+              </select>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-[#6f887f]">
+              <span className="rounded-full bg-[#eef9f1] px-3 py-1.5">{(users.data ?? []).filter(user => user.role === "admin").length} administrators</span>
+              <span className="rounded-full bg-[#f5f9f6] px-3 py-1.5">{(users.data ?? []).filter(user => user.role !== "admin").length} students</span>
+              <span className="rounded-full bg-[#f5f9f6] px-3 py-1.5">{visibleUsers.length} shown</span>
+            </div>
+            <div className="mt-3 max-h-[28rem] space-y-2 overflow-y-auto pr-1">
+              {visibleUsers.map(user => (
+                <div
+                  key={user.legacyId}
+                  className="flex flex-col gap-3 rounded-xl bg-[#f5f9f6] px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 truncate text-sm font-medium text-[#274d43]">
+                      {user.role === "admin" ? <ShieldCheck size={15} className="shrink-0 text-[#2d7965]" /> : <ShieldOff size={15} className="shrink-0 text-[#94aaa2]" />}
+                      <span className="truncate">{user.name || user.email || `User ${user.legacyId}`}</span>
+                    </div>
+                    <div className="truncate pl-5 text-xs text-[#82958e]">
+                      {user.email || "No email"} · ID {user.legacyId}
+                    </div>
+                  </div>
+                  <select
+                    value={user.role === "admin" ? "admin" : "user"}
+                    disabled={setRole.isPending}
+                    aria-label={`Set role for ${user.name || user.email || `user ${user.legacyId}`}`}
+                    onChange={event =>
+                      setRole.mutate({
+                        userId: user.legacyId,
+                        role: event.target.value as "user" | "admin",
+                      })
+                    }
+                    className="h-9 rounded-full border border-[#c8d9d2] bg-white px-3 text-xs font-semibold text-[#1d5146]"
+                  >
+                    <option value="user">Student</option>
+                    <option value="admin">Administrator</option>
+                  </select>
+                </div>
+              ))}
+              {!visibleUsers.length && (
+                <p className="rounded-xl border border-dashed border-[#cdded7] px-4 py-6 text-center text-xs text-[#82958e]">
+                  No users match this search.
+                </p>
+              )}
+            </div>
+            <p className="mt-3 text-[11px] leading-5 text-[#82958e]">
+              Administrators can access the management workspace. The owner account, your current administrator session, and the last remaining administrator cannot be demoted.
+            </p>
           </div>
         </section>
         <section className="rounded-2xl border border-[#dfe9e3] bg-white p-6 shadow-sm">

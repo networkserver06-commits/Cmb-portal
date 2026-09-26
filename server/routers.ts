@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { parse } from "cookie";
 import { COOKIE_NAME } from "../shared/const";
 import {
@@ -1088,14 +1089,39 @@ export const appRouter = router({
           role: z.enum(["user", "admin"]),
         })
       )
-      .mutation(async ({ input }) => {
-        await (await mongo())
-          .collection("users")
-          .updateOne(
-            { legacyId: input.userId },
-            { $set: { role: input.role, updatedAt: new Date() } }
-          );
-        return { success: true };
+      .mutation(async ({ ctx, input }) => {
+        const db = await mongo();
+        const users = db.collection<any>("users");
+        const target = await users.findOne({ legacyId: input.userId });
+        if (!target)
+          throw new TRPCError({ code: "NOT_FOUND", message: "User not found." });
+        if (
+          input.role === "user" &&
+          target.openId &&
+          target.openId === process.env.OWNER_OPEN_ID
+        )
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "The owner account must remain an administrator.",
+          });
+        if (input.role === "user" && ctx.user.id === input.userId)
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "You cannot remove your own administrator access.",
+          });
+        if (input.role === "user" && target.role === "admin") {
+          const adminCount = await users.countDocuments({ role: "admin" });
+          if (adminCount <= 1)
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "At least one administrator account must remain.",
+            });
+        }
+        await users.updateOne(
+          { legacyId: input.userId },
+          { $set: { role: input.role, updatedAt: new Date() } }
+        );
+        return { success: true, userId: input.userId, role: input.role };
       }),
     listPayments: adminProcedure.query(async () => {
       const db = await mongo();
