@@ -1,6 +1,30 @@
 import { officePreviewFileType, renderOfficePreview } from "./officePreview";
 
 export const PUBLIC_PREVIEW_CHARACTERS = 2400;
+export const MAX_PREVIEW_SOURCE_BYTES = 128 * 1024 * 1024;
+
+export async function readPreviewResponse(response: Response) {
+  if (!response.body) return Buffer.from(await response.arrayBuffer());
+  const reader = response.body.getReader();
+  const chunks: Buffer[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const part = await reader.read();
+      if (part.done) break;
+      const chunk = Buffer.from(part.value);
+      total += chunk.byteLength;
+      if (total > MAX_PREVIEW_SOURCE_BYTES) {
+        await reader.cancel();
+        throw new Error("The preview source exceeds the 128 MiB preview limit.");
+      }
+      chunks.push(chunk);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  return Buffer.concat(chunks, total);
+}
 
 export function isPdfDocument(mimeType: string, fileName: string) {
   const normalizedMime = mimeType.split(";", 1)[0].trim().toLowerCase();
@@ -77,6 +101,7 @@ export async function buildLimitedDocumentPreview(input: {
   mimeType: string;
 }) {
   const normalizedMime = input.mimeType.split(";", 1)[0].trim().toLowerCase();
+  const extension = input.fileName.toLowerCase().split(".").pop() ?? "";
   if (isPdfDocument(normalizedMime, input.fileName)) {
     try {
       const preview = await extractPdfFirstPage(input.bytes);
@@ -99,7 +124,8 @@ export async function buildLimitedDocumentPreview(input: {
   if (
     normalizedMime.startsWith("text/") ||
     normalizedMime === "application/csv" ||
-    normalizedMime === "application/json"
+    normalizedMime === "application/json" ||
+    ["txt", "md", "csv", "json", "xml", "html", "htm", "log"].includes(extension)
   ) {
     return {
       excerpt: limitPreview(input.bytes.toString("utf8")),

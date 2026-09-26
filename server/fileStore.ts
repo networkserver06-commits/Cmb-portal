@@ -389,10 +389,13 @@ export async function purgeRejectedPortalFile(input: {
   return { deleted: true as const };
 }
 
-export async function readPortalFileBytes(fileId: string) {
+export async function readPortalFileBytes(
+  fileId: string,
+  maxBytes = MAX_SCAN_BYTES
+) {
   const metadata = await portalFileById(fileId);
   if (!metadata) throw new Error("The requested file is unavailable.");
-  if (metadata.byteLength > MAX_SCAN_BYTES)
+  if (metadata.byteLength > maxBytes)
     throw new Error("The selected file exceeds the safety scan limit.");
 
   const stream = (await portalFiles()).openDownloadStream(new ObjectId(fileId));
@@ -401,7 +404,7 @@ export async function readPortalFileBytes(fileId: string) {
   for await (const chunk of stream) {
     const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
     total += buffer.byteLength;
-    if (total > MAX_SCAN_BYTES)
+    if (total > maxBytes)
       throw new Error("The selected file exceeds the safety scan limit.");
     chunks.push(buffer);
   }

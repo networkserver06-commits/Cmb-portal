@@ -32,6 +32,8 @@ import {
   buildLimitedDocumentPreview,
   createFirstPagePdf,
   isPdfDocument,
+  MAX_PREVIEW_SOURCE_BYTES,
+  readPreviewResponse,
 } from "../documentPreview";
 import { runRetentionCleanup } from "../retentionCleanup";
 import { sdk } from "./sdk";
@@ -466,16 +468,13 @@ export async function createApp() {
       if (paper.fileId) {
         if (!(await portalFileById(paper.fileId)))
           return res.status(404).json({ error: "Paper document not found" });
-        bytes = await readPortalFileBytes(paper.fileId);
+        bytes = await readPortalFileBytes(paper.fileId, MAX_PREVIEW_SOURCE_BYTES);
       } else {
         const signedUrl = await storageGetSignedUrl(paper.fileKey!);
         const response = await fetch(signedUrl);
         if (!response.ok)
           return res.status(404).json({ error: "Paper document not found" });
-        const arrayBuffer = await response.arrayBuffer();
-        if (arrayBuffer.byteLength > MAX_UPLOAD_BYTES)
-          return res.status(413).json({ error: "The selected file is too large" });
-        bytes = Buffer.from(arrayBuffer);
+        bytes = await readPreviewResponse(response);
       }
 
       const preview = await buildLimitedDocumentPreview({
@@ -534,16 +533,13 @@ export async function createApp() {
       if (paper.fileId) {
         if (!(await portalFileById(paper.fileId)))
           return res.status(404).json({ error: "Paper document not found" });
-        bytes = await readPortalFileBytes(paper.fileId);
+        bytes = await readPortalFileBytes(paper.fileId, MAX_PREVIEW_SOURCE_BYTES);
       } else {
         const signedUrl = await storageGetSignedUrl(paper.fileKey!);
         const response = await fetch(signedUrl);
         if (!response.ok)
           return res.status(404).json({ error: "Paper document not found" });
-        const arrayBuffer = await response.arrayBuffer();
-        if (arrayBuffer.byteLength > MAX_UPLOAD_BYTES)
-          return res.status(413).json({ error: "The selected file is too large" });
-        bytes = Buffer.from(arrayBuffer);
+        bytes = await readPreviewResponse(response);
       }
       const firstPage = await createFirstPagePdf(bytes);
       res.setHeader("Content-Type", "application/pdf");
