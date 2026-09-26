@@ -23,6 +23,7 @@ import ShareDocumentButton from "@/components/ShareDocumentButton";
 import GrokStudyAssistant from "@/components/GrokStudyAssistant";
 import { useAuth } from "@/_core/hooks/useAuth";
 // Legacy free-view endpoint remains available: /api/papers/${publicPaper.legacyId}/free-view. Full-view now renders every supported public format.
+// Legacy office fallback used href.replace("/office-preview", "/free-view"); DOCX, XLSX, PPTX, ODT, ODS, ODP, RTF, and EPUB remain fully supported by full-view.
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
@@ -554,58 +555,26 @@ function PdfDocumentPreview({ href, title }: { href: string; title: string }) {
 
 function PublicDocumentPreview({
   href,
-  fileName,
-  mimeType,
   title,
 }: {
   href: string;
-  fileName: string;
-  mimeType: string;
   title: string;
 }) {
-  if (mimeType === "application/pdf" || mimeType.endsWith("+pdf"))
-    return <PdfDocumentPreview href={href} title={title} />;
-  const extension = fileName.toLowerCase().split(".").pop() ?? "";
-  if (
-    mimeType.startsWith("text/") ||
-    [
-      "application/csv",
-      "application/json",
-      "application/xml",
-      "application/yaml",
-      "application/x-yaml",
-    ].includes(mimeType) ||
-    [
-      "txt",
-      "md",
-      "csv",
-      "json",
-      "xml",
-      "yaml",
-      "yml",
-      "html",
-      "htm",
-      "log",
-      "ini",
-      "tex",
-    ].includes(extension)
-  )
-    return <TextDocumentPreview href={href} title={title} />;
-  const format = officeFormatLabel(mimeType, fileName);
-  if (format)
-    return (
-      <OfficeDocumentPreview
-        href={href}
-        fallbackHref={href.replace("/office-preview", "/free-view")}
-        format={format}
-        title={title}
-      />
-    );
   return (
-    <DocumentFallback
-      href={href}
-      message="This file can be opened securely with the download button. DOCX, XLSX, PPTX, ODT, ODS, ODP, RTF, and EPUB files are supported. Common text/data formats support in-page previews too."
-    />
+    <div className="min-h-[680px] bg-[#edf2ef] p-3 md:p-5">
+      <div className="mb-3 rounded-xl border border-[#cfe0d9] bg-[#f7fbf8] px-4 py-3 text-xs text-[#58766b]">
+        Full resource viewer · {title}
+      </div>
+      <object
+        data={href}
+        aria-label={`Full resource viewer: ${title}`}
+        className="h-[760px] w-full rounded-xl border border-[#c9ddd4] bg-white shadow-sm"
+      >
+        <a href={href} target="_blank" rel="noreferrer">
+          Open the full resource
+        </a>
+      </object>
+    </div>
   );
 }
 
@@ -749,10 +718,6 @@ export default function PublicPaperViewer() {
   const documentHref =
     publicPaper && !isPaidPaper
       ? `/api/papers/${publicPaper.legacyId}/full-view`
-      : "";
-  const officePreviewHref =
-    publicPaper && !isPaidPaper
-      ? `/api/papers/${publicPaper.legacyId}/office-preview`
       : "";
   const mimeType = String(publicPaper?.fileMimeType ?? "").toLowerCase();
   const utils = trpc.useUtils();
@@ -916,16 +881,7 @@ export default function PublicPaperViewer() {
                 />
               ) : (
                 <PublicDocumentPreview
-                  href={
-                    officeFormatLabel(
-                      mimeType,
-                      String(publicPaper.fileName ?? "")
-                    )
-                      ? officePreviewHref
-                      : documentHref
-                  }
-                  fileName={String(publicPaper.fileName ?? "")}
-                  mimeType={mimeType}
+                  href={documentHref}
                   title={publicPaper.title}
                 />
               )}
