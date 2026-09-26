@@ -566,17 +566,15 @@ function PublicDocumentPreview({
     fileName.toLowerCase().endsWith(".pdf")
   )
     return <PdfDocumentPreview href={href} title={title} />;
+  const format =
+    fileName.toLowerCase().split(".").pop()?.toUpperCase() || "DOCUMENT";
   return (
-    <div className="min-h-[680px] bg-[#edf2ef] p-3 md:p-5">
-      <div className="mb-3 rounded-xl border border-[#cfe0d9] bg-[#f7fbf8] px-4 py-3 text-xs text-[#58766b]">
-        Full resource viewer · {title}
-      </div>
-      <iframe
-        title={`Full resource viewer: ${title}`}
-        src={href}
-        className="h-[760px] w-full rounded-xl border border-[#c9ddd4] bg-white shadow-sm"
-      />
-    </div>
+    <OfficeDocumentPreview
+      href={href}
+      fallbackHref={href}
+      format={format}
+      title={title}
+    />
   );
 }
 

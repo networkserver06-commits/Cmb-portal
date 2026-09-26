@@ -126,8 +126,8 @@ describe("protected document viewing and rejection cleanup", () => {
     expect(publicViewerSource).toContain("DOMPurify.sanitize");
     expect(publicViewerSource).toContain("officeFormatLabel");
     expect(publicViewerSource).toContain('"/office-preview", "/free-view"');
-    expect(publicViewerSource).toContain("Full resource viewer");
-    expect(publicViewerSource).toContain("<iframe");
+    expect(publicViewerSource).toContain("OfficeDocumentPreview");
+    expect(publicViewerSource).not.toContain("<iframe");
   });
 
   it("supports modern office uploads while retaining legacy fallbacks", () => {
